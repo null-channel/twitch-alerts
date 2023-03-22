@@ -50,6 +50,9 @@ pub struct Opts {
 
     #[clap(long, env, hide_env = true, group = "gpt")]
     pub gpt_key: Option<String>,
+
+    #[clap(long, env, hide_env = true, group = "db", default_value = "sqlite:alerts.db")]
+    pub db_path: Option<String>,
 }
 
 pub fn is_token(s: String) -> eyre::Result<()> {

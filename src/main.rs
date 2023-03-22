@@ -8,7 +8,7 @@ use clap::Parser;
 pub use opts::Secret;
 use twitch_oauth2::UserToken;
 
-use std::sync::Arc;
+use std::{sync::Arc, env, path::Path};
 
 use opts::Opts;
 
@@ -16,6 +16,7 @@ use eyre::Context;
 
 use tokio::{sync::RwLock, task::JoinHandle};
 use twitch_api::{client::ClientDefault, HelixClient};
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 
 #[tokio::main]
 async fn main() -> Result<(), eyre::Report> {
@@ -74,7 +75,16 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
         eyre::bail!("GPT key is required");
     };
 
+    // set up ai apis
     let gpt_client = ChatGPT::new(gpt_key)?;
+
+    // set up sqlite database
+
+    let Some(db_path) = opts.db_path.clone() else {
+        eyre::bail!("db path is required");
+    };
+
+    let sqlite_pool = setup_sqlite(db_path.clone()).await?;
 
     let websocket_client = websocket::WebsocketClient {
         session_id: None,
@@ -83,6 +93,7 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
         user_id,
         connect_url: twitch_api::TWITCH_EVENTSUB_WEBSOCKET_URL.clone(),
         chat_gpt: gpt_client,
+        sqlite_pool: sqlite_pool,
     };
 
     let websocket_client = {
@@ -96,6 +107,32 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
     );
     r?;
     Ok(())
+}
+
+async fn setup_sqlite(db: String) -> eyre::Result<SqlitePool> {
+     // will create the db if needed
+    let url = SqliteConnectOptions::new()
+        .filename(db)
+        .create_if_missing(true);
+    let pool = SqlitePool::connect_with(url).await?;
+
+    // Run migrations
+    let migrations = if env::var("RUST_ENV") == Ok("production".to_string()) {
+        // Productions migrations dir
+        std::env::current_exe()?.join("./migrations")
+    } else {
+        // Development migrations dir
+        let crate_dir = std::env::var("CARGO_MANIFEST_DIR")?;
+        Path::new(&crate_dir).join("./migrations")
+    };
+
+    sqlx::migrate::Migrator::new(migrations)
+        .await?
+        .run(&pool)
+        .await?;
+
+    // Return the connection manager
+    Ok(pool)
 }
 
 async fn flatten<T>(handle: JoinHandle<Result<T, eyre::Report>>) -> Result<T, eyre::Report> {

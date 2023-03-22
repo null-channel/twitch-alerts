@@ -15,6 +15,7 @@ use twitch_api::{
 };
 use twitch_oauth2::UserToken;
 
+
 pub struct WebsocketClient {
     pub session_id: Option<String>,
     pub token: Arc<RwLock<UserToken>>,
@@ -22,6 +23,7 @@ pub struct WebsocketClient {
     pub user_id: types::UserId,
     pub connect_url: url::Url,
     pub chat_gpt: ChatGPT,
+    pub sqlite_pool: sqlx::SqlitePool,
 }
 
 impl WebsocketClient {
@@ -123,27 +125,56 @@ impl WebsocketClient {
                 message:
                     Message::Notification(ChannelFollowV2Payload {
                         user_name,
+                        user_id,
                         ..
                     }),
                 ..
             }) => {
-                self.process_new_follow(user_name.to_string()).await?;
+
+                self.process_new_follow(user_id.into(),user_name.into()).await?;
                 Ok(())
             },
             _ => Ok(()),
         }
     }
 
-    async fn process_new_follow(&self, payload: String) -> Result<(), eyre::Report> {
+    async fn process_new_follow(&self,user_id:String, user_name: String) -> Result<(), eyre::Report> {
         let mut conversation: Conversation = self.chat_gpt.new_conversation_directed(
             "You are NullGPT, when answering any questions, you always answer with a short epic story involving the Rust programming language and null."
         );
     
         // Sending messages to the conversation
         let response = conversation
-            .send_message(format!("tell me a short story about my new subscriber {}?", payload))
+            .send_message(format!("tell me an epic short story about my new follower {}?", user_name))
             .await?;
     
+        let mut conn = self.sqlite_pool.acquire().await?;
+
+        let id = sqlx::query!(
+                r#"
+        INSERT INTO follow_events ( user_id,user_name )
+        VALUES ( ?1, ?2 )
+                "#,
+                user_id, user_name
+        )
+            .execute(&mut conn)
+            .await?
+            .last_insert_rowid();
+
+        let event_type = "follow".to_owned();
+        let personal_story = response.message().content.clone();
+        let id = sqlx::query!(
+                r#"
+        INSERT INTO story_segments ( user_id,event_type,story_segment )
+        VALUES ( ?1, ?2, ?3 )
+                "#,
+                user_id, event_type, personal_story
+        )
+            .execute(&mut conn)
+            .await?
+            .last_insert_rowid();        
+        
+
         println!("Response: {}", response.message().content);
         Ok(())
     }
