@@ -5,6 +5,14 @@ CREATE TABLE IF NOT EXISTS sub_events
     subscribed_at DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS event_queue
+(
+    message_id    INTEGER PRIMARY KEY NOT NULL,
+    event_data    TEXT                NOT NULL,
+    event_at      DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_processed  BOOLEAN             NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS follow_events
 (
     user_id       INTEGER PRIMARY KEY NOT NULL,

@@ -8,7 +8,7 @@ use clap::Parser;
 pub use opts::Secret;
 use twitch_oauth2::UserToken;
 
-use std::{sync::Arc, env, path::Path};
+use std::{sync::Arc, env, path::Path, thread};
 
 use opts::Opts;
 
@@ -17,6 +17,7 @@ use eyre::Context;
 use tokio::{sync::RwLock, task::JoinHandle};
 use twitch_api::{client::ClientDefault, HelixClient};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
+use std::sync::mpsc;
 
 #[tokio::main]
 async fn main() -> Result<(), eyre::Report> {
@@ -86,6 +87,8 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
 
     let sqlite_pool = setup_sqlite(db_path.clone()).await?;
 
+    let (tx, rx) = mpsc::channel();
+
     let websocket_client = websocket::WebsocketClient {
         session_id: None,
         token,
@@ -94,19 +97,26 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
         connect_url: twitch_api::TWITCH_EVENTSUB_WEBSOCKET_URL.clone(),
         chat_gpt: gpt_client,
         sqlite_pool: sqlite_pool,
+        sender: tx.clone(),
     };
 
     let websocket_client = {
+    
         let opts = opts.clone();
         async move { websocket_client.run(&opts).await }
     };
 
     let r = tokio::try_join!(
         flatten(tokio::spawn(retainer_cleanup)),
-        flatten(tokio::spawn(websocket_client))
+        flatten(tokio::spawn(websocket_client)),
+        flatten(tokio::spawn(event_queue(rx)))
     );
     r?;
     Ok(())
+}
+
+async fn event_queue(rx: mpsc::Receiver<String>) -> eyre::Result<()> {
+  Ok(())
 }
 
 async fn setup_sqlite(db: String) -> eyre::Result<SqlitePool> {

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, mpsc::Sender};
 
 use chatgpt::prelude::{ChatGPT, Conversation};
 use eyre::Context;
@@ -24,6 +24,7 @@ pub struct WebsocketClient {
     pub connect_url: url::Url,
     pub chat_gpt: ChatGPT,
     pub sqlite_pool: sqlx::SqlitePool,
+    pub sender: Sender<String>,
 }
 
 impl WebsocketClient {
@@ -50,7 +51,6 @@ impl WebsocketClient {
         Ok(socket)
     }
 
-    #[tracing::instrument(name = "subscriber", skip_all, fields())]
     pub async fn run(mut self, _opts: &crate::Opts) -> Result<(), eyre::Error> {
         let mut s = self
             .connect()
@@ -100,7 +100,7 @@ impl WebsocketClient {
                         metadata: metadata,
                         payload: event,
                     } => {
-                        self.process_notification(event, metadata).await?;
+                        self.process_notification(event, metadata,&s).await?;
                         Ok(())
                     },
                     EventsubWebsocketData::Revocation {
@@ -119,7 +119,30 @@ impl WebsocketClient {
         }
     }
 
-    async fn process_notification(&self, data: Event, metadata: NotificationMetadata<'_>) -> Result<(), eyre::Report> {
+    async fn process_notification(&self, data: Event, metadata: NotificationMetadata<'_>, payload: &str) -> Result<(), eyre::Report> {
+
+        
+        let mut conn = self.sqlite_pool.acquire().await?;
+
+        let message_id = metadata.message_id.to_string();
+        let event_at = metadata.message_timestamp.to_string();
+        let id = sqlx::query!(
+                r#"
+        INSERT INTO event_queue ( message_id,event_data,event_at,is_processed )
+        VALUES ( ?1, ?2, ?3, ?4 )
+                "#,
+                message_id, payload, event_at, false
+        )
+            .execute(&mut conn)
+            .await?
+            .last_insert_rowid();
+
+        println!("Inserted event with id {}", id);
+        self.sender.send(message_id).unwrap();
+
+
+        // TODO: Delete as this is wrong... but is how it still works for right now!
+
         match data {
             Event::ChannelFollowV2(Payload{
                 message:
@@ -147,32 +170,6 @@ impl WebsocketClient {
         let response = conversation
             .send_message(format!("tell me an epic short story about my new follower {}?", user_name))
             .await?;
-    
-        let mut conn = self.sqlite_pool.acquire().await?;
-
-        let id = sqlx::query!(
-                r#"
-        INSERT INTO follow_events ( user_id,user_name )
-        VALUES ( ?1, ?2 )
-                "#,
-                user_id, user_name
-        )
-            .execute(&mut conn)
-            .await?
-            .last_insert_rowid();
-
-        let event_type = "follow".to_owned();
-        let personal_story = response.message().content.clone();
-        let id = sqlx::query!(
-                r#"
-        INSERT INTO story_segments ( user_id,event_type,story_segment )
-        VALUES ( ?1, ?2, ?3 )
-                "#,
-                user_id, event_type, personal_story
-        )
-            .execute(&mut conn)
-            .await?
-            .last_insert_rowid();        
         
 
         println!("Response: {}", response.message().content);
@@ -196,7 +193,7 @@ impl WebsocketClient {
         self.client
             .req_post(req, body, &*self.token.read().await)
             .await?;
-        tracing::info!("listening to ban and unbans");
+        tracing::info!("we are listening");
         Ok(())
     }
 }
