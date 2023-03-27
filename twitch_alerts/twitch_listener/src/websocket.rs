@@ -50,12 +50,13 @@ impl WebsocketClient {
         Ok(socket)
     }
 
-    pub async fn run(mut self, _opts: &crate::Opts) -> Result<(), eyre::Error> {
+    pub async fn run(mut self, _opts: &crate::Opts, sender: Sender<String>) -> Result<(), eyre::Error> {
         let mut s = self
             .connect()
             .await
             .context("when establishing connection")?;
         loop {
+            let send = sender.clone();
             tokio::select!(
             Some(msg) = futures::StreamExt::next(&mut s) => {
                 let span = tracing::info_span!("message received", raw_message = ?msg);
@@ -74,12 +75,12 @@ impl WebsocketClient {
                     }
                     _ => msg.context("when getting message")?,
                 };
-                self.process_message(msg).instrument(span).await?
+                self.process_message(msg,send).instrument(span).await?
             })
         }
     }
 
-    pub async fn process_message(&mut self, msg: tungstenite::Message) -> Result<(), eyre::Report> {
+    pub async fn process_message(&mut self, msg: tungstenite::Message, sender: Sender<String>) -> Result<(), eyre::Report> {
         match msg {
             tungstenite::Message::Text(s) => {
                 tracing::info!("{s}");
@@ -99,7 +100,7 @@ impl WebsocketClient {
                         metadata: metadata,
                         payload: event,
                     } => {
-                        self.process_notification(event, metadata,&s).await?;
+                        self.process_notification(event, metadata,&s, sender).await?;
                         Ok(())
                     },
                     EventsubWebsocketData::Revocation {
@@ -118,7 +119,7 @@ impl WebsocketClient {
         }
     }
 
-    async fn process_notification(&self, data: Event, metadata: NotificationMetadata<'_>, payload: &str) -> Result<(), eyre::Report> {
+    async fn process_notification(&self, data: Event, metadata: NotificationMetadata<'_>, payload: &str, sender: Sender<String>) -> Result<(), eyre::Report> {
 
         
         let mut conn = self.sqlite_pool.acquire().await?;
@@ -137,7 +138,7 @@ impl WebsocketClient {
             .last_insert_rowid();
 
         println!("Inserted event with id {}", id);
-        //self.sender.send(message_id).unwrap();
+        sender.send(message_id).unwrap();
 
 
         // TODO: Delete as this is wrong... but is how it still works for right now!

@@ -102,7 +102,7 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
     let websocket_client = {
     
         let opts = opts.clone();
-        async move { websocket_client.run(&opts).await }
+        async move { websocket_client.run(&opts, tx).await }
     };
 
     let r = tokio::try_join!(
