@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+    "ai_manager",
+    "twitch_alerts",
+    "twitch_listener",
+]

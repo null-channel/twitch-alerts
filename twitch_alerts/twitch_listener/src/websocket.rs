@@ -24,7 +24,6 @@ pub struct WebsocketClient {
     pub connect_url: url::Url,
     pub chat_gpt: ChatGPT,
     pub sqlite_pool: sqlx::SqlitePool,
-    pub sender: Sender<String>,
 }
 
 impl WebsocketClient {
@@ -138,7 +137,7 @@ impl WebsocketClient {
             .last_insert_rowid();
 
         println!("Inserted event with id {}", id);
-        self.sender.send(message_id).unwrap();
+        //self.sender.send(message_id).unwrap();
 
 
         // TODO: Delete as this is wrong... but is how it still works for right now!

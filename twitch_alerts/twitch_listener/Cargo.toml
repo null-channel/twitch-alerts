@@ -1,5 +1,5 @@
 [package]
-name = "twitch-alerts"
+name = "twitch_listener"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,14 +9,14 @@ edition = "2021"
 anyhow = "1.0"
 sqlx = { version = "0.6.2", features = ["sqlite", "runtime-tokio-native-tls"] }
 structopt = "0.3"
-twitch_api = {path = "./twitch_api", features = [
+twitch_api = {path = "../../twitch_api", features = [
     "reqwest",
     "helix",
     "eventsub",
     "hmac",
     "unsupported",
     "deny_unknown_fields" ]}
-twitch_oauth2 = {path = "./twitch_api/twitch_oauth2" }
+twitch_oauth2 = {path = "../../twitch_api/twitch_oauth2" }
 clap = { version = "4.1.8", features = ["derive", "env"] }
 color-eyre = { version = "0.6", features = ["capture-spantrace"] }
 dotenvy = "0.15.6"

@@ -51,7 +51,7 @@ pub struct Opts {
     #[clap(long, env, hide_env = true, group = "gpt")]
     pub gpt_key: Option<String>,
 
-    #[clap(long, env, hide_env = true, group = "db", default_value = "sqlite:alerts.db")]
+    #[clap(long, env, hide_env = true, group = "db", default_value = "alerts.db")]
     pub db_path: Option<String>,
 }
 

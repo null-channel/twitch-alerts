@@ -97,7 +97,6 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
         connect_url: twitch_api::TWITCH_EVENTSUB_WEBSOCKET_URL.clone(),
         chat_gpt: gpt_client,
         sqlite_pool: sqlite_pool,
-        sender: tx.clone(),
     };
 
     let websocket_client = {
