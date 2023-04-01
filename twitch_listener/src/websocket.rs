@@ -1,4 +1,4 @@
-use std::sync::{Arc, mpsc::Sender};
+use std::sync::{mpsc::Sender, Arc};
 
 use chatgpt::prelude::{ChatGPT, Conversation};
 use eyre::Context;
@@ -7,14 +7,14 @@ use tokio_tungstenite::tungstenite;
 use tracing::Instrument;
 use twitch_api::{
     eventsub::{
+        channel::{ChannelFollowV2, ChannelFollowV2Payload},
         event::websocket::{EventsubWebsocketData, ReconnectPayload, SessionData, WelcomePayload},
-        Event, NotificationMetadata, Payload, channel::{ChannelFollowV2, ChannelFollowV2Payload}, Message,
+        Event, Message, NotificationMetadata, Payload,
     },
     types::{self},
     HelixClient,
 };
 use twitch_oauth2::UserToken;
-
 
 pub struct WebsocketClient {
     pub session_id: Option<String>,
@@ -30,7 +30,7 @@ impl WebsocketClient {
     pub async fn connect(
         &self,
     ) -> Result<
-            tokio_tungstenite::WebSocketStream<
+        tokio_tungstenite::WebSocketStream<
             tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
         >,
         eyre::Error,
@@ -50,7 +50,11 @@ impl WebsocketClient {
         Ok(socket)
     }
 
-    pub async fn run(mut self, _opts: &crate::Opts, sender: Sender<String>) -> Result<(), eyre::Error> {
+    pub async fn run(
+        mut self,
+        _opts: &crate::Opts,
+        sender: Sender<String>,
+    ) -> Result<(), eyre::Error> {
         let mut s = self
             .connect()
             .await
@@ -80,7 +84,11 @@ impl WebsocketClient {
         }
     }
 
-    pub async fn process_message(&mut self, msg: tungstenite::Message, sender: Sender<String>) -> Result<(), eyre::Report> {
+    pub async fn process_message(
+        &mut self,
+        msg: tungstenite::Message,
+        sender: Sender<String>,
+    ) -> Result<(), eyre::Report> {
         match msg {
             tungstenite::Message::Text(s) => {
                 tracing::info!("{s}");
@@ -100,9 +108,10 @@ impl WebsocketClient {
                         metadata: metadata,
                         payload: event,
                     } => {
-                        self.process_notification(event, metadata,&s, sender).await?;
+                        self.process_notification(event, metadata, &s, sender)
+                            .await?;
                         Ok(())
-                    },
+                    }
                     EventsubWebsocketData::Revocation {
                         metadata: _,
                         payload: _,
@@ -119,58 +128,47 @@ impl WebsocketClient {
         }
     }
 
-    async fn process_notification(&self, data: Event, metadata: NotificationMetadata<'_>, payload: &str, sender: Sender<String>) -> Result<(), eyre::Report> {
-
-        
-        let mut conn = self.sqlite_pool.acquire().await?;
-
-        let message_id = metadata.message_id.to_string();
-        let event_at = metadata.message_timestamp.to_string();
-        let id = sqlx::query!(
-                r#"
-        INSERT INTO event_queue ( message_id,event_data,event_at,is_processed )
-        VALUES ( ?1, ?2, ?3, ?4 )
-                "#,
-                message_id, payload, event_at, false
-        )
-            .execute(&mut conn)
-            .await?
-            .last_insert_rowid();
-
-        println!("Inserted event with id {}", id);
-        sender.send(message_id).unwrap();
-
-
+    async fn process_notification(
+        &self,
+        data: Event,
+        metadata: NotificationMetadata<'_>,
+        payload: &str,
+        sender: Sender<String>,
+    ) -> Result<(), eyre::Report> {
         // TODO: Delete as this is wrong... but is how it still works for right now!
 
         match data {
-            Event::ChannelFollowV2(Payload{
+            Event::ChannelFollowV2(Payload {
                 message:
                     Message::Notification(ChannelFollowV2Payload {
-                        user_name,
-                        user_id,
-                        ..
+                        user_name, user_id, ..
                     }),
                 ..
             }) => {
-
-                self.process_new_follow(user_id.into(),user_name.into()).await?;
+                self.process_new_follow(user_id.into(), user_name.into())
+                    .await?;
                 Ok(())
-            },
+            }
             _ => Ok(()),
         }
     }
 
-    async fn process_new_follow(&self,user_id:String, user_name: String) -> Result<(), eyre::Report> {
+    async fn process_new_follow(
+        &self,
+        user_id: String,
+        user_name: String,
+    ) -> Result<(), eyre::Report> {
         let mut conversation: Conversation = self.chat_gpt.new_conversation_directed(
             "You are NullGPT, when answering any questions, you always answer with a short epic story involving the Rust programming language and null."
         );
-    
+
         // Sending messages to the conversation
         let response = conversation
-            .send_message(format!("tell me an epic short story about my new follower {}?", user_name))
+            .send_message(format!(
+                "tell me an epic short story about my new follower {}?",
+                user_name
+            ))
             .await?;
-        
 
         println!("Response: {}", response.message().content);
         Ok(())
@@ -186,10 +184,13 @@ impl WebsocketClient {
         }
         let req = twitch_api::helix::eventsub::CreateEventSubSubscriptionRequest::new();
         let body = twitch_api::helix::eventsub::CreateEventSubSubscriptionBody::new(
-            twitch_api::eventsub::channel::ChannelFollowV2::new(self.user_id.clone(),self.user_id.clone()),
+            twitch_api::eventsub::channel::ChannelFollowV2::new(
+                self.user_id.clone(),
+                self.user_id.clone(),
+            ),
             twitch_api::eventsub::Transport::websocket(data.id.clone()),
         );
-        
+
         self.client
             .req_post(req, body, &*self.token.read().await)
             .await?;

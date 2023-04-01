@@ -8,16 +8,16 @@ use clap::Parser;
 pub use opts::Secret;
 use twitch_oauth2::UserToken;
 
-use std::{sync::Arc, env, path::Path, thread};
+use std::{env, path::Path, sync::Arc, thread};
 
 use opts::Opts;
 
 use eyre::Context;
 
-use tokio::{sync::RwLock, task::JoinHandle};
-use twitch_api::{client::ClientDefault, HelixClient};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use std::sync::mpsc;
+use tokio::{sync::RwLock, task::JoinHandle};
+use twitch_api::{client::ClientDefault, HelixClient};
 
 #[tokio::main]
 async fn main() -> Result<(), eyre::Report> {
@@ -100,7 +100,6 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
     };
 
     let websocket_client = {
-    
         let opts = opts.clone();
         async move { websocket_client.run(&opts, tx).await }
     };
@@ -115,11 +114,11 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
 }
 
 async fn event_queue(rx: mpsc::Receiver<String>) -> eyre::Result<()> {
-  Ok(())
+    Ok(())
 }
 
 async fn setup_sqlite(db: String) -> eyre::Result<SqlitePool> {
-     // will create the db if needed
+    // will create the db if needed
     let url = SqliteConnectOptions::new()
         .filename(db)
         .create_if_missing(true);

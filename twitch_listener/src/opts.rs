@@ -10,7 +10,12 @@ use twitch_api::twitch_oauth2::AccessToken;
 )]
 pub struct Opts {
     /// OAuth2 Access token
-    #[clap(long, env, hide_env = true, group = "token", required_unless_present = "service"
+    #[clap(
+        long,
+        env,
+        hide_env = true,
+        group = "token",
+        required_unless_present = "service"
     )]
     pub access_token: Option<String>,
     /// Name of channel to monitor. If left out, defaults to owner of access token.
@@ -69,15 +74,21 @@ pub fn is_token(s: String) -> eyre::Result<()> {
 pub struct Secret(String);
 
 impl Secret {
-    pub fn secret(&self) -> &str { &self.0 }
+    pub fn secret(&self) -> &str {
+        &self.0
+    }
 }
 
 impl std::str::FromStr for Secret {
     type Err = std::convert::Infallible;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> { Ok(Self(s.to_string())) }
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(s.to_string()))
+    }
 }
 
 impl std::fmt::Debug for Secret {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "[secret]") }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[secret]")
+    }
 }
