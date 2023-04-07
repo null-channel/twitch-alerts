@@ -1,6 +1,6 @@
 use std::sync::{mpsc::Sender, Arc};
 
-use chatgpt::prelude::{ChatGPT, Conversation};
+use common::TwitchEventHandler;
 use eyre::Context;
 use tokio::sync::RwLock;
 use tokio_tungstenite::tungstenite;
@@ -22,8 +22,7 @@ pub struct WebsocketClient {
     pub client: HelixClient<'static, reqwest::Client>,
     pub user_id: types::UserId,
     pub connect_url: url::Url,
-    pub chat_gpt: ChatGPT,
-    pub sqlite_pool: sqlx::SqlitePool,
+    pub twitch_event_handler: Box<dyn TwitchEventHandler + Sync + Send>,
 }
 
 impl WebsocketClient {
@@ -137,7 +136,7 @@ impl WebsocketClient {
     ) -> Result<(), eyre::Report> {
         // TODO: Delete as this is wrong... but is how it still works for right now!
 
-        match data {
+        match &data {
             Event::ChannelFollowV2(Payload {
                 message:
                     Message::Notification(ChannelFollowV2Payload {
@@ -145,33 +144,15 @@ impl WebsocketClient {
                     }),
                 ..
             }) => {
-                self.process_new_follow(user_id.into(), user_name.into())
-                    .await?;
+                self.twitch_event_handler.new_event(
+                    data,
+                    metadata.message_id.into(),
+                    metadata.message_timestamp.as_str().into(),
+                );
                 Ok(())
             }
             _ => Ok(()),
         }
-    }
-
-    async fn process_new_follow(
-        &self,
-        user_id: String,
-        user_name: String,
-    ) -> Result<(), eyre::Report> {
-        let mut conversation: Conversation = self.chat_gpt.new_conversation_directed(
-            "You are NullGPT, when answering any questions, you always answer with a short epic story involving the Rust programming language and null."
-        );
-
-        // Sending messages to the conversation
-        let response = conversation
-            .send_message(format!(
-                "tell me an epic short story about my new follower {}?",
-                user_name
-            ))
-            .await?;
-
-        println!("Response: {}", response.message().content);
-        Ok(())
     }
 
     pub async fn process_welcome_message(

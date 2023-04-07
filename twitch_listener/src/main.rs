@@ -3,7 +3,7 @@ pub mod opts;
 pub mod util;
 pub mod websocket;
 
-use chatgpt::prelude::ChatGPT;
+use ai_manager::AIManager;
 use clap::Parser;
 pub use opts::Secret;
 use twitch_oauth2::UserToken;
@@ -76,9 +76,6 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
         eyre::bail!("GPT key is required");
     };
 
-    // set up ai apis
-    let gpt_client = ChatGPT::new(gpt_key)?;
-
     // set up sqlite database
 
     let Some(db_path) = opts.db_path.clone() else {
@@ -88,6 +85,13 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
     let sqlite_pool = setup_sqlite(db_path.clone()).await?;
 
     let (tx, rx) = mpsc::channel();
+    let ai_manager_res = AIManager::new(sqlite_pool, gpt_key);
+
+    let Ok(ai_manager) = ai_manager_res else {
+        panic!("failed to create the ai manager");
+    };
+
+    let twitch_event_handler = Box::new(ai_manager);
 
     let websocket_client = websocket::WebsocketClient {
         session_id: None,
@@ -95,8 +99,7 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
         client,
         user_id,
         connect_url: twitch_api::TWITCH_EVENTSUB_WEBSOCKET_URL.clone(),
-        chat_gpt: gpt_client,
-        sqlite_pool: sqlite_pool,
+        twitch_event_handler: twitch_event_handler,
     };
 
     let websocket_client = {

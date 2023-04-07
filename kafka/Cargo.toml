@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 common = { path = "../common" }
+rdkafka = "0.29.0"
+twitch_api = {path = "../twitch_api", features = ["eventsub"]}
