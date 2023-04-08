@@ -34,10 +34,7 @@ impl TwitchEventHandler for AIManager {
 
         match &event {
             Event::ChannelFollowV2(Payload {
-                message:
-                    Message::Notification(ChannelFollowV2Payload {
-                        user_name, user_id, ..
-                    }),
+                message: Message::Notification(ChannelFollowV2Payload { user_name, .. }),
                 ..
             }) => {
                 let response = conversation

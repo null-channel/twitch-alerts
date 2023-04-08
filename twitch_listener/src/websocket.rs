@@ -7,7 +7,6 @@ use tokio_tungstenite::tungstenite;
 use tracing::Instrument;
 use twitch_api::{
     eventsub::{
-        channel::{ChannelFollowV2, ChannelFollowV2Payload},
         event::websocket::{EventsubWebsocketData, ReconnectPayload, SessionData, WelcomePayload},
         Event, Message, NotificationMetadata, Payload,
     },
@@ -15,6 +14,8 @@ use twitch_api::{
     HelixClient,
 };
 use twitch_oauth2::UserToken;
+
+use crate::opts::Opts;
 
 pub struct WebsocketClient {
     pub session_id: Option<String>,
@@ -49,11 +50,7 @@ impl WebsocketClient {
         Ok(socket)
     }
 
-    pub async fn run(
-        mut self,
-        _opts: &crate::Opts,
-        sender: Sender<String>,
-    ) -> Result<(), eyre::Error> {
+    pub async fn run(mut self, _opts: &Opts, sender: Sender<String>) -> Result<(), eyre::Error> {
         let mut s = self
             .connect()
             .await
@@ -103,11 +100,8 @@ impl WebsocketClient {
                         self.process_welcome_message(session).await?;
                         Ok(())
                     }
-                    EventsubWebsocketData::Notification {
-                        metadata: metadata,
-                        payload: event,
-                    } => {
-                        self.process_notification(event, metadata, &s, sender)
+                    EventsubWebsocketData::Notification { metadata, payload } => {
+                        self.process_notification(payload, metadata, &s, sender)
                             .await?;
                         Ok(())
                     }
@@ -138,13 +132,10 @@ impl WebsocketClient {
 
         match &data {
             Event::ChannelFollowV2(Payload {
-                message:
-                    Message::Notification(ChannelFollowV2Payload {
-                        user_name, user_id, ..
-                    }),
+                message: Message::Notification(..),
                 ..
             }) => {
-                self.twitch_event_handler.new_event(
+                _ = self.twitch_event_handler.new_event(
                     data,
                     metadata.message_id.into(),
                     metadata.message_timestamp.as_str().into(),

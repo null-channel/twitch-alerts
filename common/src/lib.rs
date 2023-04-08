@@ -1,4 +1,4 @@
-use std::{rc::Rc, sync::Arc};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use twitch_api::eventsub::Event;

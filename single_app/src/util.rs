@@ -1,8 +1,6 @@
 use eyre::Context;
 use twitch_oauth2::UserToken;
 
-use crate::opts::Opts;
-
 pub fn install_utils() -> eyre::Result<()> {
     let _ = dotenvy::dotenv(); //ignore error
     install_tracing();
@@ -67,7 +65,7 @@ pub async fn make_token<'a>(
 #[tracing::instrument(skip(client, opts))]
 pub async fn get_access_token(
     client: &reqwest::Client,
-    opts: &Opts,
+    opts: &crate::Opts,
 ) -> Result<UserToken, eyre::Report> {
     if let Some(ref access_token) = opts.access_token {
         make_token(client, access_token.to_string()).await
