@@ -1,6 +1,6 @@
 use std::sync::{mpsc::Sender, Arc};
 
-use common::TwitchEventHandler;
+use common::{NewTwitchEventMessage, TwitchEvent, FollowEvent};
 use eyre::Context;
 use tokio::sync::RwLock;
 use tokio_tungstenite::tungstenite;
@@ -8,7 +8,7 @@ use tracing::Instrument;
 use twitch_api::{
     eventsub::{
         event::websocket::{EventsubWebsocketData, ReconnectPayload, SessionData, WelcomePayload},
-        Event, Message, NotificationMetadata, Payload,
+        Event, Message, NotificationMetadata, Payload, channel::ChannelFollowV2Payload,
     },
     types::{self},
     HelixClient,
@@ -23,7 +23,6 @@ pub struct WebsocketClient {
     pub client: HelixClient<'static, reqwest::Client>,
     pub user_id: types::UserId,
     pub connect_url: url::Url,
-    pub twitch_event_handler: Box<dyn TwitchEventHandler + Sync + Send>,
 }
 
 impl WebsocketClient {
@@ -50,14 +49,13 @@ impl WebsocketClient {
         Ok(socket)
     }
 
-    pub async fn run(mut self, _opts: &Opts, sender: Sender<String>) -> Result<(), eyre::Error> {
+    pub async fn run(mut self, _opts: &Opts,sender: Sender<NewTwitchEventMessage>) -> Result<(), eyre::Error> {
         let mut s = self
             .connect()
             .await
             .context("when establishing connection")?;
         loop {
-            let send = sender.clone();
-            tokio::select!(
+            tokio::select!( 
             Some(msg) = futures::StreamExt::next(&mut s) => {
                 let span = tracing::info_span!("message received", raw_message = ?msg);
                 let msg = match msg {
@@ -75,7 +73,7 @@ impl WebsocketClient {
                     }
                     _ => msg.context("when getting message")?,
                 };
-                self.process_message(msg,send).instrument(span).await?
+                self.process_message(msg,sender.clone()).instrument(span).await?
             })
         }
     }
@@ -83,7 +81,7 @@ impl WebsocketClient {
     pub async fn process_message(
         &mut self,
         msg: tungstenite::Message,
-        sender: Sender<String>,
+        sender: Sender<NewTwitchEventMessage>,
     ) -> Result<(), eyre::Report> {
         match msg {
             tungstenite::Message::Text(s) => {
@@ -101,7 +99,7 @@ impl WebsocketClient {
                         Ok(())
                     }
                     EventsubWebsocketData::Notification { metadata, payload } => {
-                        self.process_notification(payload, metadata, &s, sender)
+                        self.process_notification(payload, &metadata, &s, sender)
                             .await?;
                         Ok(())
                     }
@@ -124,9 +122,9 @@ impl WebsocketClient {
     async fn process_notification(
         &self,
         data: Event,
-        metadata: NotificationMetadata<'_>,
+        metadata: &NotificationMetadata<'_>,
         payload: &str,
-        sender: Sender<String>,
+        sender: Sender<NewTwitchEventMessage>,
     ) -> Result<(), eyre::Report> {
         // TODO: Delete as this is wrong... but is how it still works for right now!
 
@@ -135,11 +133,13 @@ impl WebsocketClient {
                 message: Message::Notification(..),
                 ..
             }) => {
-                _ = self.twitch_event_handler.new_event(
-                    data,
-                    metadata.message_id.into(),
-                    metadata.message_timestamp.as_str().into(),
-                );
+                let event = new_twitch_event(data)?;
+                let message = NewTwitchEventMessage {
+                    event,
+                    message_at: metadata.message_timestamp.as_str().into(),
+                    message_id: metadata.message_id.to_string(),
+                };
+                sender.send(message).unwrap();
                 Ok(())
             }
             _ => Ok(()),
@@ -168,5 +168,105 @@ impl WebsocketClient {
             .await?;
         tracing::info!("we are listening");
         Ok(())
+    }
+}
+
+// Creates a new TwitchEvent enum from the payload and metadata
+fn new_twitch_event(
+    payload: Event,
+) -> Result<TwitchEvent, eyre::Report> {
+    match payload {
+        Event::ChannelFollowV2(Payload {
+            message: Message::Notification(ChannelFollowV2Payload { user_name, .. }),
+            ..
+        }) => Ok(TwitchEvent::ChannelFollow(FollowEvent{
+            user_name: user_name.to_string(),
+        })),
+        Event::ChannelSubscribeV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelSubscribeV1 is not supported")),
+        Event::ChannelCheerV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelCheerV1 is not supported")),
+        Event::ChannelPointsCustomRewardAddV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelPointsCustomRewardAddV1 is not supported")),
+        Event::ChannelPointsCustomRewardUpdateV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelPointsCustomRewardUpdateV1 is not supported")),
+        Event::ChannelPointsCustomRewardRemoveV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelPointsCustomRewardRemoveV1 is not supported")),
+        Event::ChannelPointsCustomRewardRedemptionAddV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelPointsCustomRewardRedemptionAddV1 is not supported")),
+        Event::ChannelPointsCustomRewardRedemptionUpdateV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelPointsCustomRewardRedemptionUpdateV1 is not supported")),
+        Event::ChannelHypeTrainBeginV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelHypeTrainBeginV1 is not supported")),
+        Event::ChannelHypeTrainProgressV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelHypeTrainProgressV1 is not supported")),
+        Event::ChannelHypeTrainEndV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelHypeTrainEndV1 is not supported")),
+        Event::ChannelPollBeginV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelPollBeginV1 is not supported")),
+        Event::ChannelPollProgressV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelPollProgressV1 is not supported")),
+        Event::ChannelPollEndV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelPollEndV1 is not supported")),
+        Event::ChannelPredictionBeginV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelPredictionBeginV1 is not supported")),
+        Event::ChannelPredictionProgressV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelPredictionProgressV1 is not supported")),
+        Event::ChannelPredictionLockV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelPredictionLockV1 is not supported")),
+        Event::ChannelPredictionEndV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelPredictionEndV1 is not supported")),
+        Event::ChannelRaidV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelRaidV1 is not supported")),
+        Event::ChannelBanV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelBanV1 is not supported")),
+        Event::ChannelUnbanV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelUnbanV1 is not supported")),
+        
+        Event::ChannelUpdateV1(Payload {
+            message: Message::Notification(..),
+            ..
+        }) => Err(eyre::eyre!("ChannelUpdateV1 is not supported")),
+        _ => todo!(),
     }
 }

@@ -1,17 +1,18 @@
-use std::sync::Arc;
 
-use async_trait::async_trait;
-use twitch_api::eventsub::Event;
-#[async_trait]
-pub trait TwitchEventHandler {
-    async fn new_event(
-        &self,
-        event: Event,
-        message_id: String,
-        message_at: String,
-    ) -> anyhow::Result<()>;
+#[derive(Debug)]
+pub struct NewTwitchEventMessage {
+    pub event: TwitchEvent,
+    pub message_id: String,
+    pub message_at: String,
 }
 
-pub trait TwitchEventProducer {
-    fn register(event_handler: Arc<dyn TwitchEventHandler>);
+#[derive(Debug)]
+pub enum TwitchEvent {
+    ChannelFollow(FollowEvent),
 }
+
+#[derive(Debug)]
+pub struct FollowEvent {
+    pub user_name: String,
+}
+

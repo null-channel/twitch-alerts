@@ -33,88 +33,10 @@ async fn main() -> Result<(), eyre::Report> {
 
     tracing::debug!(opts = ?opts);
 
-    run(&opts)
-        .await
-        .with_context(|| "when running application")?;
 
     Ok(())
 }
 
-pub async fn run(opts: &Opts) -> eyre::Result<()> {
-    let client: HelixClient<'static, _> = twitch_api::HelixClient::with_client(
-        <reqwest::Client>::default_client_with_name(Some(
-            "twitch-rs/eventsub"
-                .parse()
-                .wrap_err_with(|| "when creating header name")
-                .unwrap(),
-        ))
-        .wrap_err_with(|| "when creating client")?,
-    );
-
-    let token = util::get_access_token(client.get_client(), opts).await?;
-    let token: Arc<RwLock<UserToken>> = Arc::new(RwLock::new(token));
-    let retainer = Arc::new(retainer::Cache::<String, ()>::new());
-    let ret = retainer.clone();
-    let retainer_cleanup = async move {
-        ret.monitor(10, 0.50, tokio::time::Duration::from_secs(86400 / 2))
-            .await;
-        Ok::<(), eyre::Report>(())
-    };
-    let user_id = if let Some(ref id) = opts.channel_id {
-        id.clone().into()
-    } else if let Some(ref login) = opts.channel_login {
-        client
-            .get_user_from_login(login, &*token.read().await)
-            .await?
-            .ok_or_else(|| eyre::eyre!("no user found with name {login}"))?
-            .id
-    } else {
-        token.read().await.user_id.clone()
-    };
-
-    let Some(gpt_key) = opts.gpt_key.clone() else {
-        eyre::bail!("GPT key is required");
-    };
-
-    // set up sqlite database
-
-    let Some(db_path) = opts.db_path.clone() else {
-        eyre::bail!("db path is required");
-    };
-
-    let sqlite_pool = setup_sqlite(db_path.clone()).await?;
-
-    let (tx, rx) = mpsc::channel();
-    let ai_manager_res = AIManager::new(sqlite_pool, gpt_key);
-
-    let Ok(ai_manager) = ai_manager_res else {
-        panic!("failed to create the ai manager");
-    };
-
-    let twitch_event_handler = Box::new(ai_manager);
-
-    let websocket_client = websocket::WebsocketClient {
-        session_id: None,
-        token,
-        client,
-        user_id,
-        connect_url: twitch_api::TWITCH_EVENTSUB_WEBSOCKET_URL.clone(),
-        twitch_event_handler: twitch_event_handler,
-    };
-
-    let websocket_client = {
-        let opts = opts.clone();
-        async move { websocket_client.run(&opts, tx).await }
-    };
-
-    let r = tokio::try_join!(
-        flatten(tokio::spawn(retainer_cleanup)),
-        flatten(tokio::spawn(websocket_client)),
-        flatten(tokio::spawn(event_queue(rx)))
-    );
-    r?;
-    Ok(())
-}
 
 async fn event_queue(rx: mpsc::Receiver<String>) -> eyre::Result<()> {
     Ok(())

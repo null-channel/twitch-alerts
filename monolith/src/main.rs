@@ -80,8 +80,9 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
 
     let sqlite_pool = setup_sqlite(db_path.clone()).await?;
 
-    let (tx, rx) = mpsc::channel();
-    let ai_manager_res = AIManager::new(sqlite_pool, gpt_key);
+    let (sender,receiver) = mpsc::channel();
+
+    let ai_manager_res = AIManager::new(sqlite_pool, gpt_key,receiver);
 
     let Ok(ai_manager) = ai_manager_res else {
         panic!("failed to create the ai manager");
@@ -89,32 +90,31 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
 
     let twitch_event_handler = Box::new(ai_manager);
 
+
+
     let websocket_client = WebsocketClient {
         session_id: None,
         token,
         client,
         user_id,
         connect_url: twitch_api::TWITCH_EVENTSUB_WEBSOCKET_URL.clone(),
-        twitch_event_handler: twitch_event_handler,
     };
 
-    let websocket_client = {
+    let websocket_client_bla = {
         let opts = opts.clone();
-        async move { websocket_client.run(&opts, tx).await }
+        let sender = sender.clone();
+        async move { websocket_client.run(&opts,sender.clone()).await }
     };
 
     let r = tokio::try_join!(
         flatten(tokio::spawn(retainer_cleanup)),
-        flatten(tokio::spawn(websocket_client)),
-        flatten(tokio::spawn(event_queue(rx)))
+        //TODO: make this work
+        //flatten(tokio::spawn(websocket_client_bla)),
     );
     r?;
     Ok(())
 }
 
-async fn event_queue(rx: mpsc::Receiver<String>) -> eyre::Result<()> {
-    Ok(())
-}
 
 async fn setup_sqlite(db: String) -> eyre::Result<SqlitePool> {
     // will create the db if needed
