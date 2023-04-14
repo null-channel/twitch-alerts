@@ -1,4 +1,3 @@
-
 #[derive(Debug)]
 pub struct NewTwitchEventMessage {
     pub event: TwitchEvent,
@@ -15,4 +14,3 @@ pub enum TwitchEvent {
 pub struct FollowEvent {
     pub user_name: String,
 }
-

@@ -1,5 +1,4 @@
 use clap::{builder::ArgPredicate, ArgGroup, Parser};
-use twitch_api::twitch_oauth2::AccessToken;
 
 #[derive(Parser, Debug, Clone)]
 #[clap(about, version,

@@ -2,11 +2,11 @@
 mod util;
 use ai_manager::AIManager;
 use clap::Parser;
-use twitch_listener_lib::opts::{Opts, Secret};
+use twitch_listener_lib::opts::Opts;
 use twitch_listener_lib::websocket::WebsocketClient;
 use twitch_oauth2::UserToken;
 
-use std::{env, path::Path, sync::Arc, thread};
+use std::{env, path::Path, sync::Arc};
 
 use eyre::Context;
 
@@ -80,17 +80,13 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
 
     let sqlite_pool = setup_sqlite(db_path.clone()).await?;
 
-    let (sender,receiver) = mpsc::channel();
+    let (sender, receiver) = mpsc::sync_channel(100);
 
-    let ai_manager_res = AIManager::new(sqlite_pool, gpt_key,receiver);
+    let ai_manager_res = AIManager::new(sqlite_pool, gpt_key, receiver);
 
     let Ok(ai_manager) = ai_manager_res else {
         panic!("failed to create the ai manager");
     };
-
-    let twitch_event_handler = Box::new(ai_manager);
-
-
 
     let websocket_client = WebsocketClient {
         session_id: None,
@@ -98,23 +94,30 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
         client,
         user_id,
         connect_url: twitch_api::TWITCH_EVENTSUB_WEBSOCKET_URL.clone(),
+        sender,
     };
 
-    let websocket_client_bla = {
-        let opts = opts.clone();
-        let sender = sender.clone();
-        async move { websocket_client.run(&opts,sender.clone()).await }
-    };
+    /*
+       let websocket_client_bla = {
+           let opts = opts.clone();
+           let sender = sender.clone();
+           let websocket_client = websocket_client.clone();
+           async move {  }
+       };
+    */
+    let clinet = websocket_client.clone();
 
     let r = tokio::try_join!(
         flatten(tokio::spawn(retainer_cleanup)),
-        //TODO: make this work
-        //flatten(tokio::spawn(websocket_client_bla)),
+        flatten(tokio::spawn(async move {
+            let clinet = clinet.clone();
+            clinet.run().await
+        })),
+        flatten(tokio::spawn(async move { ai_manager.run() })),
     );
     r?;
     Ok(())
 }
-
 
 async fn setup_sqlite(db: String) -> eyre::Result<SqlitePool> {
     // will create the db if needed
