@@ -8,29 +8,24 @@ use tokio::runtime::Handle;
 pub struct AIManager {
     pub sqlite_pool: sqlx::SqlitePool,
     pub chat_gpt: ChatGPT,
-    pub res: Receiver<NewTwitchEventMessage>,
 }
 
 impl AIManager {
-    pub fn new(
-        sqlite: sqlx::SqlitePool,
-        chat_key: String,
-        res: Receiver<NewTwitchEventMessage>,
-    ) -> anyhow::Result<Self> {
+    pub fn new(sqlite: sqlx::SqlitePool, chat_key: String) -> anyhow::Result<Self> {
         let chat = ChatGPT::new(chat_key)?;
         Ok(AIManager {
             sqlite_pool: sqlite,
             chat_gpt: chat,
-            res: res,
         })
     }
 
-    pub fn run(&self) -> Result<(), eyre::Error> {
-        let thread_handle = Handle::current();
+    pub async fn run(&self, receiver: Receiver<NewTwitchEventMessage>) -> Result<(), eyre::Error> {
         loop {
-            match self.res.recv() {
+            let msg = receiver.recv();
+
+            match msg {
                 Ok(message) => {
-                    let res = thread_handle.block_on(self.new_event(message));
+                    let res = self.new_event(message).await;
                     match res {
                         Ok(()) => {
                             println!("ok");

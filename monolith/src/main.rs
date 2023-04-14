@@ -82,7 +82,7 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
 
     let (sender, receiver) = mpsc::sync_channel(100);
 
-    let ai_manager_res = AIManager::new(sqlite_pool, gpt_key, receiver);
+    let ai_manager_res = AIManager::new(sqlite_pool, gpt_key);
 
     let Ok(ai_manager) = ai_manager_res else {
         panic!("failed to create the ai manager");
@@ -113,7 +113,7 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
             let clinet = clinet.clone();
             clinet.run().await
         })),
-        flatten(tokio::spawn(async move { ai_manager.run() })),
+        flatten(tokio::spawn(async move { ai_manager.run(receiver).await })),
     );
     r?;
     Ok(())
