@@ -13,4 +13,5 @@ pub enum TwitchEvent {
 #[derive(Debug)]
 pub struct FollowEvent {
     pub user_name: String,
+    pub user_id: String,
 }

@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS sub_events
 
 CREATE TABLE IF NOT EXISTS follow_events
 (
+    account_id    INTEGER             NOT NULL,
     user_id       INTEGER PRIMARY KEY NOT NULL,
     user_name     TEXT                NOT NULL,
     tier          INTEGER             NOT NULL DEFAULT 1000,

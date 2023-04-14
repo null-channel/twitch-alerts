@@ -170,10 +170,11 @@ impl WebsocketClient {
 fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
     match payload {
         Event::ChannelFollowV2(Payload {
-            message: Message::Notification(ChannelFollowV2Payload { user_name, .. }),
+            message: Message::Notification(ChannelFollowV2Payload { user_name, user_id, .. }),
             ..
         }) => Ok(TwitchEvent::ChannelFollow(FollowEvent {
             user_name: user_name.to_string(),
+            user_id: user_id.to_string(),
         })),
         Event::ChannelSubscribeV1(Payload {
             message: Message::Notification(..),
