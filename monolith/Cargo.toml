@@ -16,7 +16,8 @@ twitch_api = {path = "../twitch_api", features = [
     "eventsub",
     "hmac",
     "unsupported",
-    "deny_unknown_fields" ]}
+    "deny_unknown_fields",
+    "mock_api", ]}
 twitch_oauth2 = {path = "../twitch_api/twitch_oauth2" }
 clap = { version = "4.1.8", features = ["derive", "env"] }
 color-eyre = { version = "0.6", features = ["capture-spantrace"] }

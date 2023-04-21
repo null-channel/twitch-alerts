@@ -37,6 +37,8 @@ async fn main() -> Result<(), eyre::Report> {
 }
 
 pub async fn run(opts: &Opts) -> eyre::Result<()> {
+
+    
     let client: HelixClient<'static, _> = twitch_api::HelixClient::with_client(
         <reqwest::Client>::default_client_with_name(Some(
             "twitch-rs/eventsub"

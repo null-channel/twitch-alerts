@@ -1,3 +1,5 @@
+pub mod sqlite;
+
 use std::sync::mpsc::Receiver;
 
 use chatgpt::prelude::{ChatGPT, Conversation};
@@ -56,17 +58,10 @@ impl AIManager {
                     .await?;
 
 
-                    let mut conn = self.sqlite_pool.acquire().await?;
-                    let todo_id = sqlx::query!(
-                        r#"
-                INSERT INTO story_segments ( event_type )
-                VALUES ( ? )
-                        "#,
-                        "Follow"
-                    )
-                    .execute(&mut conn)
-                    .await?;
                 println!("Response: {}", response.message().content);
+                let mut conn = self.sqlite_pool.acquire().await?;
+                let db_results = sqlite::write_new_story_segment(conn, follow_event.user_id, "follow".to_string(), response.message().content.to_string()).await?;
+                println!("db_results: {:?}", db_results);
             }
         }
         Ok(())

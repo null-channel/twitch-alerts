@@ -174,7 +174,7 @@ fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
             ..
         }) => Ok(TwitchEvent::ChannelFollow(FollowEvent {
             user_name: user_name.to_string(),
-            user_id: user_id.to_string(),
+            user_id: user_id.to_string().parse::<i64>()?,
         })),
         Event::ChannelSubscribeV1(Payload {
             message: Message::Notification(..),
