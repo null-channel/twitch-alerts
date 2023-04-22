@@ -22,12 +22,3 @@ CREATE TABLE IF NOT EXISTS story_segments
     event_type    TEXT                NOT NULL,
     story_segment TEXT                NOT NULL DEFAULT 0
 );
-
-CREATE TABLE IF NOT EXISTS raid_events
-(
-    user_id       INTEGER PRIMARY KEY NOT NULL,
-    user_name     TEXT                NOT NULL,
-    raiders       INTEGER             NOT NULL DEFAULT 0,
-    raid_at       DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    story_segment TEXT                NOT NULL DEFAULT 0
-);

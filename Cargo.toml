@@ -6,6 +6,7 @@ members = [
     "common",
     "monolith",
     "kafka",
+    "frontend",
 ]
 
 exclude = [
