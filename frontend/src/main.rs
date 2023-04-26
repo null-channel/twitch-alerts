@@ -3,12 +3,9 @@ use gloo::timers::callback::{Interval, Timeout};
 use yew::{html, Component, Context, Html};
 
 pub enum Msg {
-    StartTimeout,
-    StartInterval,
-    Cancel,
-    Done,
-    Tick,
-    UpdateTime,
+    NewEventMsg,
+    EventFinished,
+    PollApi,
 }
 
 pub struct App {
@@ -18,6 +15,8 @@ pub struct App {
     interval: Option<Interval>,
     timeout: Option<Timeout>,
     console_timer: Option<Timer<'static>>,
+    event_queue: Vec<String>,
+    current_message: String,
 }
 
 impl App {
@@ -42,7 +41,7 @@ impl Component for App {
 
         let clock_handle = {
             let link = ctx.link().clone();
-            Interval::new(1, move || link.send_message(Msg::UpdateTime))
+            Interval::new(30000, move || link.send_message(Msg::PollApi))
         };
 
         Self {
@@ -52,86 +51,78 @@ impl Component for App {
             interval: None,
             timeout: None,
             console_timer: None,
+            event_queue: Vec::new(),
+            current_message: String::from(""),
         }
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            Msg::StartTimeout => {
-                let handle = {
-                    let link = ctx.link().clone();
-                    Timeout::new(3000, move || link.send_message(Msg::Done))
-                };
-
-                self.timeout = Some(handle);
-
-                self.messages.clear();
-                console::clear!();
-
-                self.messages.push("Timer started!");
-                self.console_timer = Some(Timer::new("Timer"));
+            Msg::PollApi => {
+                //poll api for new events
+                self.event_queue.push(String::from("This is a message to display to the users"));
+                let link = ctx.link().clone();
+                link.send_message(Msg::NewEventMsg);
                 true
             }
-            Msg::StartInterval => {
-                let handle = {
-                    let link = ctx.link().clone();
-                    Interval::new(1000, move || link.send_message(Msg::Tick))
-                };
-                self.interval = Some(handle);
-
-                self.messages.clear();
-                console::clear!();
-
-                self.messages.push("Interval started!");
-                true
-            }
-            Msg::Cancel => {
-                self.cancel();
-                self.messages.push("Canceled!");
-                console::warn!("Canceled!");
-                true
-            }
-            Msg::Done => {
-                self.cancel();
-                self.messages.push("Done!");
-
-                // todo weblog
-                // ConsoleService::group();
-                console::info!("Done!");
-                if let Some(timer) = self.console_timer.take() {
-                    drop(timer);
+            Msg::NewEventMsg => {
+                let message = self.event_queue.pop();
+                if let Some(message) = message {
+                    self.current_message = message;
                 }
+                
+                let link = ctx.link().clone();
+                let timeout = Timeout::new(3000, move || link.send_message(Msg::EventFinished));
+                
+                Timeout::forget(timeout);
+                true
+            }
+            Msg::EventFinished => {
+                self.current_message = String::from("");
+                if !self.event_queue.is_empty() {
+                    let link = ctx.link().clone();
+                    link.send_message(Msg::NewEventMsg);
+                }
+                true
+            }
+            // Msg::Done => {
+            //     self.cancel();
+            //     self.messages.push("Done!");
 
-                // todo weblog
-                // ConsoleService::group_end();
-                true
-            }
-            Msg::Tick => {
-                self.messages.push("Tick...");
-                // todo weblog
-                // ConsoleService::count_named("Tick");
-                true
-            }
-            Msg::UpdateTime => {
-                self.time = App::get_current_time();
-                true
-            }
+            //     // todo weblog
+            //     // ConsoleService::group();
+            //     console::info!("Done!");
+            //     if let Some(timer) = self.console_timer.take() {
+            //         drop(timer);
+            //     }
+
+            //     // todo weblog
+            //     // ConsoleService::group_end();
+            //     true
+            // }
+            // Msg::Tick => {
+            //     self.messages.push("Tick...");
+            //     // todo weblog
+            //     // ConsoleService::count_named("Tick");
+            //     true
+            // }
+            // Msg::UpdateTime => {
+            //     self.time = App::get_current_time();
+            //     true
+            // }
         }
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let has_job = self.timeout.is_some() || self.interval.is_some();
+        let has_job = false;//self.timeout.is_some() || self.interval.is_some();
         html! {
             <>
                 <div id="buttons">
-                    <button disabled={has_job} onclick={ctx.link().callback(|_| Msg::StartTimeout)}>
-                        { "Start Timeout" }
+                    <button disabled={has_job} onclick={ctx.link().callback(|_| Msg::NewEventMsg)}>
+                        { "New Event" }
                     </button>
-                    <button disabled={has_job} onclick={ctx.link().callback(|_| Msg::StartInterval)}>
-                        { "Start Interval" }
-                    </button>
-                    <button disabled={!has_job} onclick={ctx.link().callback(|_| Msg::Cancel)}>
-                        { "Cancel!" }
+                    <button disabled={has_job} onclick={ctx.link().callback(|_| Msg::PollApi)}>
+                        { "Poll Api" }
                     </button>
                 </div>
                 <div id="wrapper">
@@ -139,7 +130,7 @@ impl Component for App {
                         { &self.time }
                     </div>
                     <div id="messages">
-                        { for self.messages.iter().map(|message| html! { <p>{ message }</p> }) }
+                        {  html! { <p>{ self.current_message.as_str() }</p> } }
                     </div>
                 </div>
             </>
