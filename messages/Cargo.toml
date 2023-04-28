@@ -1,11 +1,11 @@
 [package]
-name = "kafka"
+name = "messages"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-messages = { path = "../messages" }
-rdkafka = "0.29.0"
 twitch_api = {path = "../twitch_api", features = ["eventsub"]}
+async-trait = "0.1.68"
+anyhow = "1.0.51"

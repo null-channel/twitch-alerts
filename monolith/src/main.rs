@@ -1,9 +1,9 @@
 #![warn(clippy::unwrap_in_result)]
 mod util;
-use ai_manager::AIManager;
+use ai_manager_service::AIManager;
 use clap::Parser;
-use twitch_listener_lib::opts::Opts;
-use twitch_listener_lib::websocket::WebsocketClient;
+use twitch_listener_service_lib::opts::Opts;
+use twitch_listener_service_lib::websocket::WebsocketClient;
 use twitch_oauth2::UserToken;
 
 use std::{env, path::Path, sync::Arc};

@@ -1,12 +1,14 @@
 [workspace]
 
 members = [
-    "ai_manager",
-    "twitch_listener",
-    "common",
+    "ai_manager_service",
+    "twitch_listener_service",
+    "messages",
     "monolith",
     "kafka",
     "frontend",
+    "frontend_api",
+    "user_service",
 ]
 
 exclude = [

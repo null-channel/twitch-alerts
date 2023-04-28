@@ -3,7 +3,7 @@ pub mod sqlite;
 use std::sync::mpsc::Receiver;
 
 use chatgpt::prelude::{ChatGPT, Conversation};
-use common::{NewTwitchEventMessage, TwitchEvent};
+use messages::{NewTwitchEventMessage, TwitchEvent};
 use eyre::eyre;
 use tokio::runtime::Handle;
 

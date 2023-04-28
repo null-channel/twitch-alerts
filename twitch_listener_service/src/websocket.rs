@@ -1,6 +1,6 @@
 use std::sync::{mpsc::SyncSender, Arc};
 
-use common::{FollowEvent, NewTwitchEventMessage, TwitchEvent};
+use messages::{FollowEvent, NewTwitchEventMessage, TwitchEvent};
 use eyre::Context;
 use tokio::sync::RwLock;
 use tokio_tungstenite::tungstenite;
