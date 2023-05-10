@@ -6,7 +6,6 @@ members = [
     "messages",
     "monolith",
     "kafka",
-    "frontend",
     "frontend_api",
     "user_service",
 ]

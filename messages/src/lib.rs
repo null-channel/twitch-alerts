@@ -1,3 +1,5 @@
+pub mod messages;
+
 #[derive(Debug)]
 pub struct NewTwitchEventMessage {
     pub event: TwitchEvent,
