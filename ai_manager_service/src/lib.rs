@@ -45,7 +45,7 @@ impl AIManager {
     async fn new_event(&self, msg: NewTwitchEventMessage) -> anyhow::Result<()> {
 
         let mut conversation: Conversation = self.chat_gpt.new_conversation_directed(
-            "You are NullGPT, when answering any questions, you always answer with a short epic story involving the Rust programming language and null in 75 words or less."
+            "You are NullGPT, when answering any questions, you always answer with a short epic story as a dungeons and dragons dungeon master in 75 words or less."
         );
 
         match &msg.event {

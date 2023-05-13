@@ -28,6 +28,21 @@ function DisplayAlert() {
     onClose: (event) => console.log(event),
     onMessage: addToStack,
   });
+  let [timer, setTimer] = useState<NodeJS.Timeout>();
+  let timerRef = useRef(timer);
+
+  const endTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      dequeue();
+      setTimer(setTimeout(() => {
+        if (list.length > 0) {
+          dequeue();
+        }
+      }, 5000));
+    }
+  }, [timerRef, setTimer, dequeue]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (list.length > 0) {
