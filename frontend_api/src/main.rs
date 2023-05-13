@@ -1,34 +1,46 @@
 use std::{collections::HashMap, sync::Mutex, env, time::Duration};
 
-use forntend_api_lib::{FrontendApi, websocket, PeerMap};
+use forntend_api_lib::{ConnectionMap, accept_connection};
 use messages::messages::{NewDisplayEvent, DisplayEvent, AIEvent};
+use tokio::net::TcpListener;
+use tokio_tungstenite::tungstenite::Message;
+
 
 #[tokio::main]
 async fn main() {
-    let service = FrontendApi{
-        host: "127.0.0.1".to_string(),
-        port: 9000,
-    };
+    env_logger::init();
 
-    let (sender,receiver) = std::sync::mpsc::channel();
+    let addr = "127.0.0.1:9000";
+    let listener = TcpListener::bind(&addr).await.expect("Can't listen");
+    println!("Listening on: {}", addr);
 
-    println!("Starting api server");
-    let addr = env::args().nth(1).unwrap_or_else(|| "127.0.0.1:9000".to_string());
+    let state = ConnectionMap::new(Mutex::new(HashMap::new()));
 
-    let state = PeerMap::new(Mutex::new(HashMap::new()));
-    println!("got here");
     let state2 = state.clone();
-    tokio::spawn(async move { websocket(addr, state2).await});
 
-    tokio::spawn(async move { service.run(receiver, state.clone())});
+    tokio::spawn(async move {
+        let mut count = 0;
+        loop {
+            {
+                let mut state2 = state2.lock().unwrap();
 
-    loop {
-        sender.send(NewDisplayEvent{event: DisplayEvent::ChannelFollow(AIEvent{story_segment: "Hello".to_string(), icon_uri: "none".to_string()})}).unwrap();
+                for (&addr, tx) in state2.iter_mut() {
+                    println!("Sending message to: {}", addr);
+                    if tx.unbounded_send(Message::Text(format!("{}",count))).is_err() {
+                        println!("closing websocket message to: {} ==========", addr);
+                    }
+                }
+                count += 1;
+            }
+            tokio::time::sleep(Duration::from_millis(1000)).await;
+        }
+    });
 
-        // put thread to sleep for 10 seconds
-        tokio::time::sleep(Duration::from_millis(3000)).await;
+    while let Ok((stream, _)) = listener.accept().await {
+        let peer = stream.peer_addr().expect("connected streams should have a peer address");
+        println!("Peer address: {}", peer);
+
+        tokio::spawn(accept_connection(peer, stream, state.clone()));
     }
 }
-
-
 
