@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 const WS_URL = 'ws://127.0.0.1:9000';
 
 function DisplayAlert() {
-  useWebSocket(WS_URL, {
+  const { sendJsonMessage, readyState } = useWebSocket(WS_URL, {
     onOpen: () => {
       console.log('WebSocket connection established.');
     },
@@ -20,19 +20,26 @@ function DisplayAlert() {
   });
 
   const [message, setMessage] = useState("");
-  const [list, { enqueue, dequeue }] = useQueueState(["1","2","3"]);
-
-  function addToStack(event: WebSocketEventMap['message']) {
-    enqueue(event.data);
+  const [list, { enqueue, dequeue }] = useQueueState([{value:"1",timeSeconds:5},{value:"2",timeSeconds:5},{value:"3",timeSeconds:5}]);
+  const [displayingMessage, setDispalyingMessage] = useState<boolean|undefined>();
+  const [doneTime, setDoneTime] = useState<Date|undefined>()
+  const [running, setRunning] = useState(true);
+  if (displayingMessage === undefined) {
+    setDispalyingMessage(false);
   }
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      timerEndChecks();
-    }, 500);
-    return () => clearInterval(interval);
-  }, [dequeue])
+  function addToStack(event: WebSocketEventMap['message']) {
+    console.log("new ws message");
+    sendJsonMessage({message:"got your message sir."})
+    enqueue({value:event.data,timeSeconds:5});
+  }
 
+  const handle = useEffect(() => {
+      const interval = setInterval(() => {
+        timerEndChecks();
+      }, 1000);
+      return () => clearInterval(interval);
+  }, [dequeue,sendJsonMessage])
 
   function timerEndChecks() {
     console.log("timer ended");
@@ -46,7 +53,7 @@ function DisplayAlert() {
     const message = dequeue();
     console.log("message: "+ message);
     if (message != undefined) {
-      setMessage(message);
+      setMessage(message.value);
     }
     console.log("list: "+ list);
   }

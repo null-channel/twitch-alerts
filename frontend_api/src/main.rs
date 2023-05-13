@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Mutex, env};
+use std::{collections::HashMap, sync::Mutex, env, time::Duration};
 
 use forntend_api_lib::{FrontendApi, websocket, PeerMap};
 use messages::messages::{NewDisplayEvent, DisplayEvent, AIEvent};
@@ -26,7 +26,7 @@ async fn main() {
         sender.send(NewDisplayEvent{event: DisplayEvent::ChannelFollow(AIEvent{story_segment: "Hello".to_string(), icon_uri: "none".to_string()})}).unwrap();
 
         // put thread to sleep for 10 seconds
-        std::thread::sleep(std::time::Duration::from_secs(1));
+        tokio::time::sleep(Duration::from_millis(3000)).await;
     }
 }
 
