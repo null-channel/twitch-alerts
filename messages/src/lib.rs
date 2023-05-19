@@ -1,4 +1,5 @@
-pub mod messages;
+use serde::{Deserialize, Serialize};
+
 
 #[derive(Debug)]
 pub struct NewTwitchEventMessage {
@@ -16,4 +17,13 @@ pub enum TwitchEvent {
 pub struct FollowEvent {
     pub user_name: String,
     pub user_id: i64,
+}
+
+// Path: messages/src/lib.rs
+// { "{ "message": "hello world", "image_url": "https:://something.com" }" }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct DisplayMessage {
+    pub message: String,
+    pub image_url: String,
+    pub sound_url: String,
 }

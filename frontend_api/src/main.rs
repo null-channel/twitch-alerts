@@ -1,7 +1,6 @@
 use std::{collections::HashMap, sync::Mutex, env, time::Duration};
 
 use forntend_api_lib::{ConnectionMap, accept_connection};
-use messages::messages::{NewDisplayEvent, DisplayEvent, AIEvent};
 use tokio::net::TcpListener;
 use tokio_tungstenite::tungstenite::Message;
 

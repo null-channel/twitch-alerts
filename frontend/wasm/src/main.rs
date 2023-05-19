@@ -61,6 +61,7 @@ impl Component for App {
         // create websocket connection
         let wb_callback = ctx.link().callback(Msg::WebsocketMessage);
         listen_to_webhook(wb_callback);
+
         // Run both futures to completion
         let standalone_handle =
             Interval::new(10000, || console::debug!("Example of a standalone callback."));
@@ -120,31 +121,6 @@ impl Component for App {
                 link.send_message(Msg::NewEventMsg);
                 true
             }
-            // Msg::Done => {
-            //     self.cancel();
-            //     self.messages.push("Done!");
-
-            //     // todo weblog
-            //     // ConsoleService::group();
-            //     console::info!("Done!");
-            //     if let Some(timer) = self.console_timer.take() {
-            //         drop(timer);
-            //     }
-
-            //     // todo weblog
-            //     // ConsoleService::group_end();
-            //     true
-            // }
-            // Msg::Tick => {
-            //     self.messages.push("Tick...");
-            //     // todo weblog
-            //     // ConsoleService::count_named("Tick");
-            //     true
-            // }
-            // Msg::UpdateTime => {
-            //     self.time = App::get_current_time();
-            //     true
-            // }
         }
     }
 
@@ -192,11 +168,13 @@ pub fn listen_to_webhook(callback: Callback<String>) {
                     match msg {
                         Ok(Message::Text(data)) => {
                             log!("from websocket: {}", data);
+                            callback.emit(data);
                         }
                         Ok(Message::Bytes(b)) => {
                             let decoded = std::str::from_utf8(&b);
                             if let Ok(val) = decoded {
                                 log!("from websocket: {}", val);
+                                callback.emit(val.to_string());
                             }
                         }
                         Err(e) => {

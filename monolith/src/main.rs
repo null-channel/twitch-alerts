@@ -2,6 +2,7 @@
 mod util;
 use ai_manager_service::AIManager;
 use clap::Parser;
+use forntend_api_lib::FrontendApi;
 use twitch_listener_service_lib::opts::Opts;
 use twitch_listener_service_lib::websocket::WebsocketClient;
 use twitch_oauth2::UserToken;
@@ -11,8 +12,7 @@ use std::{env, path::Path, sync::Arc};
 use eyre::Context;
 
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
-use std::sync::mpsc;
-use tokio::{sync::RwLock, task::JoinHandle};
+use tokio::{sync::{RwLock, mpsc}, task::JoinHandle};
 use twitch_api::{client::ClientDefault, HelixClient};
 
 #[tokio::main]
@@ -82,9 +82,10 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
 
     let sqlite_pool = setup_sqlite(db_path.clone()).await?;
 
-    let (sender, receiver) = mpsc::sync_channel(100);
+    let (sender, receiver) = mpsc::unbounded_channel();
+    let (frentend_sender, frontend_receiver) = mpsc::unbounded_channel();
 
-    let ai_manager_res = AIManager::new(sqlite_pool, gpt_key);
+    let ai_manager_res = AIManager::new(sqlite_pool, gpt_key, frentend_sender);
 
     let Ok(ai_manager) = ai_manager_res else {
         panic!("failed to create the ai manager");
@@ -98,6 +99,8 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
         connect_url: twitch_api::TWITCH_EVENTSUB_WEBSOCKET_URL.clone(),
         sender,
     };
+
+    let frontend_api = FrontendApi::new("127.0.0.1:9000".into());
 
     /*
        let websocket_client_bla = {
@@ -116,6 +119,7 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
             clinet.run().await
         })),
         flatten(tokio::spawn(async move { ai_manager.run(receiver).await })),
+        flatten(tokio::spawn(async move { frontend_api.run(frontend_receiver).await })),
     );
     r?;
     Ok(())

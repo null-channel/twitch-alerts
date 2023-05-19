@@ -3,30 +3,32 @@ pub mod sqlite;
 use std::sync::mpsc::Receiver;
 
 use chatgpt::prelude::{ChatGPT, Conversation};
-use messages::{NewTwitchEventMessage, TwitchEvent};
+use messages::{NewTwitchEventMessage, TwitchEvent, DisplayMessage};
 use eyre::eyre;
-use tokio::runtime::Handle;
+use tokio::{runtime::Handle, sync::mpsc};
 
 pub struct AIManager {
     pub sqlite_pool: sqlx::SqlitePool,
     pub chat_gpt: ChatGPT,
+    pub frontend_sender: mpsc::UnboundedSender<DisplayMessage>,
 }
 
 impl AIManager {
-    pub fn new(sqlite: sqlx::SqlitePool, chat_key: String) -> anyhow::Result<Self> {
+    pub fn new(sqlite: sqlx::SqlitePool, chat_key: String, fs: mpsc::UnboundedSender<DisplayMessage>) -> anyhow::Result<Self> {
         let chat = ChatGPT::new(chat_key)?;
         Ok(AIManager {
             sqlite_pool: sqlite,
             chat_gpt: chat,
+            frontend_sender: fs,
         })
     }
 
-    pub async fn run(&self, receiver: Receiver<NewTwitchEventMessage>) -> Result<(), eyre::Error> {
+    pub async fn run(&self, mut receiver: mpsc::UnboundedReceiver<NewTwitchEventMessage>) -> Result<(), eyre::Error> {
         loop {
-            let msg = receiver.recv();
+            let msg = (&mut receiver).recv().await;
 
             match msg {
-                Ok(message) => {
+                Some(message) => {
                     let res = self.new_event(message).await;
                     match res {
                         Ok(()) => {
@@ -37,7 +39,7 @@ impl AIManager {
                         }
                     }
                 }
-                Err(e) => return Err(eyre!("error: {}", e)),
+                None => return Err(eyre!("error: receiver closed")),
             }
         }
     }

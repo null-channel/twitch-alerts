@@ -1,9 +1,10 @@
 use std::{sync::{mpsc::Receiver, Arc, Mutex}, env, collections::HashMap};
-use messages::messages::NewDisplayEvent;
-use tokio::{net::{TcpListener, TcpStream}};
+use messages::{DisplayMessage};
+use tokio::{net::{TcpListener, TcpStream}, sync::mpsc};
 use futures_channel::mpsc::{unbounded, UnboundedSender};
 use std::net::SocketAddr;
 use futures_util::{future, pin_mut, stream::TryStreamExt, StreamExt, SinkExt};
+use eyre::eyre;
 
 use tokio_tungstenite::{
     accept_async,
@@ -12,6 +13,65 @@ use tokio_tungstenite::{
 
 type Tx = UnboundedSender<Message>;
 pub type ConnectionMap = Arc<Mutex<HashMap<SocketAddr, Tx>>>;
+
+
+
+pub struct FrontendApi {
+    address: String,
+    connection_state: ConnectionMap,
+}
+
+impl FrontendApi {
+    pub fn new(addr: String) -> FrontendApi {
+        FrontendApi {
+            address: addr,
+            connection_state: ConnectionMap::new(Mutex::new(HashMap::new())),
+        }
+    }
+
+    pub async fn run(&self, mut receiver: mpsc::UnboundedReceiver<DisplayMessage>) -> Result<(), eyre::Error> {
+
+        let listener = TcpListener::bind(&self.address).await.expect("Can't listen");
+        println!("Listening on: {}", self.address);
+    
+        let state2 = self.connection_state.clone();
+    
+        tokio::spawn(async move {
+            loop {
+                let msg = (&mut receiver).recv().await;
+    
+                match msg {
+                    Some(message) => {
+                        let mut state2 = state2.lock().unwrap();
+                        let Ok(message) = serde_json::to_string(&message) else {
+                            println!("Error serializing message");
+                            continue;
+                        };
+                        for (&addr, tx) in state2.iter_mut() {
+                            println!("Sending message to: {}", addr);
+
+                            if tx.unbounded_send(Message::Text(message.clone())).is_err() {
+                                println!("closing websocket message to: {} ==========", addr);
+                            }
+                        }
+                    }
+                    None => panic!("Error receiving message")
+                }
+            }
+        });
+
+        let new_connection_state = self.connection_state.clone();
+    
+        while let Ok((stream, _)) = listener.accept().await {
+            let peer = stream.peer_addr().expect("connected streams should have a peer address");
+            println!("Peer address: {}", peer);
+    
+            tokio::spawn(accept_connection(peer, stream, new_connection_state.clone()));
+        };        
+        Ok(())
+    }
+}
+
 
 pub async fn accept_connection(peer: SocketAddr, stream: TcpStream, state: ConnectionMap) {
     if let Err(e) = handle_connection(peer, stream, state).await {

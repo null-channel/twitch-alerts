@@ -30,17 +30,21 @@ function DisplayAlert() {
   });
   let [timer, setTimer] = useState<NodeJS.Timeout>();
   let timerRef = useRef(timer);
+  let setTimerRef = useRef(setTimer);
 
   const endTimer = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       dequeue();
-      setTimer(setTimeout(() => {
-        if (list.length > 0) {
-          dequeue();
-        }
+      setTimerRef.current(setTimeout(() => {
+        endTimer();
+      }, 5000));
+    } else {
+      setTimerRef.current(setTimeout(() => {
+        endTimer();
       }, 5000));
     }
+
   }, [timerRef, setTimer, dequeue]);
 
   useEffect(() => {

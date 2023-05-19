@@ -9,3 +9,5 @@ edition = "2021"
 twitch_api = {path = "../twitch_api", features = ["eventsub"]}
 async-trait = "0.1.68"
 anyhow = "1.0.51"
+serde = {version = "1.0.163", features = ["derive"]}
+serde_json = "1.0.96"

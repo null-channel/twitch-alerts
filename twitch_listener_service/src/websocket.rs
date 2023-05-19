@@ -1,8 +1,8 @@
-use std::sync::{mpsc::SyncSender, Arc};
+use std::sync::{Arc};
 
 use messages::{FollowEvent, NewTwitchEventMessage, TwitchEvent};
 use eyre::Context;
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, mpsc::UnboundedSender};
 use tokio_tungstenite::tungstenite;
 use tracing::Instrument;
 use twitch_api::{
@@ -23,7 +23,7 @@ pub struct WebsocketClient {
     pub client: HelixClient<'static, reqwest::Client>,
     pub user_id: types::UserId,
     pub connect_url: url::Url,
-    pub sender: SyncSender<NewTwitchEventMessage>,
+    pub sender: UnboundedSender<NewTwitchEventMessage>,
 }
 
 impl WebsocketClient {
