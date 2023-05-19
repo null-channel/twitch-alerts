@@ -12,7 +12,10 @@ use std::{env, path::Path, sync::Arc};
 use eyre::Context;
 
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
-use tokio::{sync::{RwLock, mpsc}, task::JoinHandle};
+use tokio::{
+    sync::{mpsc, RwLock},
+    task::JoinHandle,
+};
 use twitch_api::{client::ClientDefault, HelixClient};
 
 #[tokio::main]
@@ -37,8 +40,6 @@ async fn main() -> Result<(), eyre::Report> {
 }
 
 pub async fn run(opts: &Opts) -> eyre::Result<()> {
-
-    
     let client: HelixClient<'static, _> = twitch_api::HelixClient::with_client(
         <reqwest::Client>::default_client_with_name(Some(
             "twitch-rs/eventsub"
@@ -119,7 +120,9 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
             clinet.run().await
         })),
         flatten(tokio::spawn(async move { ai_manager.run(receiver).await })),
-        flatten(tokio::spawn(async move { frontend_api.run(frontend_receiver).await })),
+        flatten(tokio::spawn(async move {
+            frontend_api.run(frontend_receiver).await
+        })),
     );
     r?;
     Ok(())

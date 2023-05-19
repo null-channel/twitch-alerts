@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Debug)]
 pub struct NewTwitchEventMessage {
     pub event: TwitchEvent,

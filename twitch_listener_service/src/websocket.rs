@@ -1,8 +1,8 @@
-use std::sync::{Arc};
+use std::sync::Arc;
 
-use messages::{FollowEvent, NewTwitchEventMessage, TwitchEvent};
 use eyre::Context;
-use tokio::sync::{RwLock, mpsc::UnboundedSender};
+use messages::{FollowEvent, NewTwitchEventMessage, TwitchEvent};
+use tokio::sync::{mpsc::UnboundedSender, RwLock};
 use tokio_tungstenite::tungstenite;
 use tracing::Instrument;
 use twitch_api::{
@@ -170,7 +170,10 @@ impl WebsocketClient {
 fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
     match payload {
         Event::ChannelFollowV2(Payload {
-            message: Message::Notification(ChannelFollowV2Payload { user_name, user_id, .. }),
+            message:
+                Message::Notification(ChannelFollowV2Payload {
+                    user_name, user_id, ..
+                }),
             ..
         }) => Ok(TwitchEvent::ChannelFollow(FollowEvent {
             user_name: user_name.to_string(),

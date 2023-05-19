@@ -3,8 +3,8 @@ pub mod sqlite;
 use std::sync::mpsc::Receiver;
 
 use chatgpt::prelude::{ChatGPT, Conversation};
-use messages::{NewTwitchEventMessage, TwitchEvent, DisplayMessage};
 use eyre::eyre;
+use messages::{DisplayMessage, NewTwitchEventMessage, TwitchEvent};
 use tokio::{runtime::Handle, sync::mpsc};
 
 pub struct AIManager {
@@ -14,7 +14,11 @@ pub struct AIManager {
 }
 
 impl AIManager {
-    pub fn new(sqlite: sqlx::SqlitePool, chat_key: String, fs: mpsc::UnboundedSender<DisplayMessage>) -> anyhow::Result<Self> {
+    pub fn new(
+        sqlite: sqlx::SqlitePool,
+        chat_key: String,
+        fs: mpsc::UnboundedSender<DisplayMessage>,
+    ) -> anyhow::Result<Self> {
         let chat = ChatGPT::new(chat_key)?;
         Ok(AIManager {
             sqlite_pool: sqlite,
@@ -23,7 +27,10 @@ impl AIManager {
         })
     }
 
-    pub async fn run(&self, mut receiver: mpsc::UnboundedReceiver<NewTwitchEventMessage>) -> Result<(), eyre::Error> {
+    pub async fn run(
+        &self,
+        mut receiver: mpsc::UnboundedReceiver<NewTwitchEventMessage>,
+    ) -> Result<(), eyre::Error> {
         loop {
             let msg = (&mut receiver).recv().await;
 
@@ -45,7 +52,6 @@ impl AIManager {
     }
 
     async fn new_event(&self, msg: NewTwitchEventMessage) -> anyhow::Result<()> {
-
         let mut conversation: Conversation = self.chat_gpt.new_conversation_directed(
             "You are NullGPT, when answering any questions, you always answer with a short epic story as a dungeons and dragons dungeon master in 75 words or less."
         );
@@ -59,10 +65,15 @@ impl AIManager {
                     ))
                     .await?;
 
-
                 println!("Response: {}", response.message().content);
                 let mut conn = self.sqlite_pool.acquire().await?;
-                let db_results = sqlite::write_new_story_segment(conn, follow_event.user_id, "follow".to_string(), response.message().content.to_string()).await?;
+                let db_results = sqlite::write_new_story_segment(
+                    conn,
+                    follow_event.user_id,
+                    "follow".to_string(),
+                    response.message().content.to_string(),
+                )
+                .await?;
                 println!("db_results: {:?}", db_results);
             }
         }

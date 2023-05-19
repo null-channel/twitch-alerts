@@ -1,9 +1,8 @@
-use std::{collections::HashMap, sync::Mutex, env, time::Duration};
+use std::{collections::HashMap, env, sync::Mutex, time::Duration};
 
-use forntend_api_lib::{ConnectionMap, accept_connection};
+use forntend_api_lib::{accept_connection, ConnectionMap};
 use tokio::net::TcpListener;
 use tokio_tungstenite::tungstenite::Message;
-
 
 #[tokio::main]
 async fn main() {
@@ -25,7 +24,10 @@ async fn main() {
 
                 for (&addr, tx) in state2.iter_mut() {
                     println!("Sending message to: {}", addr);
-                    if tx.unbounded_send(Message::Text(format!("{}",count))).is_err() {
+                    if tx
+                        .unbounded_send(Message::Text(format!("{}", count)))
+                        .is_err()
+                    {
                         println!("closing websocket message to: {} ==========", addr);
                     }
                 }
@@ -36,10 +38,11 @@ async fn main() {
     });
 
     while let Ok((stream, _)) = listener.accept().await {
-        let peer = stream.peer_addr().expect("connected streams should have a peer address");
+        let peer = stream
+            .peer_addr()
+            .expect("connected streams should have a peer address");
         println!("Peer address: {}", peer);
 
         tokio::spawn(accept_connection(peer, stream, state.clone()));
     }
 }
-

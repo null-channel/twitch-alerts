@@ -1,10 +1,15 @@
-use futures_channel::mpsc::{UnboundedSender, UnboundedReceiver, unbounded};
+use futures_channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
 use futures_util::{SinkExt, StreamExt};
-use std::{net::SocketAddr, sync::{Arc, Mutex}, collections::HashMap, time::Duration};
-use tokio::{net::{TcpListener, TcpStream}};
+use std::{
+    collections::HashMap,
+    net::SocketAddr,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
+use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::{
     accept_async,
-    tungstenite::{Error, Result, Message},
+    tungstenite::{Error, Message, Result},
 };
 type Tx = UnboundedSender<Message>;
 pub type ConnectionMap = Arc<Mutex<HashMap<SocketAddr, Tx>>>;
@@ -18,9 +23,13 @@ async fn accept_connection(peer: SocketAddr, stream: TcpStream, state: Connectio
     }
 }
 
-async fn handle_connection(peer: SocketAddr, stream: TcpStream, state: ConnectionMap) -> Result<()> {
+async fn handle_connection(
+    peer: SocketAddr,
+    stream: TcpStream,
+    state: ConnectionMap,
+) -> Result<()> {
     let ws_stream = accept_async(stream).await.expect("Failed to accept");
-    
+
     let (tx, mut rx) = unbounded();
     {
         state.lock().unwrap().insert(peer, tx);
@@ -81,7 +90,9 @@ async fn main() {
     });
 
     while let Ok((stream, _)) = listener.accept().await {
-        let peer = stream.peer_addr().expect("connected streams should have a peer address");
+        let peer = stream
+            .peer_addr()
+            .expect("connected streams should have a peer address");
         println!("Peer address: {}", peer);
 
         tokio::spawn(accept_connection(peer, stream, state.clone()));
