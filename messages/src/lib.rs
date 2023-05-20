@@ -25,4 +25,5 @@ pub struct DisplayMessage {
     pub message: String,
     pub image_url: String,
     pub sound_url: String,
+    pub display_time: usize,
 }

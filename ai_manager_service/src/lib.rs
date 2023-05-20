@@ -53,14 +53,14 @@ impl AIManager {
 
     async fn new_event(&self, msg: NewTwitchEventMessage) -> anyhow::Result<()> {
         let mut conversation: Conversation = self.chat_gpt.new_conversation_directed(
-            "You are NullGPT, when answering any questions, you always answer with a short epic story as a dungeons and dragons dungeon master in 75 words or less."
+            "You are D&DGPT, when answering any questions, you always answer with a short epic story as a dungeons and dragons dungeon master in 65 words or less."
         );
 
         match &msg.event {
             TwitchEvent::ChannelFollow(follow_event) => {
                 let response = conversation
                     .send_message(format!(
-                        "tell me an epic story about my new follower {}?",
+                        "tell me an epic story about how {} became my new follower?",
                         follow_event.user_name
                     ))
                     .await?;
@@ -75,6 +75,17 @@ impl AIManager {
                 )
                 .await?;
                 println!("db_results: {:?}", db_results);
+
+                let display_time = response.message().content.split(" ").count() * 500;
+                //TODO: check if there is a "MAX_DISPLAY_TIME" env var
+
+                let display_message = DisplayMessage{
+                    message: response.message().content.to_string(),
+                    image_url: "none".to_string(),
+                    sound_url: "none".to_string(),
+                    display_time: display_time,
+                };
+                self.frontend_sender.send(display_message)?;
             }
         }
         Ok(())

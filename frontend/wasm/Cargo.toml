@@ -13,6 +13,7 @@ wasm-bindgen = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 image = "0.24.6"
+messages = { path = "../../messages" }
 
 ws_stream_wasm = "0.7.4"
 pharos = "0.5.3"

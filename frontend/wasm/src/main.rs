@@ -3,6 +3,7 @@ use std::env;
 use ::futures::StreamExt;
 use gloo::console::{self, Timer};
 use gloo::timers::callback::{Interval, Timeout};
+use messages::DisplayMessage;
 use reqwasm::http::Request;
 use wasm_bindgen::UnwrapThrowExt;
 use ws_stream_wasm::{WsMessage, WsMeta};
@@ -98,15 +99,26 @@ impl Component for App {
                 true
             }
             Msg::NewEventMsg => {
-                let message = self.event_queue.pop();
-                if let Some(message) = message {
-                    self.current_message = message;
+                let message_json = self.event_queue.pop();
+
+                if let Some(message_json) = message_json {
+                let message = serde_json::from_str::<DisplayMessage>(&message_json);
+
+                    let Ok(message) = message else {
+                        log!("Error parsing message: {}", message_json);
+                        return true;
+                    };
+
+                    self.current_message = message.message;
+
+                    log!("New message with display time: {}", message.display_time);
+
+                    let link = ctx.link().clone();
+                    let timeout = Timeout::new(message.display_time as u32, move || link.send_message(Msg::EventFinished));
+
+                    Timeout::forget(timeout);
                 }
 
-                let link = ctx.link().clone();
-                let timeout = Timeout::new(500, move || link.send_message(Msg::EventFinished));
-
-                Timeout::forget(timeout);
                 true
             }
             Msg::EventFinished => {

@@ -18,7 +18,7 @@ use tokio::{
 };
 use twitch_api::{client::ClientDefault, HelixClient};
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 32)]
 async fn main() -> Result<(), eyre::Report> {
     util::install_utils()?;
     let opts = Opts::parse();
@@ -40,6 +40,8 @@ async fn main() -> Result<(), eyre::Report> {
 }
 
 pub async fn run(opts: &Opts) -> eyre::Result<()> {
+
+
     let client: HelixClient<'static, _> = twitch_api::HelixClient::with_client(
         <reqwest::Client>::default_client_with_name(Some(
             "twitch-rs/eventsub"
@@ -92,7 +94,7 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
         panic!("failed to create the ai manager");
     };
 
-    let websocket_client = WebsocketClient {
+    let twitch_websocket_client = WebsocketClient {
         session_id: None,
         token,
         client,
@@ -111,12 +113,12 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
            async move {  }
        };
     */
-    let clinet = websocket_client.clone();
+    let twithc_clinet = twitch_websocket_client.clone();
 
     let r = tokio::try_join!(
         flatten(tokio::spawn(retainer_cleanup)),
         flatten(tokio::spawn(async move {
-            let clinet = clinet.clone();
+            let clinet = twithc_clinet.clone();
             clinet.run().await
         })),
         flatten(tokio::spawn(async move { ai_manager.run(receiver).await })),
