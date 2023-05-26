@@ -140,22 +140,15 @@ impl Component for App {
         }
     }
 
-    fn view(&self, ctx: &Context<Self>) -> Html {
-        let has_job = false; //self.timeout.is_some() || self.interval.is_some();
+    fn view(&self, ctx: &Context<Self>) -> Html { //self.timeout.is_some() || self.interval.is_some();
         html! {
             <>
-                <div id="buttons">
-                    <button disabled={has_job} onclick={ctx.link().callback(|_| Msg::NewEventMsg)}>
-                        { "New Event" }
-                    </button>
-                    <button disabled={has_job} onclick={ctx.link().callback(|_| Msg::PollApi)}>
-                        { "Poll Api" }
-                    </button>
-                </div>
                 <div id="wrapper">
-                    <div id="time">
-                        { &self.time }
-                    </div>
+                    if self.current_message != "" {
+                        <div id="clan_image">
+                            <img src="img/null-logo.svg" alt="null logo"/> 
+                        </div>
+                    }
                     <div id="messages">
                         {  html! { <p>{ self.current_message.as_str() }</p> } }
                     </div>
