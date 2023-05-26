@@ -40,3 +40,7 @@ messages = { path = "../messages" }
 ai_manager_service = { path = "../ai_manager_service" }
 twitch_listener_service = { path = "../twitch_listener_service" }
 frontend_api = { path = "../frontend_api" }
+
+
+[patch.crates-io.twitch_types]
+git = "https://github.com/twitch-rs/twitch_api"
