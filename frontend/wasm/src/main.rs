@@ -102,7 +102,7 @@ impl Component for App {
                 let message_json = self.event_queue.pop();
 
                 if let Some(message_json) = message_json {
-                let message = serde_json::from_str::<DisplayMessage>(&message_json);
+                    let message = serde_json::from_str::<DisplayMessage>(&message_json);
 
                     let Ok(message) = message else {
                         log!("Error parsing message: {}", message_json);
@@ -114,7 +114,9 @@ impl Component for App {
                     log!("New message with display time: {}", message.display_time);
 
                     let link = ctx.link().clone();
-                    let timeout = Timeout::new(message.display_time as u32, move || link.send_message(Msg::EventFinished));
+                    let timeout = Timeout::new(message.display_time as u32, move || {
+                        link.send_message(Msg::EventFinished)
+                    });
 
                     Timeout::forget(timeout);
                 }
@@ -140,13 +142,14 @@ impl Component for App {
         }
     }
 
-    fn view(&self, ctx: &Context<Self>) -> Html { //self.timeout.is_some() || self.interval.is_some();
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        //self.timeout.is_some() || self.interval.is_some();
         html! {
             <>
                 <div id="wrapper">
                     if self.current_message != "" {
                         <div id="clan_image">
-                            <img src="img/null-logo.svg" alt="null logo"/> 
+                            <img src="img/null-logo.svg" alt="null logo"/>
                         </div>
                     }
                     <div id="messages">

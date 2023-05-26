@@ -5,6 +5,7 @@ use messages::{FollowEvent, NewTwitchEventMessage, TwitchEvent};
 use tokio::sync::{mpsc::UnboundedSender, RwLock};
 use tokio_tungstenite::tungstenite;
 use tracing::Instrument;
+use twitch_api::twitch_oauth2::UserToken;
 use twitch_api::{
     eventsub::{
         channel::ChannelFollowV2Payload,
@@ -14,7 +15,6 @@ use twitch_api::{
     types::{self},
     HelixClient,
 };
-use twitch_api::twitch_oauth2::UserToken;
 
 #[derive(Clone)]
 pub struct WebsocketClient {

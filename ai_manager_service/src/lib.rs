@@ -79,7 +79,7 @@ impl AIManager {
                 let display_time = response.message().content.split(" ").count() * 500;
                 //TODO: check if there is a "MAX_DISPLAY_TIME" env var
 
-                let display_message = DisplayMessage{
+                let display_message = DisplayMessage {
                     message: response.message().content.to_string(),
                     image_url: "none".to_string(),
                     sound_url: "none".to_string(),
