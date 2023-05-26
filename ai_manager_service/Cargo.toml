@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 messages = { path = "../messages" }
-twitch_api = {path = "../twitch_api", features = ["eventsub"]}
 sqlx = { version = "0.6.2", features = ["sqlite", "runtime-tokio-native-tls"] }
 async-trait = "0.1.68"
 anyhow = "1.0.51"

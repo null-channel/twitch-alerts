@@ -1,5 +1,5 @@
 use eyre::Context;
-use twitch_oauth2::UserToken;
+use twitch_api::twitch_oauth2::UserToken;
 
 use crate::opts::Opts;
 
@@ -55,8 +55,8 @@ fn install_tracing() {
 
 #[tracing::instrument(skip(client, token))]
 pub async fn make_token<'a>(
-    client: &'a impl twitch_oauth2::client::Client,
-    token: impl Into<twitch_oauth2::AccessToken>,
+    client: &'a impl twitch_api::twitch_oauth2::client::Client,
+    token: impl Into<twitch_api::twitch_oauth2::AccessToken>,
 ) -> Result<UserToken, eyre::Report> {
     UserToken::from_existing(client, token.into(), None, None)
         .await

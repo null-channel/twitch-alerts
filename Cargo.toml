@@ -15,3 +15,6 @@ members = [
 exclude = [
     "twitch_api"
 ]
+
+[patch.crates-io.twitch_types]
+git = "https://github.com/twitch-rs/twitch_api"

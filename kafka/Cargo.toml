@@ -7,5 +7,4 @@ edition = "2021"
 
 [dependencies]
 messages = { path = "../messages" }
-rdkafka = "0.29.0"
-twitch_api = {path = "../twitch_api", features = ["eventsub"]}
+rdkafka = "0.31.0"

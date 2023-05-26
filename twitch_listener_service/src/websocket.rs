@@ -14,7 +14,7 @@ use twitch_api::{
     types::{self},
     HelixClient,
 };
-use twitch_oauth2::UserToken;
+use twitch_api::twitch_oauth2::UserToken;
 
 #[derive(Clone)]
 pub struct WebsocketClient {
@@ -43,7 +43,7 @@ impl WebsocketClient {
             accept_unmasked_frames: false,
         };
         let (socket, _) =
-            tokio_tungstenite::connect_async_with_config(&self.connect_url, Some(config))
+            tokio_tungstenite::connect_async_with_config(&self.connect_url, Some(config), false)
                 .await
                 .context("Can't connect")?;
 

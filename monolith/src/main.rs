@@ -5,7 +5,7 @@ use clap::Parser;
 use forntend_api_lib::FrontendApi;
 use twitch_listener_service_lib::opts::Opts;
 use twitch_listener_service_lib::websocket::WebsocketClient;
-use twitch_oauth2::UserToken;
+use twitch_api::twitch_oauth2::UserToken;
 
 use std::{env, path::Path, sync::Arc};
 
