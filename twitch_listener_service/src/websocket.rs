@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
 use eyre::Context;
-use messages::{FollowEvent, NewTwitchEventMessage, TwitchEvent};
+use messages::{FollowEvent, NewTwitchEventMessage, TwitchEvent, SubscribeEvent};
 use tokio::sync::{mpsc::UnboundedSender, RwLock};
 use tokio_tungstenite::tungstenite;
 use tracing::Instrument;
+use twitch_api::eventsub::channel::ChannelSubscribeV1Payload;
 use twitch_api::twitch_oauth2::UserToken;
 use twitch_api::{
     eventsub::{
@@ -180,9 +181,18 @@ fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
             user_id: user_id.to_string().parse::<i64>()?,
         })),
         Event::ChannelSubscribeV1(Payload {
-            message: Message::Notification(..),
+            message: Message::Notification(ChannelSubscribeV1Payload {
+                user_name, user_id, broadcaster_user_id, broadcaster_user_name, is_gift, tier, ..
+            }),
             ..
-        }) => Err(eyre::eyre!("ChannelSubscribeV1 is not supported")),
+        }) => Ok(TwitchEvent::ChannelSubscribe(SubscribeEvent {
+            user_name: user_name.to_string(),
+            user_id: user_id.to_string().parse::<i64>()?,
+            broadcaster_user_id: broadcaster_user_id.to_string().parse::<i64>()?,
+            broadcaster_user_name: broadcaster_user_name.to_string(),
+            is_gift,
+            tier: twitch_teir_to_teir(tier),
+        })),
         Event::ChannelCheerV1(Payload {
             message: Message::Notification(..),
             ..
@@ -275,5 +285,15 @@ fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
             ..
         }) => Err(eyre::eyre!("ChannelUpdateV1 is not supported")),
         _ => todo!(),
+    }
+}
+
+fn twitch_teir_to_teir(twithc_teir: types::SubscriptionTier) -> messages::SubscriptionTier {
+    match twithc_teir {
+        types::SubscriptionTier::Tier1 => messages::SubscriptionTier::Tier1,
+        types::SubscriptionTier::Tier2 => messages::SubscriptionTier::Tier2,
+        types::SubscriptionTier::Tier3 => messages::SubscriptionTier::Tier3,
+        types::SubscriptionTier::Other(i) => messages::SubscriptionTier::Other(i),
+        types::SubscriptionTier::Prime => messages::SubscriptionTier::Prime,
     }
 }

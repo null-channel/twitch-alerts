@@ -10,12 +10,40 @@ pub struct NewTwitchEventMessage {
 #[derive(Debug)]
 pub enum TwitchEvent {
     ChannelFollow(FollowEvent),
+    ChannelSubscribe(SubscribeEvent),
 }
 
 #[derive(Debug)]
 pub struct FollowEvent {
     pub user_name: String,
     pub user_id: i64,
+}
+
+#[derive(Debug)]
+pub struct SubscribeEvent {
+    pub broadcaster_user_id: i64,
+    pub broadcaster_user_name: String,
+    pub user_name: String,
+    pub user_id: i64,
+    pub is_gift: bool,
+    pub tier: SubscriptionTier,
+}
+
+#[derive(Debug)]
+pub enum SubscriptionTier {
+    /// Tier 1. $4.99
+    #[cfg_attr(feature = "serde", serde(rename = "1000"))]
+    Tier1,
+    /// Tier 1. $9.99
+    #[cfg_attr(feature = "serde", serde(rename = "2000"))]
+    Tier2,
+    /// Tier 1. $24.99
+    #[cfg_attr(feature = "serde", serde(rename = "3000"))]
+    Tier3,
+    /// Prime subscription
+    Prime,
+    /// Other
+    Other(String),
 }
 
 // Path: messages/src/lib.rs

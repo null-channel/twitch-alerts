@@ -4,7 +4,7 @@ use std::sync::mpsc::Receiver;
 
 use chatgpt::prelude::{ChatGPT, Conversation};
 use eyre::eyre;
-use messages::{DisplayMessage, NewTwitchEventMessage, TwitchEvent};
+use messages::{DisplayMessage, NewTwitchEventMessage, TwitchEvent, FollowEvent, SubscribeEvent};
 use tokio::{runtime::Handle, sync::mpsc};
 
 pub struct AIManager {
@@ -58,36 +58,85 @@ impl AIManager {
 
         match &msg.event {
             TwitchEvent::ChannelFollow(follow_event) => {
-                let response = conversation
-                    .send_message(format!(
-                        "tell me an epic story about how {} became my new follower?",
-                        follow_event.user_name
-                    ))
-                    .await?;
-
-                println!("Response: {}", response.message().content);
-                let mut conn = self.sqlite_pool.acquire().await?;
-                let db_results = sqlite::write_new_story_segment(
-                    conn,
-                    follow_event.user_id,
-                    "follow".to_string(),
-                    response.message().content.to_string(),
-                )
-                .await?;
-                println!("db_results: {:?}", db_results);
-
-                let display_time = response.message().content.split(" ").count() * 500;
-                //TODO: check if there is a "MAX_DISPLAY_TIME" env var
-
-                let display_message = DisplayMessage {
-                    message: response.message().content.to_string(),
-                    image_url: "none".to_string(),
-                    sound_url: "none".to_string(),
-                    display_time: display_time,
-                };
-                self.frontend_sender.send(display_message)?;
+                self.handle_follow_event(follow_event, conversation).await?;
             }
+            TwitchEvent::ChannelSubscribe(sub_event) => {
+                self.handle_subscribe_event(sub_event, conversation).await?;
+            },
         }
+        Ok(())
+    }
+
+    pub async fn get_story_segment(
+        &self,
+        user_id: i64,
+        event_type: String,
+    ) -> anyhow::Result<String> {
+        let mut conn = self.sqlite_pool.acquire().await?;
+        let db_results = sqlite::get_latest_story_segments_for_user(conn, user_id).await?;
+        Ok(db_results)
+    }
+
+    pub async fn handle_subscribe_event(&self, subscriber_event: &SubscribeEvent, mut conversation: Conversation) -> anyhow::Result<()> {
+        let response = conversation
+            .send_message(format!(
+                "tell me an epic story about how {} became my new subscriber?",
+                subscriber_event.user_name
+            ))
+            .await?;
+
+        println!("Response: {}", response.message().content);
+        let mut conn = self.sqlite_pool.acquire().await?;
+        let db_results = sqlite::write_new_story_segment(
+            conn,
+            subscriber_event.user_id,
+            "subscribe".to_string(),
+            response.message().content.to_string(),
+        )
+        .await?;
+        println!("db_results: {:?}", db_results);
+
+        let display_time = response.message().content.split(" ").count() * 500;
+
+        let display_message = DisplayMessage {
+            message: response.message().content.to_string(),
+            image_url: "none".to_string(),
+            sound_url: "none".to_string(),
+            display_time: display_time,
+        };
+        self.frontend_sender.send(display_message)?;
+        Ok(())
+    }
+
+    pub async fn handle_follow_event(&self, follow_event: &FollowEvent, mut conversation: Conversation) -> anyhow::Result<()> {
+        let response = conversation
+            .send_message(format!(
+                "tell me an epic story about how {} became my new follower?",
+                follow_event.user_name
+            ))
+            .await?;
+
+        println!("Response: {}", response.message().content);
+        let mut conn = self.sqlite_pool.acquire().await?;
+        let db_results = sqlite::write_new_story_segment(
+            conn,
+            follow_event.user_id,
+            "follow".to_string(),
+            response.message().content.to_string(),
+        )
+        .await?;
+        println!("db_results: {:?}", db_results);
+
+        let display_time = response.message().content.split(" ").count() * 500;
+        //TODO: check if there is a "MAX_DISPLAY_TIME" env var
+
+        let display_message = DisplayMessage {
+            message: response.message().content.to_string(),
+            image_url: "none".to_string(),
+            sound_url: "none".to_string(),
+            display_time: display_time,
+        };
+        self.frontend_sender.send(display_message)?;
         Ok(())
     }
 }
