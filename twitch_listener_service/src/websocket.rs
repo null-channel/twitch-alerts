@@ -119,7 +119,7 @@ impl WebsocketClient {
         &self,
         data: Event,
         metadata: &NotificationMetadata<'_>,
-        payload: &str,
+        _payload: &str,
     ) -> Result<(), eyre::Report> {
         // TODO: Delete as this is wrong... but is how it still works for right now!
 
