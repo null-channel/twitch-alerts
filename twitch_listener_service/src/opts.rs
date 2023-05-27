@@ -24,9 +24,7 @@ pub struct Opts {
     #[clap(long, env, hide_env = true, group = "channel")]
     pub channel_id: Option<String>,
     /// URL to service that provides OAuth2 token. Called on start and whenever the token needs to be refreshed.
-    ///
-    /// This application does not do any refreshing of tokens.
-    #[clap(long, env, hide_env = true, group = "token",
+    #[clap(long, env, hide_env = true, group = "service",
         value_parser = url::Url::parse, required_unless_present = "token"
         )]
     pub oauth2_service_url: Option<url::Url>,
