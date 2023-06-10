@@ -151,10 +151,11 @@ impl Component for App {
                         <div id="clan_image">
                             <img src="img/null-logo.svg" alt="null logo"/>
                         </div>
+                        <div id="messages">
+                            {  html! { <p>{ self.current_message.as_str() }</p> } }
+                        </div>
                     }
-                    <div id="messages">
-                        {  html! { <p>{ self.current_message.as_str() }</p> } }
-                    </div>
+
                 </div>
             </>
         }

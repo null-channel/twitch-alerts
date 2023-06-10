@@ -1,0 +1,2 @@
+export TWITCH_HELIX_URL=http://localhost:8080
+export TWITCH_EVENTSUB_WEBSOCKET_URL=ws://127.0.0.1:8080/ws

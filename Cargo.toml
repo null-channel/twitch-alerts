@@ -8,7 +8,6 @@ members = [
     "kafka",
     "frontend_api",
     "user_service",
-    "websocket_server_test",
     "frontend/wasm"
 ]
 
