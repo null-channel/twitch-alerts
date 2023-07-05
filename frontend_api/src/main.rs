@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, sync::Mutex, time::Duration};
+use std::{collections::HashMap, sync::Mutex, time::Duration};
 
 use forntend_api_lib::{accept_connection, ConnectionMap};
 use tokio::net::TcpListener;
