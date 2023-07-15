@@ -170,7 +170,7 @@ pub fn listen_to_webhook(callback: Callback<String>) {
     // Spawn a background task that will fetch a joke and send it to the component.
     log!("Spawning background task for webhook.");
 
-    let ws_res = WebSocket::open("ws://127.0.0.1:9000");
+    let ws_res = WebSocket::open("ws://10.1.1.53:9000");
 
     match ws_res {
         Ok(ws) => {

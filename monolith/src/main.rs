@@ -101,7 +101,7 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
         sender,
     };
 
-    let frontend_api = FrontendApi::new("127.0.0.1:9000".into());
+    let frontend_api = FrontendApi::new("0.0.0.0:9000".into());
 
     /*
        let websocket_client_bla = {
@@ -136,14 +136,18 @@ async fn setup_sqlite(db: String) -> eyre::Result<SqlitePool> {
     let pool = SqlitePool::connect_with(url).await?;
 
     // Run migrations
-    let migrations = if env::var("RUST_ENV") == Ok("production".to_string()) {
+    let migrations = if env::var("ENV") == Ok("production".to_string()) {
         // Productions migrations dir
-        std::env::current_exe()?.join("./migrations")
+
+        let crate_dir = std::env::var("AI_MIGRATIONS_DIR")?;
+        Path::new(&crate_dir).join("migrations")
     } else {
         // Development migrations dir
         let crate_dir = std::env::var("CARGO_MANIFEST_DIR")?;
         Path::new(&crate_dir).join("./migrations")
     };
+
+    println!("Running migrations from: {:?}", migrations.clone());
 
     sqlx::migrate::Migrator::new(migrations)
         .await?
