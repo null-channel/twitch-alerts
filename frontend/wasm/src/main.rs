@@ -60,10 +60,13 @@ impl Component for App {
         // create websocket connection
         let wb_callback = ctx.link().callback(Msg::WebsocketMessage);
 
-        
+        let loc = gloo::utils::window().location();
 
-        listen_to_webhook(wb_callback);
+        let host = loc.hostname();
 
+        if let Ok(websocket_host) = host {
+            listen_to_webhook(wb_callback, websocket_host);
+        }
         // Run both futures to completion
         let standalone_handle = Interval::new(10000, || {
             console::debug!("Example of a standalone callback.")
@@ -164,13 +167,13 @@ fn main() {
     yew::Renderer::<App>::new().render();
 }
 
-pub fn listen_to_webhook(callback: Callback<String>) {
+pub fn listen_to_webhook(callback: Callback<String>, host: String) {
     // Spawn a background task
-
+    let conn_string = format!("ws://{}:9000", host);
     spawn_local(async move {
         loop {
             log!("Spawning background task for webhook.");
-            let ws_res = WebSocket::open("ws://10.1.1.53:9000");
+            let ws_res = WebSocket::open(&conn_string);
             match ws_res {
                 Ok(ws) => {
                     let (mut write, mut read) = ws.split();
@@ -189,7 +192,6 @@ pub fn listen_to_webhook(callback: Callback<String>) {
                             }
                             Err(e) => {
                                 log!("ws: {:?}", e);
-                                std::thread::sleep(std::time::Duration::from_millis(5000));
                             }
                         }
                     }
