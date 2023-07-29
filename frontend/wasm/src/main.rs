@@ -59,6 +59,9 @@ impl Component for App {
     fn create(ctx: &Context<Self>) -> Self {
         // create websocket connection
         let wb_callback = ctx.link().callback(Msg::WebsocketMessage);
+
+        
+
         listen_to_webhook(wb_callback);
 
         // Run both futures to completion
