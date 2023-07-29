@@ -5,9 +5,9 @@ use gloo::console::{self, Timer};
 use gloo::timers::callback::{Interval, Timeout};
 use messages::DisplayMessage;
 use reqwasm::http::Request;
+use std::sync::mpsc::{Receiver, Sender};
 use wasm_bindgen::UnwrapThrowExt;
 use ws_stream_wasm::{WsMessage, WsMeta};
-use yew::platform::pinned::mpsc::UnboundedSender;
 use yew::platform::spawn_local;
 use yew::{html, AttrValue, Callback, Component, Context, Html};
 
@@ -15,11 +15,6 @@ use reqwasm::websocket::{
     futures::{self, WebSocket},
     Message,
 };
-
-use pharos::*;
-use wasm_bindgen::prelude::*;
-use ws_stream_wasm::*;
-//use futures::prelude::*;
 
 // A macro to provide `println!(..)`-style syntax for `console.log` logging.
 macro_rules! log {
@@ -167,36 +162,41 @@ fn main() {
 }
 
 pub fn listen_to_webhook(callback: Callback<String>) {
-    // Spawn a background task that will fetch a joke and send it to the component.
-    log!("Spawning background task for webhook.");
+    // Spawn a background task
 
-    let ws_res = WebSocket::open("ws://10.1.1.53:9000");
-
-    match ws_res {
-        Ok(ws) => {
-            spawn_local(async move {
-                let (mut write, mut read) = ws.split();
-                while let Some(msg) = read.next().await {
-                    match msg {
-                        Ok(Message::Text(data)) => {
-                            log!("from websocket: {}", data);
-                            callback.emit(data);
-                        }
-                        Ok(Message::Bytes(b)) => {
-                            let decoded = std::str::from_utf8(&b);
-                            if let Ok(val) = decoded {
-                                log!("from websocket: {}", val);
-                                callback.emit(val.to_string());
+    spawn_local(async move {
+        loop {
+            log!("Spawning background task for webhook.");
+            let ws_res = WebSocket::open("ws://10.1.1.53:9000");
+            match ws_res {
+                Ok(ws) => {
+                    let (mut write, mut read) = ws.split();
+                    while let Some(msg) = read.next().await {
+                        match msg {
+                            Ok(Message::Text(data)) => {
+                                log!("from websocket: {}", data);
+                                callback.emit(data);
+                            }
+                            Ok(Message::Bytes(b)) => {
+                                let decoded = std::str::from_utf8(&b);
+                                if let Ok(val) = decoded {
+                                    log!("from websocket: {}", val);
+                                    callback.emit(val.to_string());
+                                }
+                            }
+                            Err(e) => {
+                                log!("ws: {:?}", e);
+                                std::thread::sleep(std::time::Duration::from_millis(5000));
                             }
                         }
-                        Err(e) => {
-                            log!("ws: {:?}", e)
-                        }
                     }
+                    log!("WebSocket Closed");
                 }
-                log!("WebSocket Closed");
-            });
+                Err(e) => {
+                    println!("Error connecting HERE {:?}", e);
+                    std::thread::sleep(std::time::Duration::from_millis(5000));
+                }
+            }
         }
-        Err(e) => println!("Error connecting HERE {:?}", e),
-    }
+    });
 }
