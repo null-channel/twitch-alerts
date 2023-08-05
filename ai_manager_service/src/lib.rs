@@ -4,7 +4,7 @@ use std::sync::mpsc::Receiver;
 
 use chatgpt::prelude::{ChatGPT, Conversation};
 use eyre::eyre;
-use messages::{DisplayMessage, NewTwitchEventMessage, TwitchEvent, FollowEvent, SubscribeEvent};
+use messages::{DisplayMessage, NewTwitchEventMessage, TwitchEvent, FollowEvent, SubscribeEvent, RaidEvent};
 use tokio::{runtime::Handle, sync::mpsc};
 
 pub struct AIManager {
@@ -63,6 +63,9 @@ impl AIManager {
             TwitchEvent::ChannelSubscribe(sub_event) => {
                 self.handle_subscribe_event(sub_event, conversation).await?;
             },
+            TwitchEvent::ChannelRaid(raid_event) => {
+                self.handle_raid_event(raid_event, conversation).await?;
+            }
         }
         Ok(())
     }
@@ -77,10 +80,41 @@ impl AIManager {
         Ok(db_results)
     }
 
+    
+    pub async fn handle_raid_event(&self, raid_event: &RaidEvent, mut conversation: Conversation) -> anyhow::Result<()> {
+        let response = conversation
+            .send_message(format!(
+                "tell me an epic story about how {} party joined forces for a joint quest.",
+                raid_event.from_broadcaster_user_name
+            ))
+            .await?;
+
+        println!("Response: {}", response.message().content);
+        let mut conn = self.sqlite_pool.acquire().await?;
+        let db_results = sqlite::write_new_raid_event(
+            conn,
+            raid_event,
+            response.message().content.to_string(),
+        )
+        .await?;
+        println!("db_results: {:?}", db_results);
+
+        let display_time = response.message().content.split(" ").count() * 500;
+
+        let display_message = DisplayMessage {
+            message: response.message().content.to_string(),
+            image_url: "none".to_string(),
+            sound_url: "none".to_string(),
+            display_time: display_time,
+        };
+        self.frontend_sender.send(display_message)?;
+        Ok(())
+    }
+
     pub async fn handle_subscribe_event(&self, subscriber_event: &SubscribeEvent, mut conversation: Conversation) -> anyhow::Result<()> {
         let response = conversation
             .send_message(format!(
-                "tell me an epic story about how {} became my new subscriber?",
+                "tell me an epic story about how {} supported the party",
                 subscriber_event.user_name
             ))
             .await?;
@@ -111,7 +145,7 @@ impl AIManager {
     pub async fn handle_follow_event(&self, follow_event: &FollowEvent, mut conversation: Conversation) -> anyhow::Result<()> {
         let response = conversation
             .send_message(format!(
-                "tell me an epic story about how {} became my new follower?",
+                "tell me an epic story about how {} joined forces with the null party.",
                 follow_event.user_name
             ))
             .await?;

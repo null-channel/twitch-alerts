@@ -11,12 +11,24 @@ pub struct NewTwitchEventMessage {
 pub enum TwitchEvent {
     ChannelFollow(FollowEvent),
     ChannelSubscribe(SubscribeEvent),
+    ChannelRaid(RaidEvent),
 }
 
 #[derive(Debug)]
 pub struct FollowEvent {
     pub user_name: String,
     pub user_id: i64,
+}
+
+#[derive(Debug)]
+pub struct RaidEvent {
+    pub from_broadcaster_user_id: String,
+    pub from_broadcaster_user_login: String,
+    pub from_broadcaster_user_name: String,
+    pub to_broadcaster_user_id: String,
+    pub to_broadcaster_user_login: String,
+    pub to_broadcaster_user_name: String,
+    pub viewers: i64,
 }
 
 #[derive(Debug)]

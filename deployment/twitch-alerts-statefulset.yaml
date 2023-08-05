@@ -65,9 +65,9 @@ spec:
       # Start your application & Litestream to share a PVC data directory.
       containers:
       - name: twitch-alerts
-        image: nullchannel/twitch-alerts:0.1.12
+        image: nullchannel/twitch-alerts:0.1.13
         ports:
-        - name: http
+        - name: websocket
           containerPort: 9000
         volumeMounts:
         - name: data

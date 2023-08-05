@@ -5,9 +5,13 @@ metadata:
 spec:
   type: LoadBalancer
   selector:
-    statefulset.kubernetes.io/pod-name: twitch-alerts-0
+    app: twitch-alerts
   ports:
   - protocol: TCP
     port: 9000
     targetPort: 9000
-    name: http
+    name: websocket
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+    name: frontend

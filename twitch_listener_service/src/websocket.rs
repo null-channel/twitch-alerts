@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use eyre::Context;
-use messages::{FollowEvent, NewTwitchEventMessage, TwitchEvent, SubscribeEvent};
+use messages::{FollowEvent, NewTwitchEventMessage, TwitchEvent, SubscribeEvent, RaidEvent};
 use tokio::sync::{mpsc::UnboundedSender, RwLock};
 use tokio_tungstenite::tungstenite;
 use tracing::Instrument;
-use twitch_api::eventsub::channel::ChannelSubscribeV1Payload;
+use twitch_api::eventsub::channel::{ChannelSubscribeV1Payload, ChannelRaidV1Payload};
 use twitch_api::twitch_oauth2::UserToken;
 use twitch_api::{
     eventsub::{
@@ -162,6 +162,18 @@ impl WebsocketClient {
         self.client
             .req_post(req, body, &*self.token.read().await)
             .await?;
+        let transport = twitch_api::eventsub::Transport::websocket(data.id.clone());
+
+        self.client.create_eventsub_subscription(
+            twitch_api::eventsub::channel::ChannelSubscribeV1::broadcaster_user_id(self.user_id.clone()),
+            transport.clone(), 
+            &*self.token.read().await).await?;
+
+        self.client.create_eventsub_subscription(
+            twitch_api::eventsub::channel::ChannelRaidV1::to_broadcaster_user_id(self.user_id.clone()),
+            transport.clone(), 
+            &*self.token.read().await).await?;
+
         tracing::info!("we are listening");
         Ok(())
     }
@@ -192,6 +204,25 @@ fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
             broadcaster_user_name: broadcaster_user_name.to_string(),
             is_gift,
             tier: twitch_teir_to_teir(tier),
+        })),
+        Event::ChannelRaidV1(Payload {
+            message: Message::Notification(ChannelRaidV1Payload { 
+                from_broadcaster_user_id, 
+                from_broadcaster_user_login, 
+                from_broadcaster_user_name, 
+                to_broadcaster_user_id, 
+                to_broadcaster_user_login, 
+                to_broadcaster_user_name, 
+                viewers, .. }),
+                ..
+        }) => Ok(TwitchEvent::ChannelRaid(RaidEvent{
+            from_broadcaster_user_id: from_broadcaster_user_id.to_string(),
+            from_broadcaster_user_login: from_broadcaster_user_login.to_string(),
+            from_broadcaster_user_name: from_broadcaster_user_name.to_string(),
+            to_broadcaster_user_id: to_broadcaster_user_id.to_string(),
+            to_broadcaster_user_login: to_broadcaster_user_login.to_string(),
+            to_broadcaster_user_name: to_broadcaster_user_name.to_string(),
+            viewers: viewers
         })),
         Event::ChannelCheerV1(Payload {
             message: Message::Notification(..),
@@ -284,6 +315,7 @@ fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
             message: Message::Notification(..),
             ..
         }) => Err(eyre::eyre!("ChannelUpdateV1 is not supported")),
+
         _ => todo!(),
     }
 }

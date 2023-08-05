@@ -15,16 +15,16 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0"
-sqlx = { version = "0.6.2", features = ["sqlite", "runtime-tokio-native-tls"] }
+sqlx = { version = "0.7.1", features = ["sqlite", "runtime-tokio-native-tls"] }
 structopt = "0.3"
-twitch_api = { git = "https://github.com/twitch-rs/twitch_api.git" , features = [
+twitch_api = { git = "https://github.com/twitch-rs/twitch_api.git", ref="ef47c46ff0c2f7f8ea66c8291f22ea39351297ce", features = [
     "reqwest",
     "helix",
     "eventsub",
     "hmac",
     "unsupported",
     "deny_unknown_fields",
-    "mock_api"] }
+    "mock_api"]}
 clap = { version = "4.1.8", features = ["derive", "env"] }
 color-eyre = { version = "0.6", features = ["capture-spantrace"] }
 dotenvy = "0.15.6"
@@ -49,3 +49,4 @@ ai_manager_service = { path = "../ai_manager_service" }
 # workaround for https://github.com/twitch-rs/twitch_api/issues/256
 [patch.crates-io.twitch_types]
 git = "https://github.com/twitch-rs/twitch_api"
+ref = "ef47c46ff0c2f7f8ea66c8291f22ea39351297ce"

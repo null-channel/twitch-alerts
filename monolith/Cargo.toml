@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 
 anyhow = "1.0"
-sqlx = { version = "0.6.3", features = ["sqlite", "runtime-tokio-native-tls"] }
+sqlx = { version = "0.7.1", features = ["sqlite", "runtime-tokio-native-tls"] }
 structopt = "0.3"
 twitch_api = { git = "https://github.com/twitch-rs/twitch_api.git" , features = [
     "reqwest",
@@ -30,7 +30,7 @@ retainer = "0.3.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
 tokio = { version = "1.26.0", features = ["macros", "rt-multi-thread"] }
-tokio-tungstenite = { version = "0.19.0", features = ["native-tls"] }
+tokio-tungstenite = { version = "0.20.0", features = ["native-tls"] }
 tracing = "0.1.37"
 tracing-error = "0.2.0"
 tracing-log = "0.1.3"

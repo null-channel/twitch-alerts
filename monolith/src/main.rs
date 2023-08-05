@@ -144,7 +144,11 @@ async fn setup_sqlite(db: String) -> eyre::Result<SqlitePool> {
     } else {
         // Development migrations dir
         let crate_dir = std::env::var("CARGO_MANIFEST_DIR")?;
-        Path::new(&crate_dir).join("./migrations")
+        let Some(path) = Path::new(&crate_dir).parent() else {
+            panic!()
+        };
+        
+        path.join("ai_manager_service/migrations")
     };
 
     println!("Running migrations from: {:?}", migrations.clone());
