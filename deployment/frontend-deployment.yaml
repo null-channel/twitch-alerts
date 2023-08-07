@@ -8,21 +8,20 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      lbtype: external
+      app: twitch-alerts
   template:
     metadata:
       labels:
-        lbtype: external
         app: twitch-alerts
     spec:
       containers:
       - name: twitch-alerts
-        image: nullchannel/twitch-alerts-frontend:0.1.4
+        image: nullchannel/twitch-alerts-frontend:0.1.7
         imagePullPolicy: Always
         resources:
           limits:
             cpu: 1500m
             memory: "2Gi"
         ports:
-        - containerPort: 8080
+        - containerPort: 80
           name: frontend
