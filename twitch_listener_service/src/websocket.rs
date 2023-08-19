@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use eyre::Context;
-use messages::{FollowEvent, NewTwitchEventMessage, TwitchEvent, SubscribeEvent, RaidEvent};
+use messages::{FollowEvent, NewTwitchEventMessage, TwitchEvent, SubscribeEvent, RaidEvent, ChannelGiftMessage};
 use tokio::sync::{mpsc::UnboundedSender, RwLock};
 use tokio_tungstenite::tungstenite;
 use tracing::Instrument;
@@ -9,7 +9,7 @@ use twitch_api::eventsub::channel::{ChannelSubscribeV1Payload, ChannelRaidV1Payl
 use twitch_api::twitch_oauth2::UserToken;
 use twitch_api::{
     eventsub::{
-        channel::ChannelFollowV2Payload,
+        channel::{ChannelSubscriptionGiftV1Payload,ChannelFollowV2Payload},
         event::websocket::{EventsubWebsocketData, ReconnectPayload, SessionData, WelcomePayload},
         Event, Message, NotificationMetadata, Payload,
     },
@@ -224,6 +224,33 @@ fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
             to_broadcaster_user_name: to_broadcaster_user_name.to_string(),
             viewers: viewers
         })),
+        Event::ChannelSubscriptionGiftV1(Payload {
+            message: Message::Notification(ChannelSubscriptionGiftV1Payload {
+            broadcaster_user_id,
+            broadcaster_user_login,
+            broadcaster_user_name,
+            cumulative_total,
+            is_anonymous,
+            tier,
+            total,
+            user_id,
+            user_login,
+            user_name, ..}),
+            ..
+        }) => {
+            Ok(TwitchEvent::ChannelSubGift(ChannelGiftMessage{
+                broadcaster_user_id: broadcaster_user_id.to_string(),
+                broadcaster_user_login: broadcaster_user_login.to_string(),
+                broadcaster_user_name: broadcaster_user_name.to_string(),
+                cumulative_total: cumulative_total,
+                is_anonymous: is_anonymous,
+                tier: twitch_teir_to_teir(tier),
+                total: total,
+                user_id: braid_optional_to_string_optional(user_id),
+                user_login: braid_optional_to_string_optional(user_login),
+                user_name: braid_optional_to_string_optional(user_name),
+            }))
+        }
         Event::ChannelCheerV1(Payload {
             message: Message::Notification(..),
             ..
@@ -320,12 +347,19 @@ fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
     }
 }
 
-fn twitch_teir_to_teir(twithc_teir: types::SubscriptionTier) -> messages::SubscriptionTier {
+fn twitch_teir_to_teir(twithc_teir: types::SubscriptionTier) -> messages::NullSubTier {
     match twithc_teir {
-        types::SubscriptionTier::Tier1 => messages::SubscriptionTier::Tier1,
-        types::SubscriptionTier::Tier2 => messages::SubscriptionTier::Tier2,
-        types::SubscriptionTier::Tier3 => messages::SubscriptionTier::Tier3,
-        types::SubscriptionTier::Other(i) => messages::SubscriptionTier::Other(i),
-        types::SubscriptionTier::Prime => messages::SubscriptionTier::Prime,
+        types::SubscriptionTier::Tier1 => messages::NullSubTier::Tier1("rare".to_string()),
+        types::SubscriptionTier::Tier2 => messages::NullSubTier::Tier2("epic".to_string()),
+        types::SubscriptionTier::Tier3 => messages::NullSubTier::Tier3("legendary".to_string()),
+        types::SubscriptionTier::Other(i) => messages::NullSubTier::Other(i),
+        types::SubscriptionTier::Prime => messages::NullSubTier::Prime("prime".to_string()),
+    }
+}
+
+fn braid_optional_to_string_optional<T: ToString>(input: Option<T>) -> Option<String> {
+    match input {
+        None => None,
+        Some(thing) => Some(thing.to_string())
     }
 }

@@ -1,3 +1,4 @@
+use anyhow::Ok;
 use sqlx::{pool::PoolConnection, Sqlite};
 
 pub async fn write_new_story_segment(
@@ -17,6 +18,31 @@ VALUES ( ?, ?, ? )
     )
     .execute(&mut *conn)
     .await?;
+    Ok(())
+}
+
+pub async fn write_new_gift_subs_event(
+    mut conn: PoolConnection<Sqlite>,
+    event: &messages::ChannelGiftMessage,
+    tier: String,
+    story_segment: String
+) -> anyhow::Result<()> {
+
+    sqlx::query!(
+        r#"
+INSERT INTO gift_subs_events (
+    broadcaster_user_id, cumulative_total, is_anonymous,
+    tier, total, user_id, user_login, user_name, story_segment 
+)
+VALUES (?, ?, ?, ?, ?, ?, ? ,? ,?)
+    "#,
+    event.broadcaster_user_id, event.cumulative_total,
+    event.is_anonymous, tier, event.total, event.user_id,
+    event.user_login, event.user_name, story_segment
+    )
+    .execute(&mut *conn)
+    .await?;
+
     Ok(())
 }
 
