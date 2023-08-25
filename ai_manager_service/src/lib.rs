@@ -58,15 +58,21 @@ impl AIManager {
 
         match &msg.event {
             TwitchEvent::ChannelFollow(follow_event) => {
+
+                println!("Channel Follow Event!");
                 self.handle_follow_event(follow_event, conversation).await?;
             }
             TwitchEvent::ChannelSubscribe(sub_event) => {
+
+                println!("Channel Subscribe Event!");
                 self.handle_subscribe_event(sub_event, conversation).await?;
             },
             TwitchEvent::ChannelRaid(raid_event) => {
+                println!("Channel Raid Event!");
                 self.handle_raid_event(raid_event, conversation).await?;
             },
             TwitchEvent::ChannelSubGift(sub_gift) => {
+                println!("Channel Sub Gift Event!");
                 self.handle_gift_sub_event(sub_gift, conversation).await?;
             }
         }
@@ -133,8 +139,9 @@ impl AIManager {
     pub async fn handle_raid_event(&self, raid_event: &RaidEvent, mut conversation: Conversation) -> anyhow::Result<()> {
         let response = conversation
             .send_message(format!(
-                "tell me an epic story about how {} party joined forces for a joint quest.",
-                raid_event.from_broadcaster_user_name
+                "tell me an epic story about how {} people from {}'s party joined forces with the Null party for a joint quest.",
+                raid_event.viewers,
+                raid_event.from_broadcaster_user_name,
             ))
             .await?;
 

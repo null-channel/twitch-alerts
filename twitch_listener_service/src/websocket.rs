@@ -123,23 +123,14 @@ impl WebsocketClient {
         _payload: &str,
     ) -> Result<(), eyre::Report> {
         // TODO: Delete as this is wrong... but is how it still works for right now!
-
-        match &data {
-            Event::ChannelFollowV2(Payload {
-                message: Message::Notification(..),
-                ..
-            }) => {
-                let event = new_twitch_event(data)?;
-                let message = NewTwitchEventMessage {
-                    event,
-                    message_at: metadata.message_timestamp.as_str().into(),
-                    message_id: metadata.message_id.to_string(),
-                };
-                self.sender.send(message).unwrap();
-                Ok(())
-            }
-            _ => Ok(()),
-        }
+        let event = new_twitch_event(data)?;
+        let message = NewTwitchEventMessage {
+            event,
+            message_at: metadata.message_timestamp.as_str().into(),
+            message_id: metadata.message_id.to_string(),
+        };
+        self.sender.send(message).unwrap();
+        Ok(())
     }
 
     pub async fn process_welcome_message(
@@ -197,14 +188,18 @@ fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
                 user_name, user_id, broadcaster_user_id, broadcaster_user_name, is_gift, tier, ..
             }),
             ..
-        }) => Ok(TwitchEvent::ChannelSubscribe(SubscribeEvent {
+        }) => 
+        {
+            println!("New sub event +!+!+!+!+!+!!+!+!+!+!+!+!+!+");
+            Ok(TwitchEvent::ChannelSubscribe(SubscribeEvent {
             user_name: user_name.to_string(),
             user_id: user_id.to_string().parse::<i64>()?,
             broadcaster_user_id: broadcaster_user_id.to_string().parse::<i64>()?,
             broadcaster_user_name: broadcaster_user_name.to_string(),
             is_gift,
             tier: twitch_teir_to_teir(tier),
-        })),
+        })
+        )},
         Event::ChannelRaidV1(Payload {
             message: Message::Notification(ChannelRaidV1Payload { 
                 from_broadcaster_user_id, 
