@@ -162,6 +162,7 @@ async fn setup_sqlite(db: String) -> eyre::Result<SqlitePool> {
     Ok(pool)
 }
 
+
 async fn flatten<T>(handle: JoinHandle<Result<T, eyre::Report>>) -> Result<T, eyre::Report> {
     match handle.await {
         Ok(Ok(result)) => Ok(result),

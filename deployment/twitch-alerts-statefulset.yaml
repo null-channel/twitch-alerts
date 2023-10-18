@@ -1,7 +1,7 @@
 # It is recommended to use a StatefulSet as they restrict the number of pods.
 # Applications using Litestream can only be run on a single node at a time.
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: twitch-alerts
   namespace: twitch-alerts
@@ -9,22 +9,9 @@ spec:
   selector:
     matchLabels:
       app: twitch-alerts
-  serviceName: twitch-alerts
 
   # Litestream only supports a single node so this must always be "1".
   replicas: 1
-
-  # Persistent volume is recommended for better durability guarantees between restarts.
-  volumeClaimTemplates:
-  - metadata:
-      name: data
-      namespace: twitch-alerts
-    spec:
-      storageClassName: manual
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: 100Mi
 
   template:
     metadata:
@@ -37,6 +24,9 @@ spec:
       - name: configmap
         configMap:
           name: litestream
+      - name: data
+        emptyDir:
+          sizeLimit: 5G
           
 
       # Initialize using Litestream to restore data automatically
@@ -65,7 +55,7 @@ spec:
       # Start your application & Litestream to share a PVC data directory.
       containers:
       - name: twitch-alerts
-        image: nullchannel/twitch-alerts:0.1.13
+        image: nullchannel/twitch-alerts:0.1.14
         ports:
         - name: websocket
           containerPort: 9000
