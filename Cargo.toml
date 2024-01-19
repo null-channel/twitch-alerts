@@ -9,7 +9,7 @@ members = [
     "frontend_api",
     "user_service",
     "frontend/wasm",
-    "twitch_chat",
+    "twitch_chat", "light_server",
 ]
 
 exclude = [

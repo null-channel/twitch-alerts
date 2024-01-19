@@ -1,20 +1,18 @@
-use std::env;
 
 use ::futures::StreamExt;
 use gloo::console::{self, Timer};
 use gloo::timers::callback::{Interval, Timeout};
 use messages::DisplayMessage;
-use reqwasm::http::Request;
 use std::sync::mpsc::{Receiver, Sender};
-use wasm_bindgen::UnwrapThrowExt;
 use ws_stream_wasm::{WsMessage, WsMeta};
 use yew::platform::spawn_local;
-use yew::{html, AttrValue, Callback, Component, Context, Html};
-
+use yew::prelude::*;
+use yew_hooks::prelude::*;
 use reqwasm::websocket::{
     futures::{self, WebSocket},
     Message,
 };
+use web_sys::{AudioContext, HtmlAudioElement};
 
 // A macro to provide `println!(..)`-style syntax for `console.log` logging.
 macro_rules! log {
@@ -76,7 +74,26 @@ impl Component for App {
             let link = ctx.link().clone();
             Interval::new(30000, move || link.send_message(Msg::PollApi))
         };
+        // Initialize Web Audio API
+        let audio_context = AudioContext::new().unwrap();
 
+        // Load and play audio file
+        let audio_element = HtmlAudioElement::new().unwrap();
+        audio_element.set_src("sound/Wow.wav"); // Replace with your audio file path
+        audio_element.play().unwrap();
+
+        let result = web_sys::HtmlAudioElement::new_with_src("sound/Wow.wav");
+        result.unwrap().play();
+        // Connect audio element to the audio context
+        //
+        //let source = audio_context.create_media_element_source(&audio_element).unwrap();
+        //source.connect_with_audio_node(&audio_context.destination()).unwrap();
+//        let node_audio = NodeRef::default();
+//        let audio = use_media_with_options(
+//            node_audio,
+//            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3".to_string(),
+//            UseMediaOptions::enable_auto_play(),
+//        );
         Self {
             time: App::get_current_time(),
             messages: Vec::new(),
@@ -118,7 +135,8 @@ impl Component for App {
                     let timeout = Timeout::new(message.display_time as u32, move || {
                         link.send_message(Msg::EventFinished)
                     });
-
+                    let result = web_sys::HtmlAudioElement::new_with_src("sound/Wow.wav");
+                    result.unwrap().play();
                     Timeout::forget(timeout);
                 }
 
@@ -156,7 +174,8 @@ impl Component for App {
                             {  html! { <p>{ self.current_message.as_str() }</p> } }
                         </div>
                     }
-
+                    <div>
+                    </div>
                 </div>
             </>
         }

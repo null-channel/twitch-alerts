@@ -1,0 +1,172 @@
+use crate::messages::Message;
+use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
+// Tui Stuff
+use crossterm::{
+    event::{self, KeyCode, KeyEventKind},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    ExecutableCommand,
+};
+use ratatui::prelude::Rect;
+use ratatui::{
+    prelude::{CrosstermBackend, Stylize, Terminal},
+    widgets::Paragraph,
+};
+use std::{
+    io::{stdout, Result},
+    time::Duration,
+};
+
+#[derive(Debug)]
+pub struct App {
+    pub mode: AppMode,
+    tw_receiver: UnboundedReceiver<Message>,
+    tw_sender: UnboundedSender<String>,
+    yt_receiver: UnboundedReceiver<Message>,
+    yt_sender: UnboundedSender<String>,
+
+    ui_sender: UnboundedSender<Duration>,
+    latest_message: String,
+}
+
+#[derive(Debug, Clone)]
+enum AppMode {
+    StreamStarting(GameMode),
+    BeRightBack(GameMode),
+}
+
+#[derive(Debug, Clone)]
+enum GameMode {
+    Wordel,
+}
+
+impl App {
+    pub fn new(
+        tw_receiver: UnboundedReceiver<Message>,
+        tw_sender: UnboundedSender<String>,
+        yt_sender: UnboundedSender<String>,
+        yt_receiver: UnboundedReceiver<Message>,
+        ui_sender: UnboundedSender<Duration>,
+    ) -> Self {
+        App {
+            mode: AppMode::StreamStarting(GameMode::Wordel),
+            tw_receiver,
+            tw_sender,
+            yt_sender,
+            yt_receiver,
+            ui_sender,
+            latest_message: "no messages".to_string(),
+        }
+    }
+
+    // Start the app loop
+    pub fn start(&mut self) -> anyhow::Result<()> {
+        stdout().execute(EnterAlternateScreen)?;
+        enable_raw_mode()?;
+        let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
+        terminal.clear()?;
+
+        let mut start = std::time::Instant::now();
+
+        loop {
+            //check for twitch chat messages
+            match self.tw_receiver.try_recv() {
+                Ok(message) => self.handle_message(message),
+                Err(_e) => (),
+            }
+            //check for youtube chat messages
+
+            //check for user input
+            if event::poll(std::time::Duration::from_millis(5))? {
+                if let event::Event::Key(key) = event::read()? {
+                    if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
+                        break;
+                    }
+                }
+            }
+
+            let duration = start.elapsed();
+            if duration >= std::time::Duration::from_millis(16) {
+                start = std::time::Instant::now();
+                self.ui_sender.send(duration);
+            }
+        }
+        loop {
+            terminal.draw(|frame| {
+                let area = frame.size();
+                let instructions_size = Rect::new(0, 0, area.width, 1);
+                frame.render_widget(
+                    Paragraph::new("Hello Ratatui! (press 'Q' to quit)")
+                        .white()
+                        .on_blue(),
+                    instructions_size,
+                );
+
+                let fun_area = Rect::new(0, 1, area.width, area.height - 2);
+                frame.render_widget(
+                    Paragraph::new(format!("you have pressed up {} times", 5))
+                        .gray()
+                        .on_dark_gray(),
+                    fun_area,
+                );
+                let status_message_area = Rect::new(0, area.height - 1, area.width, 1);
+                frame.render_widget(
+                    Paragraph::new(format!("Latest Message: {}", self.latest_message))
+                        .dark_gray()
+                        .on_gray(),
+                    status_message_area,
+                );
+            })?;
+            if event::poll(std::time::Duration::from_millis(5))? {
+                if let event::Event::Key(key) = event::read()? {
+                    if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
+                        break;
+                    }
+                }
+            }
+            match self.twitch_chat_receiver.try_recv() {
+                Ok(message) => self.handle_message(message),
+                Err(_e) => (),
+            }
+        }
+
+        stdout().execute(LeaveAlternateScreen)?;
+        disable_raw_mode()?;
+        Ok(())
+    }
+
+    fn handle_message(&mut self, message: Message) {
+        self.latest_message = match message {
+            Message::Debug(s) => s,
+            Message::TwitchMessage(s) => s,
+        }
+    }
+}
+
+fn app(ui_sender: UnboundedSender<std::time::Duration>) -> anyhow::Result<()> {
+    let mut start = std::time::Instant::now();
+    loop {
+        //check for twitch chat messages
+        match self.twitch_chat_receiver.try_recv() {
+            Ok(message) => self.handle_message(message),
+            Err(_e) => (),
+        }
+        //check for youtube chat messages
+
+        //check for user input
+        if event::poll(std::time::Duration::from_millis(5))? {
+            if let event::Event::Key(key) = event::read()? {
+                if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
+                    break;
+                }
+            }
+        }
+
+        let duration = start.elapsed();
+        if duration >= std::time::Duration::from_millis(16) {
+            start = std::time::Instant::now();
+            ui_sender.send(duration);
+        }
+    }
+
+    Ok(())
+}
