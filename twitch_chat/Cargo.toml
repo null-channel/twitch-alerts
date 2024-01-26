@@ -15,4 +15,4 @@ anyhow = "1.0.75"
 
 # Tui things
 crossterm = "0.27.0"
-ratatui = { version = "0.24.0", features = ["all-widgets"]}
+anathema = { git = "https://github.com/togglebyte/anathema", branch = "main" }

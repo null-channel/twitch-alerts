@@ -1,12 +1,8 @@
-
-
-
 #[derive(Debug, Clone)]
 pub enum Message {
     TwitchMessage(String),
     Debug(String),
 }
-
 
 impl Message {
     pub fn new_twitch_message(message: String) -> Self {
