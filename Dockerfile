@@ -1,9 +1,9 @@
-FROM rust:1.67 as builder
+FROM rust:1.74 as builder
 WORKDIR /usr/src/app
 COPY . .
 RUN cargo build --bin monolith --release
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 RUN apt-get update && apt-get install -y openssl ca-certificates
 RUN update-ca-certificates
 RUN apt-get install -y libssl-dev

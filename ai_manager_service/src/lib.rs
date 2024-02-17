@@ -4,7 +4,10 @@ use std::sync::mpsc::Receiver;
 
 use chatgpt::prelude::{ChatGPT, Conversation};
 use eyre::eyre;
-use messages::{DisplayMessage, NewTwitchEventMessage, TwitchEvent, FollowEvent, SubscribeEvent, RaidEvent, ChannelGiftMessage, NullSubTier};
+use messages::{
+    ChannelGiftMessage, DisplayMessage, FollowEvent, NewTwitchEventMessage, NullSubTier, RaidEvent,
+    SubscribeEvent, TwitchEvent,
+};
 use tokio::{runtime::Handle, sync::mpsc};
 
 pub struct AIManager {
@@ -58,19 +61,17 @@ impl AIManager {
 
         match &msg.event {
             TwitchEvent::ChannelFollow(follow_event) => {
-
                 println!("Channel Follow Event!");
                 self.handle_follow_event(follow_event, conversation).await?;
             }
             TwitchEvent::ChannelSubscribe(sub_event) => {
-
                 println!("Channel Subscribe Event!");
                 self.handle_subscribe_event(sub_event, conversation).await?;
-            },
+            }
             TwitchEvent::ChannelRaid(raid_event) => {
                 println!("Channel Raid Event!");
                 self.handle_raid_event(raid_event, conversation).await?;
-            },
+            }
             TwitchEvent::ChannelSubGift(sub_gift) => {
                 println!("Channel Sub Gift Event!");
                 self.handle_gift_sub_event(sub_gift, conversation).await?;
@@ -88,27 +89,29 @@ impl AIManager {
         let db_results = sqlite::get_latest_story_segments_for_user(conn, user_id).await?;
         Ok(db_results)
     }
-    
-    pub async fn handle_gift_sub_event(&self, gift_sub_event: &ChannelGiftMessage, mut conversation: Conversation) -> anyhow::Result<()> {
+
+    pub async fn handle_gift_sub_event(
+        &self,
+        gift_sub_event: &ChannelGiftMessage,
+        mut conversation: Conversation,
+    ) -> anyhow::Result<()> {
         let gifter_name = match gift_sub_event.user_name.clone() {
             Some(name) => name,
-            None => "anonymous".to_string()
+            None => "anonymous".to_string(),
         };
 
         let tier = match gift_sub_event.tier.clone() {
-            NullSubTier::Tier1(tier) => tier, 
-            NullSubTier::Tier2(tier) => tier, 
-            NullSubTier::Tier3(tier) => tier, 
-            NullSubTier::Prime(tier) => tier, 
+            NullSubTier::Tier1(tier) => tier,
+            NullSubTier::Tier2(tier) => tier,
+            NullSubTier::Tier3(tier) => tier,
+            NullSubTier::Prime(tier) => tier,
             NullSubTier::Other(tier) => tier,
         };
-        
+
         let response = conversation
             .send_message(format!(
                 "tell me an epic story about how {} gifted new {} powers to {} null party members.",
-                gifter_name,
-                tier,
-                gift_sub_event.total,
+                gifter_name, tier, gift_sub_event.total,
             ))
             .await?;
 
@@ -135,8 +138,11 @@ impl AIManager {
         Ok(())
     }
 
-
-    pub async fn handle_raid_event(&self, raid_event: &RaidEvent, mut conversation: Conversation) -> anyhow::Result<()> {
+    pub async fn handle_raid_event(
+        &self,
+        raid_event: &RaidEvent,
+        mut conversation: Conversation,
+    ) -> anyhow::Result<()> {
         let response = conversation
             .send_message(format!(
                 "tell me an epic story about how {} people from {}'s party joined forces with the Null party for a joint quest.",
@@ -147,12 +153,9 @@ impl AIManager {
 
         println!("Response: {}", response.message().content);
         let mut conn = self.sqlite_pool.acquire().await?;
-        let db_results = sqlite::write_new_raid_event(
-            conn,
-            raid_event,
-            response.message().content.to_string(),
-        )
-        .await?;
+        let db_results =
+            sqlite::write_new_raid_event(conn, raid_event, response.message().content.to_string())
+                .await?;
         println!("db_results: {:?}", db_results);
 
         let display_time = response.message().content.split(" ").count() * 500;
@@ -167,7 +170,11 @@ impl AIManager {
         Ok(())
     }
 
-    pub async fn handle_subscribe_event(&self, subscriber_event: &SubscribeEvent, mut conversation: Conversation) -> anyhow::Result<()> {
+    pub async fn handle_subscribe_event(
+        &self,
+        subscriber_event: &SubscribeEvent,
+        mut conversation: Conversation,
+    ) -> anyhow::Result<()> {
         let response = conversation
             .send_message(format!(
                 "tell me an epic story about how {} supported the party",
@@ -198,7 +205,11 @@ impl AIManager {
         Ok(())
     }
 
-    pub async fn handle_follow_event(&self, follow_event: &FollowEvent, mut conversation: Conversation) -> anyhow::Result<()> {
+    pub async fn handle_follow_event(
+        &self,
+        follow_event: &FollowEvent,
+        mut conversation: Conversation,
+    ) -> anyhow::Result<()> {
         let response = conversation
             .send_message(format!(
                 "tell me an epic story about how {} joined forces with the null party.",

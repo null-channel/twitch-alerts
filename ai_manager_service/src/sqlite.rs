@@ -25,9 +25,8 @@ pub async fn write_new_gift_subs_event(
     mut conn: PoolConnection<Sqlite>,
     event: &messages::ChannelGiftMessage,
     tier: String,
-    story_segment: String
+    story_segment: String,
 ) -> anyhow::Result<()> {
-
     sqlx::query!(
         r#"
 INSERT INTO gift_subs_events (
@@ -36,9 +35,15 @@ INSERT INTO gift_subs_events (
 )
 VALUES (?, ?, ?, ?, ?, ?, ? ,? ,?)
     "#,
-    event.broadcaster_user_id, event.cumulative_total,
-    event.is_anonymous, tier, event.total, event.user_id,
-    event.user_login, event.user_name, story_segment
+        event.broadcaster_user_id,
+        event.cumulative_total,
+        event.is_anonymous,
+        tier,
+        event.total,
+        event.user_id,
+        event.user_login,
+        event.user_name,
+        story_segment
     )
     .execute(&mut *conn)
     .await?;
@@ -49,7 +54,7 @@ VALUES (?, ?, ?, ?, ?, ?, ? ,? ,?)
 pub async fn write_new_raid_event(
     mut conn: PoolConnection<Sqlite>,
     event: &messages::RaidEvent,
-    story_segment: String
+    story_segment: String,
 ) -> anyhow::Result<()> {
     sqlx::query!(
         r#"
@@ -57,7 +62,7 @@ INSERT INTO raid_events ( from_broadcaster_user_id,
      from_broadcaster_user_name, to_broadcaster_user_id, to_broadcaster_user_name,
      viewers, story_segment)
 VALUES ( ?, ?, ?, ?, ?, ? )
-        "#, 
+        "#,
         event.from_broadcaster_user_id,
         event.from_broadcaster_user_name,
         event.to_broadcaster_user_id,

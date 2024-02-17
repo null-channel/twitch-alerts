@@ -1,15 +1,19 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use eyre::Context;
-use messages::{FollowEvent, NewTwitchEventMessage, TwitchEvent, SubscribeEvent, RaidEvent, ChannelGiftMessage};
+use messages::{
+    ChannelGiftMessage, FollowEvent, NewTwitchEventMessage, RaidEvent, SubscribeEvent, TwitchEvent,
+};
 use tokio::sync::{mpsc::UnboundedSender, RwLock};
+use tokio::time::Instant;
 use tokio_tungstenite::tungstenite;
 use tracing::Instrument;
-use twitch_api::eventsub::channel::{ChannelSubscribeV1Payload, ChannelRaidV1Payload};
+use twitch_api::eventsub::channel::{ChannelRaidV1Payload, ChannelSubscribeV1Payload};
 use twitch_api::twitch_oauth2::UserToken;
 use twitch_api::{
     eventsub::{
-        channel::{ChannelSubscriptionGiftV1Payload,ChannelFollowV2Payload},
+        channel::{ChannelFollowV2Payload, ChannelSubscriptionGiftV1Payload},
         event::websocket::{EventsubWebsocketData, ReconnectPayload, SessionData, WelcomePayload},
         Event, Message, NotificationMetadata, Payload,
     },
@@ -25,6 +29,7 @@ pub struct WebsocketClient {
     pub user_id: types::UserId,
     pub connect_url: url::Url,
     pub sender: UnboundedSender<NewTwitchEventMessage>,
+    pub keepalive: Instant,
 }
 
 impl WebsocketClient {
@@ -47,18 +52,17 @@ impl WebsocketClient {
             tokio_tungstenite::connect_async_with_config(&self.connect_url, Some(config), false)
                 .await
                 .context("Can't connect")?;
-
         Ok(socket)
     }
 
-    pub async fn run(mut self) -> Result<(), eyre::Error> {
-        let mut s = self
+    pub async fn run(&mut self) -> Result<(), eyre::Error> {
+        let mut socket = self
             .connect()
             .await
             .context("when establishing connection")?;
         loop {
             tokio::select!(
-            Some(msg) = futures::StreamExt::next(&mut s) => {
+            Some(msg) = futures::StreamExt::next(&mut socket) => {
                 let span = tracing::info_span!("message received", raw_message = ?msg);
                 let msg = match msg {
                     Err(tungstenite::Error::Protocol(
@@ -67,17 +71,52 @@ impl WebsocketClient {
                         tracing::warn!(
                             "connection was sent an unexpected frame or was reset, reestablishing it"
                         );
-                        s = self
-                            .connect().instrument(span)
-                            .await
-                            .context("when reestablishing connection")?;
-                        continue
+                        let s = self.process_failure(span).await;
+                        if let Some(res) = s {
+                            socket = res;
+                        }
+                        None
                     }
-                    _ => msg.context("when getting message")?,
+                    _ => Some(msg.context("when getting message")?),
                 };
-                self.process_message(msg).instrument(span).await?
+                if let Some(msg) = msg {
+                    let span = tracing::info_span!("processing message");
+                    self.process_message(msg).instrument(span).await?
+                }
+            },
+            else => {
+                let span = tracing::info_span!("keepalive");
+                if self.keepalive.elapsed() > Duration::from_secs(30) {
+                    let s = self.process_failure(span).await;
+                    if let Some(res) = s {
+                        socket = res;
+                    }
+                    continue
+                }
             })
         }
+    }
+
+    async fn process_failure(
+        &mut self,
+        span: tracing::Span,
+    ) -> Option<
+        tokio_tungstenite::WebSocketStream<
+            tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+        >,
+    > {
+        let res = self
+            .connect()
+            .instrument(span)
+            .await
+            .context("when reestablishing connection");
+
+        if let Err(e) = res {
+            tracing::error!("failed to reestablish connection: {e}");
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            return None;
+        }
+        Some(res.unwrap())
     }
 
     pub async fn process_message(&mut self, msg: tungstenite::Message) -> Result<(), eyre::Report> {
@@ -107,7 +146,10 @@ impl WebsocketClient {
                     EventsubWebsocketData::Keepalive {
                         metadata: _,
                         payload: _,
-                    } => Ok(()),
+                    } => {
+                        self.keepalive = Instant::now();
+                        Ok(())
+                    }
                     _ => Ok(()),
                 }
             }
@@ -155,15 +197,25 @@ impl WebsocketClient {
             .await?;
         let transport = twitch_api::eventsub::Transport::websocket(data.id.clone());
 
-        self.client.create_eventsub_subscription(
-            twitch_api::eventsub::channel::ChannelSubscribeV1::broadcaster_user_id(self.user_id.clone()),
-            transport.clone(), 
-            &*self.token.read().await).await?;
+        self.client
+            .create_eventsub_subscription(
+                twitch_api::eventsub::channel::ChannelSubscribeV1::broadcaster_user_id(
+                    self.user_id.clone(),
+                ),
+                transport.clone(),
+                &*self.token.read().await,
+            )
+            .await?;
 
-        self.client.create_eventsub_subscription(
-            twitch_api::eventsub::channel::ChannelRaidV1::to_broadcaster_user_id(self.user_id.clone()),
-            transport.clone(), 
-            &*self.token.read().await).await?;
+        self.client
+            .create_eventsub_subscription(
+                twitch_api::eventsub::channel::ChannelRaidV1::to_broadcaster_user_id(
+                    self.user_id.clone(),
+                ),
+                transport.clone(),
+                &*self.token.read().await,
+            )
+            .await?;
 
         tracing::info!("we are listening");
         Ok(())
@@ -184,68 +236,78 @@ fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
             user_id: user_id.to_string().parse::<i64>()?,
         })),
         Event::ChannelSubscribeV1(Payload {
-            message: Message::Notification(ChannelSubscribeV1Payload {
-                user_name, user_id, broadcaster_user_id, broadcaster_user_name, is_gift, tier, ..
-            }),
+            message:
+                Message::Notification(ChannelSubscribeV1Payload {
+                    user_name,
+                    user_id,
+                    broadcaster_user_id,
+                    broadcaster_user_name,
+                    is_gift,
+                    tier,
+                    ..
+                }),
             ..
-        }) => 
-        {
+        }) => {
             println!("New sub event +!+!+!+!+!+!!+!+!+!+!+!+!+!+");
             Ok(TwitchEvent::ChannelSubscribe(SubscribeEvent {
-            user_name: user_name.to_string(),
-            user_id: user_id.to_string().parse::<i64>()?,
-            broadcaster_user_id: broadcaster_user_id.to_string().parse::<i64>()?,
-            broadcaster_user_name: broadcaster_user_name.to_string(),
-            is_gift,
-            tier: twitch_teir_to_teir(tier),
-        })
-        )},
+                user_name: user_name.to_string(),
+                user_id: user_id.to_string().parse::<i64>()?,
+                broadcaster_user_id: broadcaster_user_id.to_string().parse::<i64>()?,
+                broadcaster_user_name: broadcaster_user_name.to_string(),
+                is_gift,
+                tier: twitch_teir_to_teir(tier),
+            }))
+        }
         Event::ChannelRaidV1(Payload {
-            message: Message::Notification(ChannelRaidV1Payload { 
-                from_broadcaster_user_id, 
-                from_broadcaster_user_login, 
-                from_broadcaster_user_name, 
-                to_broadcaster_user_id, 
-                to_broadcaster_user_login, 
-                to_broadcaster_user_name, 
-                viewers, .. }),
-                ..
-        }) => Ok(TwitchEvent::ChannelRaid(RaidEvent{
+            message:
+                Message::Notification(ChannelRaidV1Payload {
+                    from_broadcaster_user_id,
+                    from_broadcaster_user_login,
+                    from_broadcaster_user_name,
+                    to_broadcaster_user_id,
+                    to_broadcaster_user_login,
+                    to_broadcaster_user_name,
+                    viewers,
+                    ..
+                }),
+            ..
+        }) => Ok(TwitchEvent::ChannelRaid(RaidEvent {
             from_broadcaster_user_id: from_broadcaster_user_id.to_string(),
             from_broadcaster_user_login: from_broadcaster_user_login.to_string(),
             from_broadcaster_user_name: from_broadcaster_user_name.to_string(),
             to_broadcaster_user_id: to_broadcaster_user_id.to_string(),
             to_broadcaster_user_login: to_broadcaster_user_login.to_string(),
             to_broadcaster_user_name: to_broadcaster_user_name.to_string(),
-            viewers: viewers
+            viewers: viewers,
         })),
         Event::ChannelSubscriptionGiftV1(Payload {
-            message: Message::Notification(ChannelSubscriptionGiftV1Payload {
-            broadcaster_user_id,
-            broadcaster_user_login,
-            broadcaster_user_name,
-            cumulative_total,
-            is_anonymous,
-            tier,
-            total,
-            user_id,
-            user_login,
-            user_name, ..}),
+            message:
+                Message::Notification(ChannelSubscriptionGiftV1Payload {
+                    broadcaster_user_id,
+                    broadcaster_user_login,
+                    broadcaster_user_name,
+                    cumulative_total,
+                    is_anonymous,
+                    tier,
+                    total,
+                    user_id,
+                    user_login,
+                    user_name,
+                    ..
+                }),
             ..
-        }) => {
-            Ok(TwitchEvent::ChannelSubGift(ChannelGiftMessage{
-                broadcaster_user_id: broadcaster_user_id.to_string(),
-                broadcaster_user_login: broadcaster_user_login.to_string(),
-                broadcaster_user_name: broadcaster_user_name.to_string(),
-                cumulative_total: cumulative_total,
-                is_anonymous: is_anonymous,
-                tier: twitch_teir_to_teir(tier),
-                total: total,
-                user_id: braid_optional_to_string_optional(user_id),
-                user_login: braid_optional_to_string_optional(user_login),
-                user_name: braid_optional_to_string_optional(user_name),
-            }))
-        }
+        }) => Ok(TwitchEvent::ChannelSubGift(ChannelGiftMessage {
+            broadcaster_user_id: broadcaster_user_id.to_string(),
+            broadcaster_user_login: broadcaster_user_login.to_string(),
+            broadcaster_user_name: broadcaster_user_name.to_string(),
+            cumulative_total: cumulative_total,
+            is_anonymous: is_anonymous,
+            tier: twitch_teir_to_teir(tier),
+            total: total,
+            user_id: braid_optional_to_string_optional(user_id),
+            user_login: braid_optional_to_string_optional(user_login),
+            user_name: braid_optional_to_string_optional(user_name),
+        })),
         Event::ChannelCheerV1(Payload {
             message: Message::Notification(..),
             ..
@@ -355,6 +417,6 @@ fn twitch_teir_to_teir(twithc_teir: types::SubscriptionTier) -> messages::NullSu
 fn braid_optional_to_string_optional<T: ToString>(input: Option<T>) -> Option<String> {
     match input {
         None => None,
-        Some(thing) => Some(thing.to_string())
+        Some(thing) => Some(thing.to_string()),
     }
 }

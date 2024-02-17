@@ -32,7 +32,6 @@ pub async fn main() -> anyhow::Result<()> {
     // otherwise they will back up.
 
     let (app_sender, app_receiver) = mpsc::unbounded_channel();
-    //let (chat_sender, chat_receiver) = mpsc::unbounded_channel();
     let c = client.clone();
     let join_handle = tokio::spawn(async move {
         while let Some(message) = incoming_messages.recv().await {
@@ -97,7 +96,10 @@ pub async fn main() -> anyhow::Result<()> {
 
     // Anathema tests
     // Step one: Load and compile templates
-    let my_view = MyView();
+    let state = MyState {
+        chats: List::new(vec!["Start".to_string()]),
+    };
+    let my_view = MyView::new(state, app_receiver);
     let template = read_to_string("index.aml").unwrap();
     let mut templates = Templates::new(template, my_view);
     let templates = templates.compile().unwrap();
@@ -116,51 +118,53 @@ pub async fn main() -> anyhow::Result<()> {
 }
 
 // TODO: delete this
-use anathema::core::{Event, KeyCode, Nodes, View, Color};
-use anathema::values::{State, StateValue, List};
+use anathema::core::{Color, Event, KeyCode, Nodes, View};
+use anathema::values::{List, State, StateValue};
 
 #[derive(State)]
 struct MyState {
     chats: List<String>,
 }
 
-#[derive(Clone)]
 struct MyView {
     state: MyState,
-
+    message_receiver: mpsc::UnboundedReceiver<Message>,
 }
 
 impl MyView {
-    fn new(state: MyState) -> Self {
-        Self(state)
+    fn new(state: MyState, message_receiver: mpsc::UnboundedReceiver<Message>) -> Self {
+        Self {
+            state,
+            message_receiver,
+        }
     }
 
     fn new_chat(&mut self, chat: String) {
-        let mut state = self.0;
-        state.chats.push(chat.clone());
+        self.state.chats.push_back(chat);
     }
-}   
+}
 
 impl View for MyView {
     fn on_event(&mut self, event: Event, _: &mut Nodes<'_>) -> Event {
         match event {
             Event::KeyPress(KeyCode::Up, ..) => {
-                let mut state = self.0;
-                state.chats.push("up".to_string());
+                self.state.chats.push_back("up".to_string());
                 Event::Noop
             }
-            _ => {
-                Event::Noop
-            }
+            _ => Event::Noop,
         }
     }
 
     fn tick(&mut self) {
-        let mut state = self.0.lock().unwrap();
-        state.push("tick".to_string());
+        match self.message_receiver.try_recv() {
+            Ok(message) => {
+                self.state.chats.push_back(message.text());
+            }
+            Err(_) => {}
+        }
     }
 
     fn state(&self) -> &dyn State {
-        let thing = self.0;
+        &self.state
     }
 }

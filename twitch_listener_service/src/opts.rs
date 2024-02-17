@@ -3,9 +3,11 @@ use clap::{builder::ArgPredicate, ArgGroup, Parser};
 #[derive(Parser, Debug, Clone)]
 #[clap(about, version,
     group = ArgGroup::new("token").multiple(false).required(false),
-    group = ArgGroup::new("service").multiple(true).requires("oauth2-service-url"),
+    //Why do these break the run???
+    //group = ArgGroup::new("service").multiple(true).requires("oauth2-service-url"),
     group = ArgGroup::new("channel").multiple(true).required(false),
-    group = ArgGroup::new("gpt").multiple(true).requires("gpt-key"),
+    //Why do these break the run???
+    //group = ArgGroup::new("gpt").multiple(true).requires("gpt-key"),
 )]
 pub struct Opts {
     /// OAuth2 Access token

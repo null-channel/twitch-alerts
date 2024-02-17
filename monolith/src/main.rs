@@ -15,6 +15,7 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use tokio::{
     sync::{mpsc, RwLock},
     task::JoinHandle,
+    time::Instant,
 };
 use twitch_api::{client::ClientDefault, HelixClient};
 
@@ -99,6 +100,7 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
         user_id,
         connect_url: twitch_api::TWITCH_EVENTSUB_WEBSOCKET_URL.clone(),
         sender,
+        keepalive: Instant::now(),
     };
 
     let frontend_api = FrontendApi::new("0.0.0.0:9000".into());
@@ -116,7 +118,7 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
     let r = tokio::try_join!(
         flatten(tokio::spawn(retainer_cleanup)),
         flatten(tokio::spawn(async move {
-            let clinet = twithc_clinet.clone();
+            let mut clinet = twithc_clinet.clone();
             clinet.run().await
         })),
         flatten(tokio::spawn(async move { ai_manager.run(receiver).await })),
@@ -147,7 +149,7 @@ async fn setup_sqlite(db: String) -> eyre::Result<SqlitePool> {
         let Some(path) = Path::new(&crate_dir).parent() else {
             panic!()
         };
-        
+
         path.join("ai_manager_service/migrations")
     };
 
@@ -161,7 +163,6 @@ async fn setup_sqlite(db: String) -> eyre::Result<SqlitePool> {
     // Return the connection manager
     Ok(pool)
 }
-
 
 async fn flatten<T>(handle: JoinHandle<Result<T, eyre::Report>>) -> Result<T, eyre::Report> {
     match handle.await {

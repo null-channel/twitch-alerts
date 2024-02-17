@@ -1,4 +1,4 @@
-viewport [direction: "forward"]
+viewport [direction: "vertical"]
     text "This is the start of chat!"
     for i in chats
         if i == 1
