@@ -56,7 +56,7 @@ impl AIManager {
 
     async fn new_event(&self, msg: NewTwitchEventMessage) -> anyhow::Result<()> {
         let conversation: Conversation = self.chat_gpt.new_conversation_directed(
-            "You are D&DGPT, when answering any questions, you always answer with a short epic story as a dungeons and dragons dungeon master in 65 words or less."
+            "You are D&DGPT, when answering any questions, you always answer with a short epic story as a dungeons and dragons dungeon master in 27 words or less."
         );
 
         match &msg.event {
@@ -132,7 +132,8 @@ impl AIManager {
             message: response.message().content.to_string(),
             image_url: "none".to_string(),
             sound_url: "none".to_string(),
-            display_time: display_time,
+            display_time,
+            payload: TwitchEvent::ChannelSubGift(gift_sub_event.clone()),
         };
         self.frontend_sender.send(display_message)?;
         Ok(())
@@ -152,7 +153,7 @@ impl AIManager {
             .await?;
 
         println!("Response: {}", response.message().content);
-        let mut conn = self.sqlite_pool.acquire().await?;
+        let conn = self.sqlite_pool.acquire().await?;
         let db_results =
             sqlite::write_new_raid_event(conn, raid_event, response.message().content.to_string())
                 .await?;
@@ -164,7 +165,8 @@ impl AIManager {
             message: response.message().content.to_string(),
             image_url: "none".to_string(),
             sound_url: "none".to_string(),
-            display_time: display_time,
+            display_time,
+            payload: TwitchEvent::ChannelRaid(raid_event.clone()),
         };
         self.frontend_sender.send(display_message)?;
         Ok(())
@@ -183,7 +185,7 @@ impl AIManager {
             .await?;
 
         println!("Response: {}", response.message().content);
-        let mut conn = self.sqlite_pool.acquire().await?;
+        let conn = self.sqlite_pool.acquire().await?;
         let db_results = sqlite::write_new_story_segment(
             conn,
             subscriber_event.user_id,
@@ -199,7 +201,8 @@ impl AIManager {
             message: response.message().content.to_string(),
             image_url: "none".to_string(),
             sound_url: "none".to_string(),
-            display_time: display_time,
+            display_time,
+            payload: TwitchEvent::ChannelSubscribe(subscriber_event.clone()),
         };
         self.frontend_sender.send(display_message)?;
         Ok(())
@@ -218,7 +221,7 @@ impl AIManager {
             .await?;
 
         println!("Response: {}", response.message().content);
-        let mut conn = self.sqlite_pool.acquire().await?;
+        let conn = self.sqlite_pool.acquire().await?;
         let db_results = sqlite::write_new_story_segment(
             conn,
             follow_event.user_id,
@@ -235,7 +238,8 @@ impl AIManager {
             message: response.message().content.to_string(),
             image_url: "none".to_string(),
             sound_url: "none".to_string(),
-            display_time: display_time,
+            display_time,
+            payload: TwitchEvent::ChannelFollow(follow_event.clone()),
         };
         self.frontend_sender.send(display_message)?;
         Ok(())

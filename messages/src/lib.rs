@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct NewTwitchEventMessage {
     pub event: TwitchEvent,
     pub message_id: String,
     pub message_at: String,
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TwitchEvent {
     ChannelFollow(FollowEvent),
     ChannelSubscribe(SubscribeEvent),
@@ -15,13 +15,13 @@ pub enum TwitchEvent {
     ChannelSubGift(ChannelGiftMessage),
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FollowEvent {
     pub user_name: String,
     pub user_id: i64,
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RaidEvent {
     pub from_broadcaster_user_id: String,
     pub from_broadcaster_user_login: String,
@@ -32,7 +32,7 @@ pub struct RaidEvent {
     pub viewers: i64,
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SubscribeEvent {
     pub broadcaster_user_id: i64,
     pub broadcaster_user_name: String,
@@ -44,12 +44,13 @@ pub struct SubscribeEvent {
 
 // Path: messages/src/lib.rs
 // { "{ "message": "hello world", "image_url": "https:://something.com" }" }
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DisplayMessage {
     pub message: String,
     pub image_url: String,
     pub sound_url: String,
     pub display_time: usize,
+    pub payload: TwitchEvent,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

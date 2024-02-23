@@ -2,6 +2,7 @@ use ::futures::StreamExt;
 use gloo::console::{self, Timer};
 use gloo::timers::callback::{Interval, Timeout};
 use messages::DisplayMessage;
+use messages::TwitchEvent;
 use reqwasm::websocket::{
     futures::{self, WebSocket},
     Message,
@@ -34,7 +35,7 @@ pub struct App {
     timeout: Option<Timeout>,
     console_timer: Option<Timer<'static>>,
     event_queue: Vec<String>,
-    current_message: String,
+    current_message: Option<DisplayMessage>,
 }
 
 impl App {
@@ -73,19 +74,7 @@ impl Component for App {
             let link = ctx.link().clone();
             Interval::new(30000, move || link.send_message(Msg::PollApi))
         };
-        // Initialize Web Audio API
-        let audio_context = AudioContext::new().unwrap();
 
-        // Connect audio element to the audio context
-        //
-        //let source = audio_context.create_media_element_source(&audio_element).unwrap();
-        //source.connect_with_audio_node(&audio_context.destination()).unwrap();
-        //        let node_audio = NodeRef::default();
-        //        let audio = use_media_with_options(
-        //            node_audio,
-        //            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3".to_string(),
-        //            UseMediaOptions::enable_auto_play(),
-        //        );
         Self {
             time: App::get_current_time(),
             messages: Vec::new(),
@@ -94,7 +83,7 @@ impl Component for App {
             timeout: None,
             console_timer: None,
             event_queue: Vec::new(),
-            current_message: String::from(""),
+            current_message: None,
         }
     }
 
@@ -102,15 +91,18 @@ impl Component for App {
         match msg {
             Msg::PollApi => {
                 //poll api for new events
-                self.event_queue
-                    .push(String::from("This is a message to display to the users"));
                 let link = ctx.link().clone();
                 link.send_message(Msg::NewEventMsg);
                 true
             }
             Msg::NewEventMsg => {
+                if self.current_message.is_some() {
+                    log!("Current message is not finished yet.");
+                    return true;
+                }
                 let message_json = self.event_queue.pop();
 
+                log!("New event message: {:?}", message_json);
                 if let Some(message_json) = message_json {
                     let message = serde_json::from_str::<DisplayMessage>(&message_json);
 
@@ -119,26 +111,29 @@ impl Component for App {
                         return true;
                     };
 
-                    self.current_message = message.message;
-
-                    log!("New message with display time: {}", message.display_time);
+                    log!("New message with display time: {}", &message.display_time);
+                    self.current_message = Some(message.clone());
 
                     let link = ctx.link().clone();
                     let timeout = Timeout::new(message.display_time as u32, move || {
                         link.send_message(Msg::EventFinished)
                     });
                     let result = web_sys::HtmlAudioElement::new_with_src("sound/GrandpaEvilLaugh.wav");
-                    result.unwrap().play();
+                    let _ = result.unwrap().play();
                     Timeout::forget(timeout);
                 }
 
                 true
             }
             Msg::EventFinished => {
-                self.current_message = String::from("");
+                self.current_message = None;
                 if !self.event_queue.is_empty() {
+                    log!("Event time expired, getting next event.");
                     let link = ctx.link().clone();
-                    link.send_message(Msg::NewEventMsg);
+                    let _ = Timeout::new(100, move || {
+                        link.send_message(Msg::NewEventMsg);
+                    }).forget();
+
                 }
                 true
             }
@@ -158,12 +153,34 @@ impl Component for App {
         html! {
             <>
                 <div id="wrapper">
-                    if self.current_message != "" {
+                    if let Some(message) = &self.current_message {
                         <div id="clan_image">
                             <img src="img/null-logo.svg" alt="null logo"/>
                         </div>
                         <div id="messages">
-                            {  html! { <p>{ self.current_message.as_str() }</p> } }
+                            {  html! { <p>{ message.message.as_str() }</p> } }
+                        </div>
+                        <div id="footer">
+                            {
+                                match &message.payload {
+                                    TwitchEvent::ChannelFollow(follow) => {
+                                        html! {<p>{ format!("Thank you {} for following", follow.user_name) }</p> }
+                                    }
+                                    TwitchEvent::ChannelSubscribe(sub) => {
+                                        html! {<p>{ "Thank you " } <span id="sub">{sub.user_name.clone()}</span> { "for subscribing!!!" }</p> }
+                                    }
+                                    TwitchEvent::ChannelRaid(raid) => {
+                                        html! {<p>{ format!("{} raided with {} viewers!", raid.from_broadcaster_user_name, raid.viewers) }</p> }
+                                    }
+                                    TwitchEvent::ChannelSubGift(gift) => {
+                                        if let Some(gifter) = gift.clone().user_name {
+                                            html! {<p>{ format!("{} gifted a sub to {}!", gifter, gift.broadcaster_user_name.to_string()) }</p> }
+                                        } else {
+                                            html! {<p>{ format!("Someone from the shadows gifted a sub to {}!", gift.broadcaster_user_name.to_string()) }</p> }
+                                        }
+                                    }
+                                }
+                            }
                         </div>
                     }
                     <div>
