@@ -231,7 +231,7 @@ impl AIManager {
         .await?;
         println!("db_results: {:?}", db_results);
 
-        let display_time = response.message().content.split(" ").count() * 500;
+        let display_time = response.message().content.split(" ").count() * 750;
         //TODO: check if there is a "MAX_DISPLAY_TIME" env var
 
         let display_message = DisplayMessage {
