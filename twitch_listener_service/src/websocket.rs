@@ -87,6 +87,7 @@ impl WebsocketClient {
             else => {
                 let span = tracing::info_span!("keepalive");
                 if self.keepalive.elapsed() > Duration::from_secs(30) {
+                    tracing::warn!("keepalive timeout, reestablishing connection");
                     let s = self.process_failure(span).await;
                     if let Some(res) = s {
                         socket = res;
@@ -136,6 +137,7 @@ impl WebsocketClient {
                         Ok(())
                     }
                     EventsubWebsocketData::Notification { metadata, payload } => {
+                        self.keepalive = Instant::now();
                         self.process_notification(payload, &metadata, &s)?;
                         Ok(())
                     }
@@ -420,3 +422,4 @@ fn braid_optional_to_string_optional<T: ToString>(input: Option<T>) -> Option<St
         Some(thing) => Some(thing.to_string()),
     }
 }
+

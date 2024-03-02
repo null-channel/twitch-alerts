@@ -6,4 +6,4 @@ https://id.twitch.tv/oauth2/authorize
     &client_id=hof5gwx0su6owfnys0yan9c87zr6t
     &redirect_uri=http://localhost:3000
     &scope=channel%3Amanage%3Apolls+channel%3Aread%3Apolls
-    &state=c3ab8aa609ea11e793ae92361f002671
+    &state=c3ab8aa609ea11e793ae92361f002671yay
