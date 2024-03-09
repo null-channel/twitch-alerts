@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: twitch-alerts
-        image: nullchannel/twitch-alerts-frontend:0.1.13
+        image: nullchannel/twitch-alerts-frontend:0.1.14
         imagePullPolicy: Always
         resources:
           limits:

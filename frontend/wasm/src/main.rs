@@ -118,7 +118,7 @@ impl Component for App {
                     let timeout = Timeout::new(message.display_time as u32, move || {
                         link.send_message(Msg::EventFinished)
                     });
-                    let result = web_sys::HtmlAudioElement::new_with_src("sound/GrandpaEvilLaugh.wav");
+                    let result = web_sys::HtmlAudioElement::new_with_src("sound/dial-up-modem.wav");
                     let _ = result.unwrap().play();
                     Timeout::forget(timeout);
                 }
