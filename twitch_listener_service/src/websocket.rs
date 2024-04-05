@@ -29,7 +29,6 @@ pub struct WebsocketClient {
     pub user_id: types::UserId,
     pub connect_url: url::Url,
     pub sender: UnboundedSender<NewTwitchEventMessage>,
-    pub keepalive: Instant,
 }
 
 impl WebsocketClient {
@@ -64,7 +63,7 @@ impl WebsocketClient {
             tokio::select!(
             Some(msg) = futures::StreamExt::next(&mut socket) => {
                 let span = tracing::info_span!("message received", raw_message = ?msg);
-                let msg = match msg {
+                match msg {
                     Err(tungstenite::Error::Protocol(
                         tungstenite::error::ProtocolError::ResetWithoutClosingHandshake,
                     )) => {
@@ -75,24 +74,20 @@ impl WebsocketClient {
                         if let Some(res) = s {
                             socket = res;
                         }
-                        None
                     }
-                    _ => Some(msg.context("when getting message")?),
+                    _ => {
+                        let message = msg.context("when getting message")?;
+                        let span = tracing::info_span!("processing message");
+                        self.process_message(message).instrument(span).await?
+                    }
                 };
-                if let Some(msg) = msg {
-                    let span = tracing::info_span!("processing message");
-                    self.process_message(msg).instrument(span).await?
-                }
-            },
-            else => {
+            }
+            _ = tokio::time::sleep(Duration::from_secs(40)) => {
                 let span = tracing::info_span!("keepalive");
-                if self.keepalive.elapsed() > Duration::from_secs(30) {
-                    tracing::warn!("keepalive timeout, reestablishing connection");
-                    let s = self.process_failure(span).await;
-                    if let Some(res) = s {
-                        socket = res;
-                    }
-                    continue
+                tracing::warn!("keepalive timeout, reestablishing connection");
+                let s = self.process_failure(span).await;
+                if let Some(res) = s {
+                    socket = res;
                 }
             })
         }
@@ -137,7 +132,6 @@ impl WebsocketClient {
                         Ok(())
                     }
                     EventsubWebsocketData::Notification { metadata, payload } => {
-                        self.keepalive = Instant::now();
                         self.process_notification(payload, &metadata, &s)?;
                         Ok(())
                     }
@@ -149,7 +143,6 @@ impl WebsocketClient {
                         metadata: _,
                         payload: _,
                     } => {
-                        self.keepalive = Instant::now();
                         Ok(())
                     }
                     _ => Ok(()),
@@ -422,4 +415,3 @@ fn braid_optional_to_string_optional<T: ToString>(input: Option<T>) -> Option<St
         Some(thing) => Some(thing.to_string()),
     }
 }
-

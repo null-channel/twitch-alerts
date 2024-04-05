@@ -17,13 +17,12 @@ path = "src/main.rs"
 anyhow = "1.0"
 sqlx = { version = "0.7.1", features = ["sqlite", "runtime-tokio-native-tls"] }
 structopt = "0.3"
-twitch_api = { git = "https://github.com/twitch-rs/twitch_api.git", ref="ef47c46ff0c2f7f8ea66c8291f22ea39351297ce", features = [
+twitch_api = { git = "https://github.com/twitch-rs/twitch_api.git", ref="ce645637a37f10adafd8ffde605b734f10328d40", features = [
     "reqwest",
     "helix",
     "eventsub",
     "hmac",
     "unsupported",
-    "deny_unknown_fields",
     "mock_api"]}
 clap = { version = "4.1.8", features = ["derive", "env"] }
 color-eyre = { version = "0.6", features = ["capture-spantrace"] }

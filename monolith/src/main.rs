@@ -100,7 +100,6 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
         user_id,
         connect_url: twitch_api::TWITCH_EVENTSUB_WEBSOCKET_URL.clone(),
         sender,
-        keepalive: Instant::now(),
     };
 
     let frontend_api = FrontendApi::new("0.0.0.0:9000".into());

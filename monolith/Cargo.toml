@@ -16,7 +16,6 @@ twitch_api = { git = "https://github.com/twitch-rs/twitch_api.git" , features = 
     "eventsub",
     "hmac",
     "unsupported",
-    "deny_unknown_fields",
     "mock_api"] }
 
 clap = { version = "4.1.8", features = ["derive", "env"] }
