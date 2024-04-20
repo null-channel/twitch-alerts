@@ -10,7 +10,7 @@ edition = "2021"
 anyhow = "1.0"
 sqlx = { version = "0.7.1", features = ["sqlite", "runtime-tokio-native-tls"] }
 structopt = "0.3"
-twitch_api = { git = "https://github.com/twitch-rs/twitch_api.git" , features = [
+twitch_api = { git = "https://github.com/twitch-rs/twitch_api.git", features = [
     "reqwest",
     "helix",
     "eventsub",
@@ -24,7 +24,7 @@ dotenvy = "0.15.6"
 eyre = { version = "0.6" }
 futures = "0.3.26"
 hyper = "0.14"
-reqwest = { version = "0.11.14", features = ["json"] }
+reqwest = { version = "0.12.4", features = ["json"] }
 retainer = "0.3.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
@@ -40,6 +40,11 @@ ai_manager_service = { path = "../ai_manager_service" }
 twitch_listener_service = { path = "../twitch_listener_service" }
 frontend_api = { path = "../frontend_api" }
 
+# trying to fix broken dependencies
+twitch_oauth2 = { git = "https://github.com/twitch-rs/twitch_api/" }
+twitch_types = { git = "https://github.com/twitch-rs/twitch_api/" }
 # workaround for https://github.com/twitch-rs/twitch_api/issues/256
 [patch.crates-io.twitch_types]
+git = "https://github.com/twitch-rs/twitch_api"
+[patch.crates-io.twitch_oauth2]
 git = "https://github.com/twitch-rs/twitch_api"

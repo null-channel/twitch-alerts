@@ -1,0 +1,194 @@
+warning: patch for the non root package will be ignored, specify patch at the workspace root:
+package:   /home/marek/code/twitch-alerts/twitch_listener_service/Cargo.toml
+workspace: /home/marek/code/twitch-alerts/Cargo.toml
+warning: patch for the non root package will be ignored, specify patch at the workspace root:
+package:   /home/marek/code/twitch-alerts/monolith/Cargo.toml
+workspace: /home/marek/code/twitch-alerts/Cargo.toml
+warning: virtual workspace defaulting to `resolver = "1"` despite one or more workspace members being on edition 2021 which implies `resolver = "2"`
+note: to keep the current resolver, specify `workspace.resolver = "1"` in the workspace root's manifest
+note: to use the edition 2021 resolver, specify `workspace.resolver = "2"` in the workspace root's manifest
+note: for more details see https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
+warning: /home/marek/code/twitch-alerts/twitch_listener_service/Cargo.toml: unused manifest key: dependencies.twitch_api.ref
+warning: /home/marek/code/twitch-alerts/twitch_listener_service/Cargo.toml: unused manifest key: patch.crates-io.twitch_types.ref
+   Compiling cfg-if v1.0.0
+   Compiling itoa v1.0.11
+   Compiling ryu v1.0.17
+   Compiling futures-core v0.3.30
+   Compiling futures-sink v0.3.30
+   Compiling pin-project-lite v0.2.14
+   Compiling memchr v2.7.2
+   Compiling futures-io v0.3.30
+   Compiling pin-utils v0.1.0
+   Compiling futures-task v0.3.30
+   Compiling percent-encoding v2.3.1
+   Compiling bytes v1.6.0
+   Compiling simd-adler32 v0.3.7
+   Compiling fnv v1.0.7
+   Compiling adler v1.0.2
+   Compiling scopeguard v1.2.0
+   Compiling anymap2 v0.13.0
+   Compiling either v1.11.0
+   Compiling slab v0.4.9
+   Compiling crossbeam-utils v0.8.19
+   Compiling hashbrown v0.14.3
+   Compiling once_cell v1.19.0
+   Compiling equivalent v1.0.1
+   Compiling crc32fast v1.4.0
+   Compiling serde v1.0.197
+   Compiling wasm-bindgen-macro-support v0.2.92
+   Compiling futures-channel v0.3.30
+   Compiling thiserror v1.0.58
+   Compiling pin-project v1.1.5
+   Compiling form_urlencoded v1.2.1
+   Compiling miniz_oxide v0.7.2
+   Compiling gloo-worker-macros v0.1.0
+   Compiling lock_api v0.4.11
+   Compiling pharos v0.5.3
+   Compiling async_io_stream v0.3.3
+   Compiling tracing-attributes v0.1.27
+   Compiling implicit-clone-derive v0.1.1
+   Compiling boolinator v2.4.0
+   Compiling weezl v0.1.8
+   Compiling anyhow v1.0.82
+   Compiling num-traits v0.2.18
+   Compiling fdeflate v0.3.4
+   Compiling zune-inflate v0.2.54
+   Compiling ws_stream_wasm v0.7.4
+   Compiling half v2.4.1
+   Compiling log v0.4.21
+   Compiling bytemuck v1.15.0
+   Compiling bit_field v0.10.2
+   Compiling bitflags v1.3.2
+   Compiling smallvec v1.13.2
+   Compiling lebe v0.5.2
+   Compiling color_quant v1.1.0
+   Compiling yew-macro v0.21.0
+   Compiling async-trait v0.1.80
+   Compiling send_wrapper v0.6.0
+   Compiling byteorder v1.5.0
+   Compiling tracing-core v0.1.32
+   Compiling futures-util v0.3.30
+   Compiling spin v0.9.8
+   Compiling http v0.2.12
+   Compiling gif v0.13.1
+   Compiling qoi v0.4.1
+   Compiling crossbeam-epoch v0.9.18
+   Compiling flume v0.11.0
+   Compiling flate2 v1.0.28
+   Compiling crossbeam-deque v0.8.5
+   Compiling indexmap v2.2.6
+   Compiling rayon-core v1.12.1
+   Compiling png v0.17.13
+   Compiling wasm-bindgen-macro v0.2.92
+   Compiling rayon v1.10.0
+   Compiling exr v1.72.0
+   Compiling implicit-clone v0.4.9
+   Compiling tracing v0.1.40
+   Compiling serde_json v1.0.115
+   Compiling bincode v1.3.3
+   Compiling serde_urlencoded v0.7.1
+   Compiling futures-executor v0.3.30
+   Compiling futures v0.3.30
+   Compiling jpeg-decoder v0.3.1
+   Compiling pinned v0.1.0
+   Compiling wasm-bindgen v0.2.92
+   Compiling messages v0.1.0 (/home/marek/code/twitch-alerts/messages)
+   Compiling tiff v0.9.1
+   Compiling js-sys v0.3.69
+   Compiling console_error_panic_hook v0.1.7
+   Compiling image v0.24.9
+   Compiling web-sys v0.3.69
+   Compiling wasm-bindgen-futures v0.4.42
+   Compiling serde-wasm-bindgen v0.5.0
+   Compiling gloo-timers v0.2.6
+   Compiling getrandom v0.2.14
+   Compiling serde-wasm-bindgen v0.6.5
+   Compiling gloo-timers v0.3.0
+   Compiling gloo-utils v0.1.7
+   Compiling gloo-utils v0.2.0
+   Compiling gloo-events v0.1.2
+   Compiling gloo-events v0.2.0
+   Compiling gloo-dialogs v0.1.1
+   Compiling gloo-render v0.1.1
+   Compiling gloo-dialogs v0.2.0
+   Compiling gloo-render v0.2.0
+   Compiling gloo-console v0.2.3
+   Compiling gloo-net v0.3.1
+   Compiling gloo-storage v0.2.2
+   Compiling gloo-net v0.4.0
+   Compiling gloo-storage v0.3.0
+   Compiling gloo-worker v0.4.0
+   Compiling gloo-console v0.3.0
+   Compiling gloo-file v0.2.3
+   Compiling gloo-history v0.1.5
+   Compiling gloo-net v0.1.0
+   Compiling gloo-file v0.3.0
+   Compiling gloo-history v0.2.2
+   Compiling gloo-worker v0.2.1
+   Compiling reqwasm v0.5.0
+   Compiling gloo v0.8.1
+   Compiling gloo v0.10.0
+   Compiling prokio v0.1.0
+   Compiling yew v0.21.0
+   Compiling yew-hooks v0.3.1
+   Compiling frontend v0.1.0 (/home/marek/code/twitch-alerts/frontend/wasm)
+warning: unused import: `Timer`
+ --> frontend/wasm/src/main.rs:2:27
+  |
+2 | use gloo::console::{self, Timer};
+  |                           ^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `self`
+ --> frontend/wasm/src/main.rs:7:15
+  |
+7 |     futures::{self, WebSocket},
+  |               ^^^^
+
+warning: unused imports: `Receiver`, `Sender`
+  --> frontend/wasm/src/main.rs:10:23
+   |
+10 | use std::sync::mpsc::{Receiver, Sender};
+   |                       ^^^^^^^^  ^^^^^^
+
+warning: unused imports: `AudioContext`, `HtmlAudioElement`
+  --> frontend/wasm/src/main.rs:11:15
+   |
+11 | use web_sys::{AudioContext, HtmlAudioElement};
+   |               ^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^
+
+warning: unused imports: `WsMessage`, `WsMeta`
+  --> frontend/wasm/src/main.rs:12:22
+   |
+12 | use ws_stream_wasm::{WsMessage, WsMeta};
+   |                      ^^^^^^^^^  ^^^^^^
+
+warning: unused variable: `ctx`
+   --> frontend/wasm/src/main.rs:128:20
+    |
+128 |     fn view(&self, ctx: &Context<Self>) -> Html {
+    |                    ^^^ help: if this is intentional, prefix it with an underscore: `_ctx`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `write`
+   --> frontend/wasm/src/main.rs:184:30
+    |
+184 |                     let (mut write, mut read) = ws.split();
+    |                              ^^^^^ help: if this is intentional, prefix it with an underscore: `_write`
+
+warning: variable does not need to be mutable
+   --> frontend/wasm/src/main.rs:184:26
+    |
+184 |                     let (mut write, mut read) = ws.split();
+    |                          ----^^^^^
+    |                          |
+    |                          help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` on by default
+
+warning: `frontend` (bin "frontend") generated 8 warnings (run `cargo fix --bin "frontend"` to apply 8 suggestions)
+    Finished dev [unoptimized + debuginfo] target(s) in 8.68s
+thread 'tokio-runtime-worker' panicked at 'error binding to 0.0.0.0:9050: error creating server listener: Address already in use (os error 98)', /home/marek/.cargo/registry/src/github.com-1ecc6299db9ec823/hyper-0.14.19/src/server/server.rs:77:13
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

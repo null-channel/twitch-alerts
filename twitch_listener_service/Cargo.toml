@@ -30,7 +30,7 @@ dotenvy = "0.15.6"
 eyre = { version = "0.6" }
 futures = "0.3.26"
 hyper = "0.14"
-reqwest = { version = "0.11.14", features = ["json"] }
+reqwest = { version = "0.12.4", features = ["json"] }
 retainer = "0.3.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }

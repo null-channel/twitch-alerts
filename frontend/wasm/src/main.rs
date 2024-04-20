@@ -12,7 +12,6 @@ use web_sys::{AudioContext, HtmlAudioElement};
 use ws_stream_wasm::{WsMessage, WsMeta};
 use yew::platform::spawn_local;
 use yew::prelude::*;
-use yew_hooks::prelude::*;
 
 // A macro to provide `println!(..)`-style syntax for `console.log` logging.
 macro_rules! log {
@@ -28,26 +27,9 @@ pub enum Msg {
 }
 
 pub struct App {
-    time: String,
-    messages: Vec<&'static str>,
     _standalone: (Interval, Interval),
-    interval: Option<Interval>,
-    timeout: Option<Timeout>,
-    console_timer: Option<Timer<'static>>,
     event_queue: Vec<String>,
     current_message: Option<DisplayMessage>,
-}
-
-impl App {
-    fn get_current_time() -> String {
-        let date = js_sys::Date::new_0();
-        String::from(date.to_locale_time_string("en-US"))
-    }
-
-    fn cancel(&mut self) {
-        self.timeout = None;
-        self.interval = None;
-    }
 }
 
 impl Component for App {
@@ -76,12 +58,7 @@ impl Component for App {
         };
 
         Self {
-            time: App::get_current_time(),
-            messages: Vec::new(),
             _standalone: (standalone_handle, clock_handle),
-            interval: None,
-            timeout: None,
-            console_timer: None,
             event_queue: Vec::new(),
             current_message: None,
         }
@@ -132,8 +109,8 @@ impl Component for App {
                     let link = ctx.link().clone();
                     let _ = Timeout::new(100, move || {
                         link.send_message(Msg::NewEventMsg);
-                    }).forget();
-
+                    })
+                    .forget();
                 }
                 true
             }
