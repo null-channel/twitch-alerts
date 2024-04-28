@@ -19,9 +19,15 @@ jobs:
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      -
-        name: Install Trunk
-        run: cargo install --locked trunk
+      - 
+        name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: stable
+            default: true
+            target: wasm32-unknown-unknown
+            override: true
+            components: rustfmt, clippy, trunk
       -
         name: Build UI
         run: |
