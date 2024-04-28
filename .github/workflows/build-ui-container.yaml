@@ -27,7 +27,10 @@ jobs:
             default: true
             target: wasm32-unknown-unknown
             override: true
-            components: rustfmt, clippy, trunk
+            components: rustfmt, clippy
+      -
+        name: Install Trunk
+        run: cargo install trunk
       -
         name: Build UI
         run: |
