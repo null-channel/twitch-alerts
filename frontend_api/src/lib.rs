@@ -24,6 +24,7 @@ pub type ConnectionMap = Arc<Mutex<HashMap<SocketAddr, Tx>>>;
 pub struct FrontendApi {
     address: String,
     connection_state: ConnectionMap,
+    message_queue: std::collections::VecDeque<DisplayMessage>,
 }
 
 impl FrontendApi {
@@ -31,6 +32,7 @@ impl FrontendApi {
         FrontendApi {
             address: addr,
             connection_state: ConnectionMap::new(Mutex::new(HashMap::new())),
+            message_queue: std::collections::VecDeque::new(),
         }
     }
 
