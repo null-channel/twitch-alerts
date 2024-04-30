@@ -6,14 +6,15 @@ on:
       - 'main'
   workflow_dispatch:
 
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+
     permissions:
       contents: read
       packages: write
       id-token: write
 
-jobs:
-  docker:
-    runs-on: ubuntu-latest
     steps:
       -
         name: Checkout
