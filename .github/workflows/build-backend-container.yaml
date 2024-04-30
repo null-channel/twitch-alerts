@@ -38,9 +38,6 @@ jobs:
           push: true
           tags: nullchannel/twitch-alerts:${{ github.sha }}
       - name: Sign the images with GitHub OIDC Token
-        env:
-          DIGEST: ${{ steps.build-and-push.outputs.digest }}
-          TAGS: ${{ github.sha }}
         run: |
-          cosign sign --yes "nullchannel/twitch-alerts:${{ github.sha }}@${DIGEST}"
+          cosign sign --yes "nullchannel/twitch-alerts:${{ github.sha }}@${{ steps.build-and-push.outputs.digest }}"
 
