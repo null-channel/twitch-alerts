@@ -1,15 +1,13 @@
-FROM rust:1.77 as builder
+FROM cgr.dev/chainguard/rust:latest-dev as build
+USER root
+RUN apk add openssl-dev
+RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 COPY . .
 RUN cargo build --bin monolith --release
 
-FROM ubuntu:22.04
-RUN apt-get update && apt-get install -y openssl ca-certificates
-RUN update-ca-certificates
-RUN apt-get install -y libssl-dev
-RUN rm -rf /var/lib/apt/lists/*
+FROM cgr.dev/chainguard/cc-dynamic:latest
 COPY ./ai_manager_service/migrations /var/lib/db/migrations
 EXPOSE 9000
-#RUN apt-get update && apt-get install -y extra-runtime-dependencies && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /usr/src/app/target/release/monolith /usr/local/bin/twitch-alerts
-CMD ["twitch-alerts"]
+COPY --from=build --chown=nonroot:nonroot /usr/src/app/target/release/monolith /usr/local/bin/twitch-alerts
+CMD ["/usr/local/bin/monolith"]
