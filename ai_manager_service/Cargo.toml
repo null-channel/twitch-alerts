@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 messages = { path = "../messages" }
-sqlx = { version = "0.7.1", features = ["sqlite", "runtime-tokio-native-tls"] }
+sqlx = { workspace = true }
 async-trait = "0.1.68"
 anyhow = "1.0.51"
 chatgpt_rs = "1.0.0"

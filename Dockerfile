@@ -1,6 +1,5 @@
 FROM cgr.dev/chainguard/rust:latest-dev as build
 USER root
-RUN apk add openssl-dev
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 COPY . .

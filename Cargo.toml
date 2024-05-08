@@ -21,7 +21,7 @@ exclude = [
 
 [workspace.dependencies]
 anyhow = "1.0"
-sqlx = { version = "0.7.4", features = ["sqlite", "runtime-tokio-rustls"] }
+sqlx = { version = "0.7.4", features = ["sqlite"] }
 structopt = "0.3"
 twitch_api = { git = "https://github.com/twitch-rs/twitch_api.git", features = [
     "reqwest",
@@ -36,14 +36,13 @@ color-eyre = { version = "0.6", features = ["capture-spantrace"] }
 dotenvy = "0.15.6"
 eyre = { version = "0.6" }
 futures = "0.3.26"
-hyper-tls = { version = "0.6", features = [] }
 hyper = { version = "0.14", features = [] }
-reqwest = { version = "0.12.4", features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12.4", features = ["json"] }
 retainer = "0.3.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
 tokio = { version = "1.26.0", features = ["macros", "rt-multi-thread"] }
-tokio-tungstenite = { version = "0.20.0", features = ["rustls-tls-webpki-roots"] }
+tokio-tungstenite = { version = "0.21.0", features = [] }
 tracing = "0.1.37"
 tracing-error = "0.2.0"
 tracing-log = "0.1.3"

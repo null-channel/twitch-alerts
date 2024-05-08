@@ -16,7 +16,7 @@ path = "src/main.rs"
 [dependencies]
 messages = { path = "../messages" }
 eyre = "0.6.8"
-tokio-tungstenite = "0.19.0"
+tokio-tungstenite = { workspace = true }
 anyhow = "1.0.70"
 env_logger = "0.10.0"
 tokio = { version = "1.28.0", features = ["full"] }

@@ -2,6 +2,7 @@ use eyre::eyre;
 use futures_channel::mpsc::{unbounded, UnboundedSender};
 use futures_util::{future, pin_mut, stream::TryStreamExt, SinkExt, StreamExt};
 use messages::DisplayMessage;
+use std::collections::VecDeque;
 use std::net::SocketAddr;
 use std::{
     collections::HashMap,
@@ -24,7 +25,7 @@ pub type ConnectionMap = Arc<Mutex<HashMap<SocketAddr, Tx>>>;
 pub struct FrontendApi {
     address: String,
     connection_state: ConnectionMap,
-    message_queue: std::collections::VecDeque<DisplayMessage>,
+    message_queue: VecDeque<DisplayMessage>,
 }
 
 impl FrontendApi {
@@ -32,7 +33,7 @@ impl FrontendApi {
         FrontendApi {
             address: addr,
             connection_state: ConnectionMap::new(Mutex::new(HashMap::new())),
-            message_queue: std::collections::VecDeque::new(),
+            message_queue: VecDeque::new(),
         }
     }
 

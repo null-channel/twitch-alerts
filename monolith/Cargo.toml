@@ -17,6 +17,7 @@ color-eyre = { workspace = true }
 dotenvy = { workspace = true }
 eyre = { workspace = true }
 futures = { workspace = true }
+#hyper-tls = { workspace = true }
 hyper = { workspace = true }
 reqwest = { workspace = true }
 retainer = { workspace = true }

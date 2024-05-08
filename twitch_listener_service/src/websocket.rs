@@ -42,6 +42,8 @@ impl WebsocketClient {
     > {
         tracing::info!("connecting to twitch");
         let config = tungstenite::protocol::WebSocketConfig {
+            max_write_buffer_size: 0,
+            write_buffer_size: (128 << 10), //128 Kib
             max_send_queue: None,
             max_message_size: Some(64 << 20), // 64 MiB
             max_frame_size: Some(16 << 20),   // 16 MiB
@@ -142,9 +144,7 @@ impl WebsocketClient {
                     EventsubWebsocketData::Keepalive {
                         metadata: _,
                         payload: _,
-                    } => {
-                        Ok(())
-                    }
+                    } => Ok(()),
                     _ => Ok(()),
                 }
             }
