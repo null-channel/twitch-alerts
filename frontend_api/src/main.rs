@@ -1,48 +1,18 @@
-use std::{collections::HashMap, sync::Mutex, time::Duration};
+use forntend_api_lib::FrontendApi;
+use tokio::sync::mpsc;
 
-use forntend_api_lib::{accept_connection, ConnectionMap};
-use tokio::net::TcpListener;
-use tokio_tungstenite::tungstenite::Message;
-
+//TODO: This should run like the "full app" does in the lib.rs file
 #[tokio::main]
 async fn main() {
     env_logger::init();
 
-    let addr = "127.0.0.1:9000";
-    let listener = TcpListener::bind(&addr).await.expect("Can't listen");
-    println!("Listening on: {}", addr);
+    // this main function should be the same as the one in the lib.rs file
+    // and is expected to be used for local testing
+    let ws_address = "0.0.0.0:9000";
+    let http_address = "0.0.0.0:8080";
 
-    let state = ConnectionMap::new(Mutex::new(HashMap::new()));
-
-    let state2 = state.clone();
-
-    tokio::spawn(async move {
-        let mut count = 0;
-        loop {
-            {
-                let mut state2 = state2.lock().unwrap();
-
-                for (&addr, tx) in state2.iter_mut() {
-                    println!("Sending message to: {}", addr);
-                    if tx
-                        .unbounded_send(Message::Text(format!("{}", count)))
-                        .is_err()
-                    {
-                        println!("closing websocket message to: {} ==========", addr);
-                    }
-                }
-                count += 1;
-            }
-            tokio::time::sleep(Duration::from_millis(1000)).await;
-        }
-    });
-
-    while let Ok((stream, _)) = listener.accept().await {
-        let peer = stream
-            .peer_addr()
-            .expect("connected streams should have a peer address");
-        println!("Peer address: {}", peer);
-
-        tokio::spawn(accept_connection(peer, stream, state.clone()));
-    }
+    let api = FrontendApi::new(ws_address.to_string(), http_address.to_string());
+    let (_tx, rx) = mpsc::unbounded_channel();
+    api.run(rx).await.unwrap();
+    //TODO: write some test something to send a message to the receiver
 }

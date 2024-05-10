@@ -1,9 +1,12 @@
+use axum::{routing::get, Router};
 use eyre::eyre;
 use futures_channel::mpsc::{unbounded, UnboundedSender};
 use futures_util::{future, pin_mut, stream::TryStreamExt, SinkExt, StreamExt};
+use maud::{html, Markup};
 use messages::DisplayMessage;
 use std::collections::VecDeque;
 use std::net::SocketAddr;
+use std::time::Duration;
 use std::{
     collections::HashMap,
     env,
@@ -13,6 +16,7 @@ use tokio::{
     net::{TcpListener, TcpStream},
     sync::mpsc,
 };
+use tower_http::services::ServeDir;
 
 use tokio_tungstenite::{
     accept_async,
@@ -21,19 +25,20 @@ use tokio_tungstenite::{
 
 type Tx = UnboundedSender<Message>;
 pub type ConnectionMap = Arc<Mutex<HashMap<SocketAddr, Tx>>>;
+type MessageQueue = Arc<Mutex<VecDeque<DisplayMessage>>>;
 
 pub struct FrontendApi {
-    address: String,
+    ws_address: String,
+    http_address: String,
     connection_state: ConnectionMap,
-    message_queue: VecDeque<DisplayMessage>,
 }
 
 impl FrontendApi {
-    pub fn new(addr: String) -> FrontendApi {
+    pub fn new(ws_address: String, http_address: String) -> FrontendApi {
         FrontendApi {
-            address: addr,
+            ws_address,
+            http_address,
             connection_state: ConnectionMap::new(Mutex::new(HashMap::new())),
-            message_queue: VecDeque::new(),
         }
     }
 
@@ -41,34 +46,36 @@ impl FrontendApi {
         &self,
         mut receiver: mpsc::UnboundedReceiver<DisplayMessage>,
     ) -> Result<(), eyre::Error> {
-        let listener = TcpListener::bind(&self.address)
+        let listener = TcpListener::bind(&self.ws_address)
             .await
             .expect("Can't listen");
-        println!("Listening on: {}", self.address);
+        println!("Listening on: {}", self.ws_address);
 
-        let state2 = self.connection_state.clone();
+        let connection_state = self.connection_state.clone();
+        let message_queue_arc: MessageQueue = Arc::new(Mutex::new(VecDeque::new()));
 
         tokio::spawn(async move {
             loop {
                 let msg = (&mut receiver).recv().await;
+                handle_message(connection_state.clone(), message_queue_arc.clone(), msg).await;
+            }
+        });
 
-                match msg {
-                    Some(message) => {
-                        let mut state2 = state2.lock().unwrap();
-                        let Ok(message) = serde_json::to_string(&message) else {
-                            println!("Error serializing message");
-                            continue;
-                        };
-                        for (&addr, tx) in state2.iter_mut() {
-                            println!("Sending message to: {}", addr);
+        let https_address = self.http_address.clone();
+        tokio::spawn(async move {
+            loop {
+                let listener = TcpListener::bind(&https_address)
+                    .await
+                    .expect("Can't listen");
+                // build our application
+                let app = Router::new()
+                    .route("/", get(index))
+                    //TODO: understand where to put our assets
+                    // Remember that these need served by nginx in production
+                    .nest_service("/assets", ServeDir::new("assets"));
 
-                            if tx.unbounded_send(Message::Text(message.clone())).is_err() {
-                                println!("closing websocket message to: {} ==========", addr);
-                            }
-                        }
-                    }
-                    None => panic!("Error receiving message"),
-                }
+                // run it
+                axum::serve(listener, app).await.unwrap();
             }
         });
 
@@ -90,6 +97,42 @@ impl FrontendApi {
     }
 }
 
+async fn index() -> Markup {
+    html! {
+        h1 { "Hello, World!" }
+    }
+}
+
+async fn handle_message(
+    connection_state: ConnectionMap,
+    message_queue: MessageQueue,
+    message: Option<DisplayMessage>,
+) {
+    match message {
+        Some(message) => {
+            let mut state2 = connection_state.lock().unwrap();
+            for (&addr, tx) in state2.iter_mut() {
+                println!("Sending message to: {}", addr);
+
+                //Enqueue message
+                {
+                    let mut message_queue = message_queue.lock().unwrap();
+                    message_queue.push_back(message.clone());
+                }
+
+                //TODO: Delete this as we have a message queue
+                let Ok(message) = serde_json::to_string(&message) else {
+                    println!("Error serializing message");
+                    continue;
+                };
+                if tx.unbounded_send(Message::Text(message.clone())).is_err() {
+                    println!("closing websocket message to: {} ==========", addr);
+                }
+            }
+        }
+        None => panic!("Error receiving message"),
+    }
+}
 pub async fn accept_connection(peer: SocketAddr, stream: TcpStream, state: ConnectionMap) {
     if let Err(e) = handle_connection(peer, stream, state).await {
         match e {
@@ -118,6 +161,7 @@ async fn handle_connection(
                 match msg {
                     Some(msg) => {
                         let msg = msg?;
+                        // TODO: handle message
                         if msg.is_text() ||msg.is_binary() {
                             println!("Received a message from {}: {}", peer, msg.to_text()?);
                             ws_sender.send(msg).await?;
@@ -128,6 +172,8 @@ async fn handle_connection(
                     None => break,
                 }
             }
+
+            //TODO need to manage queue here?
             msg = rx.next() => {
                 ws_sender.send(msg.unwrap()).await?;
             }
