@@ -11,14 +11,24 @@ pub struct NewTwitchEventMessage {
 pub enum TwitchEvent {
     ChannelFollow(FollowEvent),
     ChannelSubscribe(SubscribeEvent),
+    ChannelResubscribe(SubscribeEvent),
     ChannelRaid(RaidEvent),
     ChannelSubGift(ChannelGiftMessage),
+    ChannelCheer(CheerEvent),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FollowEvent {
     pub user_name: String,
     pub user_id: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct CheerEvent {
+    pub user_name: String,
+    pub user_id: i64,
+    pub bits: i64,
+    pub message: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -40,6 +50,10 @@ pub struct SubscribeEvent {
     pub user_id: i64,
     pub is_gift: bool,
     pub tier: NullSubTier,
+    pub cumulative_months: i64,
+    pub duration_months: i64,
+    pub message: String,
+    pub streak_months: Option<i64>,
 }
 
 // Path: messages/src/lib.rs

@@ -76,6 +76,15 @@ impl AIManager {
                 println!("Channel Sub Gift Event!");
                 self.handle_gift_sub_event(sub_gift, conversation).await?;
             }
+            TwitchEvent::ChannelResubscribe(resub_event) => {
+                println!("Channel Resub Event!");
+                //TODO: handle resubscribe event
+                self.handle_resub_event(resub_event, conversation).await?;
+            }
+            TwitchEvent::ChannelCheer(cheer_event) => {
+                println!("Channel Cheer Event!");
+                //TODO: handle cheer event
+            }
         }
         Ok(())
     }
@@ -167,6 +176,43 @@ impl AIManager {
             sound_url: "none".to_string(),
             display_time,
             payload: TwitchEvent::ChannelRaid(raid_event.clone()),
+        };
+        self.frontend_sender.send(display_message)?;
+        Ok(())
+    }
+
+    pub async fn handle_resub_event(
+        &self,
+        subscriber_event: &SubscribeEvent,
+        mut conversation: Conversation,
+    ) -> anyhow::Result<()> {
+        let response = conversation
+            .send_message(format!(
+                "tell me an epic story about how {} supported the party",
+                subscriber_event.user_name
+            ))
+            .await?;
+
+        println!("Response: {}", response.message().content);
+        let conn = self.sqlite_pool.acquire().await?;
+        let db_results = sqlite::write_new_story_segment(
+            conn,
+            subscriber_event.user_id,
+            "subscribe".to_string(),
+            response.message().content.to_string(),
+        )
+        .await?;
+
+        println!("db_results: {:?}", db_results);
+
+        let display_time = response.message().content.split(" ").count() * 500;
+
+        let display_message = DisplayMessage {
+            message: response.message().content.to_string(),
+            image_url: "none".to_string(),
+            sound_url: "none".to_string(),
+            display_time,
+            payload: TwitchEvent::ChannelResubscribe(subscriber_event.clone()),
         };
         self.frontend_sender.send(display_message)?;
         Ok(())

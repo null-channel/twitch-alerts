@@ -3,17 +3,20 @@ use std::time::Duration;
 
 use eyre::Context;
 use messages::{
-    ChannelGiftMessage, FollowEvent, NewTwitchEventMessage, RaidEvent, SubscribeEvent, TwitchEvent,
+    ChannelGiftMessage, CheerEvent, FollowEvent, NewTwitchEventMessage, RaidEvent, SubscribeEvent,
+    TwitchEvent,
 };
 use tokio::sync::{mpsc::UnboundedSender, RwLock};
-use tokio::time::Instant;
 use tokio_tungstenite::tungstenite;
 use tracing::Instrument;
-use twitch_api::eventsub::channel::{ChannelRaidV1Payload, ChannelSubscribeV1Payload};
+use twitch_api::eventsub::channel::{
+    ChannelCheerV1Payload, ChannelRaidV1Payload, ChannelSubscribeV1Payload,
+    ChannelSubscriptionGiftV1Payload, ChannelSubscriptionMessageV1Payload,
+};
 use twitch_api::twitch_oauth2::UserToken;
 use twitch_api::{
     eventsub::{
-        channel::{ChannelFollowV2Payload, ChannelSubscriptionGiftV1Payload},
+        channel::ChannelFollowV2Payload,
         event::websocket::{EventsubWebsocketData, ReconnectPayload, SessionData, WelcomePayload},
         Event, Message, NotificationMetadata, Payload,
     },
@@ -243,6 +246,10 @@ fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
                 broadcaster_user_name: broadcaster_user_name.to_string(),
                 is_gift,
                 tier: twitch_teir_to_teir(tier),
+                streak_months: Some(1),
+                cumulative_months: 1,
+                duration_months: 1,
+                message: "".to_string(),
             }))
         }
         Event::ChannelRaidV1(Payload {
@@ -265,8 +272,9 @@ fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
             to_broadcaster_user_id: to_broadcaster_user_id.to_string(),
             to_broadcaster_user_login: to_broadcaster_user_login.to_string(),
             to_broadcaster_user_name: to_broadcaster_user_name.to_string(),
-            viewers: viewers,
+            viewers,
         })),
+        // Need to populate data from api because the gifter is not listed
         Event::ChannelSubscriptionGiftV1(Payload {
             message:
                 Message::Notification(ChannelSubscriptionGiftV1Payload {
@@ -287,18 +295,64 @@ fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
             broadcaster_user_id: broadcaster_user_id.to_string(),
             broadcaster_user_login: broadcaster_user_login.to_string(),
             broadcaster_user_name: broadcaster_user_name.to_string(),
-            cumulative_total: cumulative_total,
-            is_anonymous: is_anonymous,
+            cumulative_total,
+            is_anonymous,
             tier: twitch_teir_to_teir(tier),
-            total: total,
+            total,
             user_id: braid_optional_to_string_optional(user_id),
             user_login: braid_optional_to_string_optional(user_login),
             user_name: braid_optional_to_string_optional(user_name),
         })),
-        Event::ChannelCheerV1(Payload {
-            message: Message::Notification(..),
+
+        Event::ChannelSubscriptionMessageV1(Payload {
+            message:
+                Message::Notification(ChannelSubscriptionMessageV1Payload {
+                    user_name,
+                    user_id,
+                    broadcaster_user_id,
+                    broadcaster_user_name,
+                    tier,
+                    cumulative_months,
+                    duration_months,
+                    message,
+                    streak_months,
+                    ..
+                }),
             ..
-        }) => Err(eyre::eyre!("ChannelCheerV1 is not supported")),
+        }) => {
+            println!("New sub event +!+!+!+!+!+!!+!+!+!+!+!+!+!+");
+            Ok(TwitchEvent::ChannelResubscribe(SubscribeEvent {
+                user_name: user_name.to_string(),
+                user_id: user_id.to_string().parse::<i64>()?,
+                broadcaster_user_id: broadcaster_user_id.to_string().parse::<i64>()?,
+                broadcaster_user_name: broadcaster_user_name.to_string(),
+                is_gift: false,
+                tier: twitch_teir_to_teir(tier),
+                cumulative_months,
+                duration_months,
+                //TODO: deal with emotes
+                message: message.text,
+                streak_months,
+            }))
+        }
+
+        Event::ChannelCheerV1(Payload {
+            message:
+                Message::Notification(ChannelCheerV1Payload {
+                    user_name,
+                    user_id,
+                    bits,
+                    message,
+                    ..
+                }),
+            ..
+        }) => Ok(TwitchEvent::ChannelCheer(CheerEvent {
+            user_name: user_name.unwrap().to_string(),
+            user_id: user_id.unwrap().to_string().parse::<i64>()?,
+            bits,
+            message: message.to_string(),
+        })),
+
         Event::ChannelPointsCustomRewardAddV1(Payload {
             message: Message::Notification(..),
             ..
@@ -369,10 +423,6 @@ fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
             message: Message::Notification(..),
             ..
         }) => Err(eyre::eyre!("ChannelPredictionEndV1 is not supported")),
-        Event::ChannelRaidV1(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(eyre::eyre!("ChannelRaidV1 is not supported")),
         Event::ChannelBanV1(Payload {
             message: Message::Notification(..),
             ..
@@ -381,8 +431,7 @@ fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
             message: Message::Notification(..),
             ..
         }) => Err(eyre::eyre!("ChannelUnbanV1 is not supported")),
-
-        Event::ChannelUpdateV1(Payload {
+        Event::ChannelUpdateV2(Payload {
             message: Message::Notification(..),
             ..
         }) => Err(eyre::eyre!("ChannelUpdateV1 is not supported")),
