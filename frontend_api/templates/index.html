@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<title>TODO with HTMX</title>
+	<link rel="stylesheet" href="/assets/css/main.css">
+	<script src="https://unpkg.com/htmx.org@1.9.12"
+		integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
+		crossorigin="anonymous"></script>
+	<script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/ws.js"></script>
+</head>
+
+<body>
+	<main class="flex flex-row justify-center w-full">
+		<div hx-ext="ws" ws-connect="ws://localhost:9000/">
+			<div id="notifications"></div>
+			<div id="alerts">
+				<h1>TODO with HTMX</h1>
+			</div>
+		</div>
+	</main>
+</body>
+
+</html>

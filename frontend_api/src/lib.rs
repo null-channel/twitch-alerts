@@ -1,16 +1,13 @@
 use axum::{routing::get, Router};
-use eyre::eyre;
 use futures_channel::mpsc::{unbounded, UnboundedSender};
-use futures_util::{future, pin_mut, stream::TryStreamExt, SinkExt, StreamExt};
+use futures_util::{SinkExt, StreamExt};
 use maud::{html, Markup};
 use messages::DisplayMessage;
 use std::collections::VecDeque;
 use std::net::SocketAddr;
-use std::time::Duration;
 use std::{
     collections::HashMap,
-    env,
-    sync::{mpsc::Receiver, Arc, Mutex},
+    sync::{Arc, Mutex},
 };
 use tokio::{
     net::{TcpListener, TcpStream},
@@ -63,20 +60,18 @@ impl FrontendApi {
 
         let https_address = self.http_address.clone();
         tokio::spawn(async move {
-            loop {
-                let listener = TcpListener::bind(&https_address)
-                    .await
-                    .expect("Can't listen");
-                // build our application
-                let app = Router::new()
-                    .route("/", get(index))
-                    //TODO: understand where to put our assets
-                    // Remember that these need served by nginx in production
-                    .nest_service("/assets", ServeDir::new("assets"));
+            let listener = TcpListener::bind(&https_address)
+                .await
+                .expect("Can't listen");
+            // build our application
+            let app = Router::new()
+                .route("/", get(index))
+                //TODO: understand where to put our assets
+                // Remember that these need served by nginx in production
+                .nest_service("/assets", ServeDir::new("assets"));
 
-                // run it
-                axum::serve(listener, app).await.unwrap();
-            }
+            // run it
+            axum::serve(listener, app).await.unwrap();
         });
 
         let new_connection_state = self.connection_state.clone();
@@ -97,10 +92,12 @@ impl FrontendApi {
     }
 }
 
-async fn index() -> Markup {
-    html! {
-        h1 { "Hello, World!" }
-    }
+#[derive(askama::Template)]
+#[template(path = "index.html")]
+struct IndexTemplate {}
+
+async fn index() -> IndexTemplate {
+    IndexTemplate {}
 }
 
 async fn handle_message(
@@ -120,12 +117,18 @@ async fn handle_message(
                     message_queue.push_back(message.clone());
                 }
 
-                //TODO: Delete this as we have a message queue
-                let Ok(message) = serde_json::to_string(&message) else {
-                    println!("Error serializing message");
-                    continue;
+                //Make html message to send to frontend
+                //<div id="alerts" hx-swap-oob="true">
+                let html_message = html! {
+                    div id="alerts" hx-swap-oob="true" {
+                        h1 { (message.message) }
+                        img src=(message.image_url) {}
+                    }
                 };
-                if tx.unbounded_send(Message::Text(message.clone())).is_err() {
+                if tx
+                    .unbounded_send(Message::Text(html_message.clone().into()))
+                    .is_err()
+                {
                     println!("closing websocket message to: {} ==========", addr);
                 }
             }
@@ -147,13 +150,13 @@ async fn handle_connection(
     stream: TcpStream,
     state: ConnectionMap,
 ) -> Result<()> {
+    println!("New WebSocket connection: {}", peer);
     let ws_stream = accept_async(stream).await.expect("Failed to accept");
 
     let (tx, mut rx) = unbounded();
     {
         state.lock().unwrap().insert(peer, tx);
     }
-    println!("New WebSocket connection: {}", peer);
     let (mut ws_sender, mut ws_receiver) = ws_stream.split();
     loop {
         tokio::select! {
@@ -175,7 +178,9 @@ async fn handle_connection(
 
             //TODO need to manage queue here?
             msg = rx.next() => {
-                ws_sender.send(msg.unwrap()).await?;
+                let msg = msg.unwrap();
+                println!("Sending message to {}: {}", peer, msg.to_text()?);
+                ws_sender.send(msg).await?;
             }
         }
     }
