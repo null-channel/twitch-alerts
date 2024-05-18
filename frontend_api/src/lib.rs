@@ -22,7 +22,25 @@ use tokio_tungstenite::{
 
 type Tx = UnboundedSender<Message>;
 pub type ConnectionMap = Arc<Mutex<HashMap<SocketAddr, Tx>>>;
-type MessageQueue = Arc<Mutex<VecDeque<DisplayMessage>>>;
+type EventQueues = Arc<Mutex<Queues>>;
+
+static EVENT_QUEUE_ACTIVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+static TTS_QUEUE_ACTIVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static IS_DISPLAYING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub struct Queues {
+    pub events: VecDeque<DisplayMessage>,
+    pub tts: VecDeque<DisplayMessage>,
+}
+
+impl Queues {
+    pub fn new() -> Queues {
+        Queues {
+            events: VecDeque::new(),
+            tts: VecDeque::new(),
+        }
+    }
+}
 
 pub struct FrontendApi {
     ws_address: String,
@@ -49,14 +67,31 @@ impl FrontendApi {
         println!("Listening on: {}", self.ws_address);
 
         let connection_state = self.connection_state.clone();
-        let message_queue_arc: MessageQueue = Arc::new(Mutex::new(VecDeque::new()));
+        let message_queue_arc: EventQueues = Arc::new(Mutex::new(Queues::new()));
 
+        //TODO: Need to fetch un presented messages from database
+
+        let queue = message_queue_arc.clone();
+        let state = connection_state.clone();
+        // Listen for incoming events and store them in the queues
         tokio::spawn(async move {
             loop {
                 let msg = (&mut receiver).recv().await;
-                handle_message(connection_state.clone(), message_queue_arc.clone(), msg).await;
+                handle_message(state.clone(), queue.clone(), msg);
             }
         });
+
+        // Process the Queues on a new thread
+
+        //tokio::spawn(async move {
+        //    loop {
+        //        let mut queues = message_queue_arc.lock().unwrap();
+        //        if !queues.events.is_empty() {
+        //            let message = queues.events.pop_front();
+        //            handle_message(connection_state.clone(), message_queue_arc.clone(), message);
+        //        }
+        //    }
+        //});
 
         let https_address = self.http_address.clone();
         tokio::spawn(async move {
@@ -66,6 +101,7 @@ impl FrontendApi {
             // build our application
             let app = Router::new()
                 .route("/", get(index))
+                .route("/admin", get(admin))
                 //TODO: understand where to put our assets
                 // Remember that these need served by nginx in production
                 .nest_service("/assets", ServeDir::new("assets"));
@@ -96,13 +132,21 @@ impl FrontendApi {
 #[template(path = "index.html")]
 struct IndexTemplate {}
 
+#[derive(askama::Template)]
+#[template(path = "admin.html")]
+struct AdminTemplate {}
+
 async fn index() -> IndexTemplate {
     IndexTemplate {}
 }
 
-async fn handle_message(
+async fn admin() -> AdminTemplate {
+    AdminTemplate {}
+}
+
+fn handle_message(
     connection_state: ConnectionMap,
-    message_queue: MessageQueue,
+    event_queues: EventQueues,
     message: Option<DisplayMessage>,
 ) {
     match message {
@@ -113,14 +157,17 @@ async fn handle_message(
 
                 //Enqueue message
                 {
-                    let mut message_queue = message_queue.lock().unwrap();
-                    message_queue.push_back(message.clone());
+                    let mut queues = event_queues.lock().unwrap();
+                    //TODO: need to handle different types of messages
+
+                    queues.events.push_back(message.clone());
                 }
 
                 //Make html message to send to frontend
                 //<div id="alerts" hx-swap-oob="true">
+                let trigger = format!("delay:{}ms", message.display_time);
                 let html_message = html! {
-                    div id="alerts" hx-swap-oob="true" {
+                    div id="notifications" hx-swap="afterend" hx-target="notifications" ws-send="done" hx-trigger=(trigger) {
                         h1 { (message.message) }
                         img src=(message.image_url) {}
                     }
@@ -158,6 +205,7 @@ async fn handle_connection(
         state.lock().unwrap().insert(peer, tx);
     }
     let (mut ws_sender, mut ws_receiver) = ws_stream.split();
+    println!("Connection state: {:?}", state.lock().unwrap().keys());
     loop {
         tokio::select! {
             msg = ws_receiver.next() => {

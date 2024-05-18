@@ -1,5 +1,4 @@
 use forntend_api_lib::FrontendApi;
-use serde_json::to_string;
 use tokio::sync::mpsc;
 
 //TODO: This should run like the "full app" does in the lib.rs file
@@ -23,10 +22,10 @@ async fn main() {
 
     loop {
         let display_message = messages::DisplayMessage {
-            message: "hello fome htmx".to_string(),
+            message: "hello from htmx".to_string(),
             image_url: "".to_string(),
             sound_url: "".to_string(),
-            display_time: 20,
+            display_time: 5000,
             payload: messages::TwitchEvent::ChannelFollow(messages::FollowEvent {
                 user_name: "some user".to_string(),
                 user_id: 123,
@@ -35,6 +34,6 @@ async fn main() {
 
         let _ = tx.send(display_message).unwrap();
 
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+        tokio::time::sleep(tokio::time::Duration::from_secs(20)).await;
     }
 }

@@ -1,0 +1,27 @@
+/** write some css to display two divs side by side that contain lists of elements */
+/* Path: main.css */
+
+div {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  width: 75%;
+}
+
+.queue {
+/** flex items-center justify-between */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+}
+
+ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+li {
+  cursor: pointer;
+}
+
+

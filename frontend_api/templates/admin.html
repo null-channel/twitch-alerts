@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<title>TODO with HTMX</title>
+	<link rel="stylesheet" href="/assets/css/main.css">
+	<script src="https://unpkg.com/htmx.org@1.9.12"
+		integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
+		crossorigin="anonymous"></script>
+	<script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/ws.js"></script>
+</head>
+
+<body>
+	<main class="flex flex-row justify-center w-full">
+		<!-- Should display 2 queues with buttons at the bottom -->
+		<div>
+			<div class="queue">
+				<h1>Events</h1>
+				<div class="">
+					<h1>TODO</h1>
+					<div id="todo-queue"></div>
+				</div>
+				<div class="">
+					<h1>DOING</h1>
+					<div id="doing-queue"></div>
+				</div>
+			</div>
+			<div class="queue">
+				<h1>TTS</h1>
+				<div>
+					<h1>DONE</h1>
+					<div id=""></div>
+				</div>
+				<div class="">
+					<h1>ARCHIVED</h1>
+					<div id="archived-queue"></div>
+				</div>
+			</div>
+			<div class="">
+				<button id="event-queue-start-stop">Stop</button>
+				<button id="tts">Play Next TTS</button>
+			</div>
+		</div>
+		<!-- Should display notifications and alerts -->
+		<div hx-ext="ws" ws-connect="ws://localhost:9000/">
+			<div id="notifications"></div>
+			<div id="alerts">
+				<h1>TODO with HTMX</h1>
+			</div>
+		</div>
+	</main>
+</body>
+
+</html>
