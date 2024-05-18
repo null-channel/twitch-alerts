@@ -1,5 +1,6 @@
 use axum::{routing::get, Router};
 use futures_channel::mpsc::{unbounded, UnboundedSender};
+use futures_util::stream::SelectNextSome;
 use futures_util::{SinkExt, StreamExt};
 use maud::{html, Markup};
 use messages::DisplayMessage;
@@ -26,7 +27,6 @@ type EventQueues = Arc<Mutex<Queues>>;
 
 static EVENT_QUEUE_ACTIVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
 static TTS_QUEUE_ACTIVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-static IS_DISPLAYING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 pub struct Queues {
     pub events: VecDeque<DisplayMessage>,
@@ -77,21 +77,67 @@ impl FrontendApi {
         tokio::spawn(async move {
             loop {
                 let msg = (&mut receiver).recv().await;
-                handle_message(state.clone(), queue.clone(), msg);
+                handle_message(state.clone(), queue.clone(), msg).await;
             }
         });
 
         // Process the Queues on a new thread
 
-        //tokio::spawn(async move {
-        //    loop {
-        //        let mut queues = message_queue_arc.lock().unwrap();
-        //        if !queues.events.is_empty() {
-        //            let message = queues.events.pop_front();
-        //            handle_message(connection_state.clone(), message_queue_arc.clone(), message);
-        //        }
-        //    }
-        //});
+        let queue_connection_state = connection_state.clone();
+        tokio::spawn(async move {
+            loop {
+                let message = {
+                    let mut queues = message_queue_arc.lock().unwrap();
+                    queues.events.pop_front()
+                };
+
+                let Some(message) = message else {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                    continue;
+                };
+                //Make html message to send to frontend
+                //<div id="alerts" hx-swap-oob="true">
+                let html_message = html! {
+                    div id="notifications" hx-swap="afterend" hx-target="notifications" {
+                        h1 { (message.message) }
+                        img src=(message.image_url) {}
+                    }
+                };
+                {
+                    let mut websocket_state = queue_connection_state.lock().unwrap();
+                    for (&addr, tx) in websocket_state.iter_mut() {
+                        if tx
+                            .unbounded_send(Message::Text(html_message.clone().into()))
+                            .is_err()
+                        {
+                            println!("closing websocket message to: {} ==========", addr);
+                        }
+                    }
+                }
+
+                //Pause for a bit to allow the message to be displayed
+                tokio::time::sleep(tokio::time::Duration::from_millis(5000)).await;
+
+                let html_message = html! {
+                    div id="notifications" hx-swap="delete" hx-target="notifications" {
+                    }
+                };
+                {
+                    let mut websocket_state = queue_connection_state.lock().unwrap();
+                    for (&addr, tx) in websocket_state.iter_mut() {
+                        if tx
+                            .unbounded_send(Message::Text(html_message.clone().into()))
+                            .is_err()
+                        {
+                            println!("closing websocket message to: {} ==========", addr);
+                        }
+                    }
+                }
+
+                //Pause a bit before running queue again
+                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+            }
+        });
 
         let https_address = self.http_address.clone();
         tokio::spawn(async move {
@@ -144,7 +190,7 @@ async fn admin() -> AdminTemplate {
     AdminTemplate {}
 }
 
-fn handle_message(
+async fn handle_message(
     connection_state: ConnectionMap,
     event_queues: EventQueues,
     message: Option<DisplayMessage>,
@@ -161,22 +207,6 @@ fn handle_message(
                     //TODO: need to handle different types of messages
 
                     queues.events.push_back(message.clone());
-                }
-
-                //Make html message to send to frontend
-                //<div id="alerts" hx-swap-oob="true">
-                let trigger = format!("delay:{}ms", message.display_time);
-                let html_message = html! {
-                    div id="notifications" hx-swap="afterend" hx-target="notifications" ws-send="done" hx-trigger=(trigger) {
-                        h1 { (message.message) }
-                        img src=(message.image_url) {}
-                    }
-                };
-                if tx
-                    .unbounded_send(Message::Text(html_message.clone().into()))
-                    .is_err()
-                {
-                    println!("closing websocket message to: {} ==========", addr);
                 }
             }
         }

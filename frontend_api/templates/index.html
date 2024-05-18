@@ -19,4 +19,11 @@
 	</main>
 </body>
 
+<script>
+	htmx.on("htmx:wsBeforeMessage", function (event) {
+		console.log("wsBeforeMessage", event);
+		<!-- do our own thing -->
+	});
+</script>
+
 </html>

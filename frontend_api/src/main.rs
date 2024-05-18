@@ -21,6 +21,7 @@ async fn main() {
     //TODO: write some test something to send a message to the receiver
 
     loop {
+        println!("Sending message");
         let display_message = messages::DisplayMessage {
             message: "hello from htmx".to_string(),
             image_url: "".to_string(),
@@ -34,6 +35,6 @@ async fn main() {
 
         let _ = tx.send(display_message).unwrap();
 
-        tokio::time::sleep(tokio::time::Duration::from_secs(20)).await;
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     }
 }
