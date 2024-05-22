@@ -15,31 +15,33 @@
 	<main class="flex flex-row justify-center w-full">
 		<!-- Should display 2 queues with buttons at the bottom -->
 		<div>
-			<div class="queue">
-				<h1>Events</h1>
-				<div class="">
-					<h1>TODO</h1>
-					<div id="todo-queue"></div>
-				</div>
-				<div class="">
-					<h1>DOING</h1>
-					<div id="doing-queue"></div>
+			<div class="queue" hx-get="/events/latest/all" hx-target="#latest" hx-swap="innerHTML"
+				hx-trigger="every 1s">
+				<h1>Last Events</h1>
+				<li id="latest"></li>
+				<div class="button-holder">
 				</div>
 			</div>
-			<div class="queue">
+			<div class="queue" hx-get="/events/latest" hx-target="#waiting" hx-swap="innerHTML"
+				hx-trigger="every 2s">
+				<h1>In Queue</h1>
+				<li id="waiting"></li>
+				<div class="button-holder">
+					{%- if enabled %}
+					<button id="event-queue-toggle" hx-get="/events/pause" hx-swap="outerHTML"
+						hx-target="#event-queue-toggle">Stop</button>
+					{% else %}
+					<button id="event-queue-toggle" hx-get="/events/start" hx-swap="outerHTML"
+						hx-target="#event-queue-toggle">Start</button>
+					{% endif %}
+				</div>
+			</div>
+			<div class="queue" hx-get="/tts" hx-swap="innerHTML" hx-target="tts" hx-trigger="every 2s">
 				<h1>TTS</h1>
-				<div>
-					<h1>DONE</h1>
-					<div id=""></div>
+				<li id="tts"></li>
+				<div class="button-holder">
+					<button id="play-next" hx-swap="none">Play Next</button>
 				</div>
-				<div class="">
-					<h1>ARCHIVED</h1>
-					<div id="archived-queue"></div>
-				</div>
-			</div>
-			<div class="">
-				<button id="event-queue-start-stop">Stop</button>
-				<button id="tts">Play Next TTS</button>
 			</div>
 		</div>
 		<!-- Should display notifications and alerts -->

@@ -1,10 +1,8 @@
 use axum::{routing::get, Router};
-use futures_channel::mpsc::{unbounded, UnboundedSender};
-use futures_util::stream::SelectNextSome;
+use futures_channel::mpsc::unbounded;
 use futures_util::{SinkExt, StreamExt};
-use maud::{html, Markup};
+use maud::html;
 use messages::DisplayMessage;
-use std::collections::VecDeque;
 use std::net::SocketAddr;
 use std::{
     collections::HashMap,
@@ -21,26 +19,11 @@ use tokio_tungstenite::{
     tungstenite::{Error, Message, Result},
 };
 
-type Tx = UnboundedSender<Message>;
-pub type ConnectionMap = Arc<Mutex<HashMap<SocketAddr, Tx>>>;
-type EventQueues = Arc<Mutex<Queues>>;
+mod routes;
+mod types;
+use routes::{admin, index};
 
-static EVENT_QUEUE_ACTIVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
-static TTS_QUEUE_ACTIVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-
-pub struct Queues {
-    pub events: VecDeque<DisplayMessage>,
-    pub tts: VecDeque<DisplayMessage>,
-}
-
-impl Queues {
-    pub fn new() -> Queues {
-        Queues {
-            events: VecDeque::new(),
-            tts: VecDeque::new(),
-        }
-    }
-}
+use crate::types::{ConnectionMap, EventQueues, Queues};
 
 pub struct FrontendApi {
     ws_address: String,
@@ -82,19 +65,26 @@ impl FrontendApi {
         });
 
         // Process the Queues on a new thread
-
         let queue_connection_state = connection_state.clone();
+        let event_queue = message_queue_arc.clone();
         tokio::spawn(async move {
             loop {
+                let active = types::EVENT_QUEUE_ACTIVE.load(std::sync::atomic::Ordering::SeqCst);
+                if !active {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                    continue;
+                }
+
                 let message = {
-                    let mut queues = message_queue_arc.lock().unwrap();
-                    queues.events.pop_front()
+                    let mut queues = event_queue.lock().unwrap();
+                    queues.unpublished_events.pop_front()
                 };
 
                 let Some(message) = message else {
                     tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
                     continue;
                 };
+
                 //Make html message to send to frontend
                 //<div id="alerts" hx-swap-oob="true">
                 let html_message = html! {
@@ -103,6 +93,10 @@ impl FrontendApi {
                         img src=(message.image_url) {}
                     }
                 };
+
+                let mut bad_websockets = vec![];
+
+                //Send message to all connected websockets
                 {
                     let mut websocket_state = queue_connection_state.lock().unwrap();
                     for (&addr, tx) in websocket_state.iter_mut() {
@@ -111,6 +105,7 @@ impl FrontendApi {
                             .is_err()
                         {
                             println!("closing websocket message to: {} ==========", addr);
+                            bad_websockets.push(addr);
                         }
                     }
                 }
@@ -130,6 +125,7 @@ impl FrontendApi {
                             .is_err()
                         {
                             println!("closing websocket message to: {} ==========", addr);
+                            bad_websockets.push(addr);
                         }
                     }
                 }
@@ -140,6 +136,7 @@ impl FrontendApi {
         });
 
         let https_address = self.http_address.clone();
+        let event_queues = message_queue_arc.clone();
         tokio::spawn(async move {
             let listener = TcpListener::bind(&https_address)
                 .await
@@ -148,9 +145,16 @@ impl FrontendApi {
             let app = Router::new()
                 .route("/", get(index))
                 .route("/admin", get(admin))
+                .route("/events/latest", get(routes::get_latest_unpublished_events))
+                .route("/tts", get(routes::get_all_events_in_queue))
+                .route("/events", get(routes::get_all_events_in_queue))
+                .route("/events/latest/all", get(routes::get_latest_events))
+                .route("/events/pause", get(routes::pause_events))
+                .route("/events/start", get(routes::resume_events))
                 //TODO: understand where to put our assets
                 // Remember that these need served by nginx in production
-                .nest_service("/assets", ServeDir::new("assets"));
+                .nest_service("/assets", ServeDir::new("assets"))
+                .with_state(event_queues.clone());
 
             // run it
             axum::serve(listener, app).await.unwrap();
@@ -174,22 +178,6 @@ impl FrontendApi {
     }
 }
 
-#[derive(askama::Template)]
-#[template(path = "index.html")]
-struct IndexTemplate {}
-
-#[derive(askama::Template)]
-#[template(path = "admin.html")]
-struct AdminTemplate {}
-
-async fn index() -> IndexTemplate {
-    IndexTemplate {}
-}
-
-async fn admin() -> AdminTemplate {
-    AdminTemplate {}
-}
-
 async fn handle_message(
     connection_state: ConnectionMap,
     event_queues: EventQueues,
@@ -197,17 +185,15 @@ async fn handle_message(
 ) {
     match message {
         Some(message) => {
-            let mut state2 = connection_state.lock().unwrap();
-            for (&addr, tx) in state2.iter_mut() {
-                println!("Sending message to: {}", addr);
+            let mut queues = event_queues.lock().unwrap();
 
-                //Enqueue message
-                {
-                    let mut queues = event_queues.lock().unwrap();
-                    //TODO: need to handle different types of messages
+            //TODO: Store different types of messages in different queues
+            queues.unpublished_events.push_back(message.clone());
 
-                    queues.events.push_back(message.clone());
-                }
+            //add to latest events, remove oldest if over 10
+            queues.latest_events.push_back(message.clone());
+            if queues.latest_events.len() > 10 {
+                queues.latest_events.pop_front();
             }
         }
         None => panic!("Error receiving message"),
@@ -247,6 +233,7 @@ async fn handle_connection(
                             println!("Received a message from {}: {}", peer, msg.to_text()?);
                             ws_sender.send(msg).await?;
                         } else if msg.is_close() {
+                            println!("Issue with connection: {}", peer);
                             break;
                         }
                     }
@@ -258,7 +245,11 @@ async fn handle_connection(
             msg = rx.next() => {
                 let msg = msg.unwrap();
                 println!("Sending message to {}: {}", peer, msg.to_text()?);
-                ws_sender.send(msg).await?;
+                let res = ws_sender.send(msg).await;
+                if res.is_err() {
+                    println!("Error sending message to {}", peer);
+                    break;
+                }
             }
         }
     }
