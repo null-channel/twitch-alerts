@@ -4,7 +4,7 @@
 div {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  width: 75%;
+  width: 100%;
 }
 
 .queue {
@@ -12,6 +12,30 @@ div {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+#latest {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.paused {
+  border: 10px solid red;
+  align-items: center;
+  padding: 10px;
+  border-radius: 15px;
+  color: #ccc;
+  width: 100%;
+}
+
+.running {
+  color: #000;
+  width: 100%;
   align-items: center;
 }
 

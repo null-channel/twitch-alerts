@@ -1,0 +1,100 @@
+:root {
+  --font-size: 1.5vw;
+}
+
+div.wrapper {
+    border-radius: 1vw;
+    background-color: #2d3140;
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    background-image: url('../img/background.png');
+    background-size: cover;
+    width: 30vw;
+    height: 30vw;
+}
+
+p {
+    color: #e8e8e8;
+    font-size: var(--font-size);
+    padding: 1.5vw;
+    width: 95%;
+    height: 90%;
+    text-align: center;
+    margin: 0;
+}
+
+p.message {
+    width: 47%;
+    height: 93%;
+    text-align: center;
+    margin: 0;
+    font-size: var(--font-size);
+    padding: 1vw;
+}
+
+p.event {
+    text-align: center;
+    margin-bottom: 0vw;
+    margin-top: .7vw;
+    font-size: var(--font-size);
+    height: fit-content;
+    padding: 1vw;
+    font-weight: bold;
+}
+
+p.follow {
+    color: black;
+}
+
+p.subscribe {
+    color: #de4b35;
+}
+
+p.raid {
+    color: #9147ff;
+}
+
+p.resubscribe {
+    color: rgb(32, 117, 42);
+
+}
+
+
+h2.message {
+    margin-bottom: .4vw;
+    padding: 0vw;
+    text-align: center;
+    font-size: var(--font-size);
+}
+
+div#message {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    padding: 1.5vw;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+}
+
+div#footer {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    padding: 1.5vw;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+}
+
+span#sub {
+    color: #9e2b25;
+    font-size: 2vw;
+    padding: 1.5vw;
+    width: 95%;
+    height: 90%;
+    text-align: center;
+    margin: 0;
+}
+

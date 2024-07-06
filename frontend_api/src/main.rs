@@ -11,7 +11,11 @@ async fn main() {
     let ws_address = "0.0.0.0:9000";
     let http_address = "0.0.0.0:8080";
 
-    let api = FrontendApi::new(ws_address.to_string(), http_address.to_string());
+    let api = FrontendApi::new(
+        ws_address.to_string(),
+        http_address.to_string(),
+        "assets".to_string(),
+    );
     let (tx, rx) = mpsc::unbounded_channel();
 
     tokio::spawn(async move {
@@ -27,7 +31,7 @@ async fn main() {
             message: format!("hello from htmx {}", count),
             image_url: "".to_string(),
             sound_url: "".to_string(),
-            display_time: 5000,
+            display_time: 10000,
             payload: messages::TwitchEvent::ChannelFollow(messages::FollowEvent {
                 user_name: "some user".to_string(),
                 user_id: 123,
@@ -36,6 +40,6 @@ async fn main() {
 
         let _ = tx.send(display_message).unwrap();
 
-        tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+        tokio::time::sleep(tokio::time::Duration::from_secs(20)).await;
     }
 }

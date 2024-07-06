@@ -33,8 +33,13 @@ pub async fn get_latest_unpublished_events(
     };
     let events = queues.unpublished_events.range(range);
 
+    let class = if crate::types::EVENT_QUEUE_ACTIVE.load(std::sync::atomic::Ordering::SeqCst) {
+        "running"
+    } else {
+        "paused"
+    };
     Ok(html! {
-        ul class="waiting" {
+        ul class=(class) {
             @for event in events {
                 li { (event.message) }
             }
@@ -47,8 +52,9 @@ pub async fn get_latest_events(
 ) -> Result<Markup, (StatusCode, String)> {
     let queues = queues.lock().unwrap();
     let events = queues.latest_events.clone();
+
     Ok(html! {
-        ul {
+        ul class="running" {
             @for event in events {
                 li { (event.message) }
             }

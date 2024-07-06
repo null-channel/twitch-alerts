@@ -15,7 +15,6 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use tokio::{
     sync::{mpsc, RwLock},
     task::JoinHandle,
-    time::Instant,
 };
 use twitch_api::{client::ClientDefault, HelixClient};
 
@@ -102,16 +101,19 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
         sender,
     };
 
-    let frontend_api = FrontendApi::new("0.0.0.0:9000".into());
+    println!(
+        "Starting frontend api on http port: {} and ws port: {}",
+        opts.http_port.clone(),
+        opts.ws_port.clone()
+    );
+    let ws_port = format!("0.0.0.0:{}", opts.ws_port.clone());
+    let http_port = format!("0.0.0.0:{}", opts.http_port.clone());
+    let frontend_api = FrontendApi::new(
+        ws_port.clone(),
+        http_port.clone(),
+        "frontend_api/assets".to_string(),
+    );
 
-    /*
-       let websocket_client_bla = {
-           let opts = opts.clone();
-           let sender = sender.clone();
-           let websocket_client = websocket_client.clone();
-           async move {  }
-       };
-    */
     let twithc_clinet = twitch_websocket_client.clone();
 
     let r = tokio::try_join!(

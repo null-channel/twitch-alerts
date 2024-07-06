@@ -25,14 +25,14 @@
 			<div class="queue" hx-get="/events/latest" hx-target="#waiting" hx-swap="innerHTML"
 				hx-trigger="every 2s">
 				<h1>In Queue</h1>
-				<li id="waiting"></li>
+				<div id="waiting"></div>
 				<div class="button-holder">
 					{%- if enabled %}
 					<button id="event-queue-toggle" hx-get="/events/pause" hx-swap="outerHTML"
 						hx-target="#event-queue-toggle">Stop</button>
 					{% else %}
-					<button id="event-queue-toggle" hx-get="/events/start" hx-swap="outerHTML"
-						hx-target="#event-queue-toggle">Start</button>
+					<button id="event-queue-toggle" class="start" hx-get="/events/start"
+						hx-swap="outerHTML" hx-target="#event-queue-toggle">Start</button>
 					{% endif %}
 				</div>
 			</div>

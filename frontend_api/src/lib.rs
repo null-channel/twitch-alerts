@@ -19,6 +19,7 @@ use tokio_tungstenite::{
     tungstenite::{Error, Message, Result},
 };
 
+mod htmx;
 mod routes;
 mod types;
 use routes::{admin, index};
@@ -29,14 +30,16 @@ pub struct FrontendApi {
     ws_address: String,
     http_address: String,
     connection_state: ConnectionMap,
+    asset_path: String,
 }
 
 impl FrontendApi {
-    pub fn new(ws_address: String, http_address: String) -> FrontendApi {
+    pub fn new(ws_address: String, http_address: String, asset_path: String) -> FrontendApi {
         FrontendApi {
             ws_address,
             http_address,
             connection_state: ConnectionMap::new(Mutex::new(HashMap::new())),
+            asset_path,
         }
     }
 
@@ -88,9 +91,10 @@ impl FrontendApi {
                 //Make html message to send to frontend
                 //<div id="alerts" hx-swap-oob="true">
                 let html_message = html! {
-                    div id="notifications" hx-swap="afterend" hx-target="notifications" {
-                        h1 { (message.message) }
-                        img src=(message.image_url) {}
+                    div id="notifications" class="alert" hx-swap="afterend" hx-target="notifications" {
+                        div class="wrapper" {
+                            (htmx::get_display_html(message.clone()))
+                        }
                     }
                 };
 
@@ -111,7 +115,7 @@ impl FrontendApi {
                 }
 
                 //Pause for a bit to allow the message to be displayed
-                tokio::time::sleep(tokio::time::Duration::from_millis(5000)).await;
+                tokio::time::sleep(tokio::time::Duration::from_millis(10000)).await;
 
                 let html_message = html! {
                     div id="notifications" hx-swap="delete" hx-target="notifications" {
@@ -136,7 +140,9 @@ impl FrontendApi {
         });
 
         let https_address = self.http_address.clone();
+        print!("Frontend HTTP is Listening on: {}", https_address);
         let event_queues = message_queue_arc.clone();
+        let asset_path = self.asset_path.clone();
         tokio::spawn(async move {
             let listener = TcpListener::bind(&https_address)
                 .await
@@ -153,7 +159,7 @@ impl FrontendApi {
                 .route("/events/start", get(routes::resume_events))
                 //TODO: understand where to put our assets
                 // Remember that these need served by nginx in production
-                .nest_service("/assets", ServeDir::new("assets"))
+                .nest_service("/assets", ServeDir::new(asset_path.clone()))
                 .with_state(event_queues.clone());
 
             // run it

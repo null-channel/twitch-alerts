@@ -57,6 +57,12 @@ pub struct Opts {
 
     #[clap(long, env, hide_env = true, group = "db", default_value = "alerts.db")]
     pub db_path: Option<String>,
+
+    #[clap(long, env, hide_env = true, default_value = "80")]
+    pub http_port: String,
+
+    #[clap(long, env, hide_env = true, default_value = "9000")]
+    pub ws_port: String,
 }
 
 pub fn is_token(s: String) -> eyre::Result<()> {

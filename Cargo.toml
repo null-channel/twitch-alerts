@@ -1,6 +1,5 @@
 [workspace]
 
-
 members = [
     "ai_manager_service",
     "twitch_listener_service",
@@ -21,7 +20,7 @@ exclude = [
 
 [workspace.dependencies]
 anyhow = "1.0"
-sqlx = { version = "0.7.4", features = ["sqlite"] }
+sqlx = { version = "0.7.4", features = ["sqlite", "runtime-tokio"] }
 structopt = "0.3"
 twitch_api = { git = "https://github.com/twitch-rs/twitch_api.git", features = [
     "reqwest",

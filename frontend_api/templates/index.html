@@ -4,7 +4,7 @@
 <head>
 	<meta charset="UTF-8">
 	<title>TODO with HTMX</title>
-	<link rel="stylesheet" href="/assets/css/main.css">
+	<link rel="stylesheet" href="/assets/css/alert.css">
 	<script src="https://unpkg.com/htmx.org@1.9.12"
 		integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
 		crossorigin="anonymous"></script>
@@ -20,9 +20,20 @@
 </body>
 
 <script>
-	htmx.on("htmx:wsBeforeMessage", function (event) {
-		console.log("wsBeforeMessage", event);
+	htmx.on("htmx:wsAfterMessage", function (event) {
+		console.log("After Message", event);
 		<!-- do our own thing -->
+
+		parser = new DOMParser();
+		xmlDoc = parser.parseFromString(event.detail.message, "text/xml");
+
+		const class_attribute = xmlDoc.getElementById("notifications").getAttribute("class");
+
+		//TODO: Add more sounds for different types of notifications
+		if (class_attribute === "alert") {
+			var audio = new Audio('assets/sounds/dial-up.wav');
+			audio.play();
+		}
 	});
 </script>
 
