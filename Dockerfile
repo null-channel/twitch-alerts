@@ -29,7 +29,8 @@ RUN chisel cut --release ubuntu-$UBUNTU_RELEASE --root /rootfs \
    ca-certificates_data \
    libgcc-s1_libs \
    libc6_libs \
-   libssl3_libs 
+   libssl3_libs \
+   openssl_bins
 
 FROM scratch
 COPY ./ai_manager_service/migrations /var/lib/db/migrations
