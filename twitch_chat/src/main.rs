@@ -1,10 +1,11 @@
 mod messages;
 
+use anathema::values::hashmap::HashMap;
 use messages::Message;
 use tokio::sync::mpsc;
 use twitch_irc::irc;
 use twitch_irc::login::StaticLoginCredentials;
-use twitch_irc::message::{AsRawIRC, IRCMessage, PrivmsgMessage, ServerMessage};
+use twitch_irc::message::{AsRawIRC, IRCMessage, PrivmsgMessage, ServerMessage, TwitchUserBasics};
 use twitch_irc::TwitchIRCClient;
 use twitch_irc::{ClientConfig, SecureTCPTransport};
 
@@ -12,6 +13,7 @@ use twitch_irc::{ClientConfig, SecureTCPTransport};
 use std::fs::read_to_string;
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Mutex};
+use std::time;
 
 use anathema::runtime::Runtime;
 use anathema::vm::Templates;
@@ -37,7 +39,7 @@ pub async fn main() -> anyhow::Result<()> {
         while let Some(message) = incoming_messages.recv().await {
             match message {
                 ServerMessage::Privmsg(msg) => {
-                    let _ = app_sender.send(Message::new_twitch_message(msg.message_text.clone()));
+                    let _ = app_sender.send(Message::new_twitch_message(msg.clone()));
                     if msg.message_text == "!say_hello" {
                         let ircmsg = irc![
                             "PRIVMSG",
@@ -115,6 +117,19 @@ pub async fn main() -> anyhow::Result<()> {
     join_handle.await.unwrap();
 
     Ok(())
+}
+
+struct Game {
+    pub messages: Vec<String>,
+    pub game_round: GameRound,
+    pub the_word: String,
+}
+
+struct GameRound {
+    pub round_number: u32,
+    // pub players_votes: HashMap<name, vote>
+    pub players_votes: HashMap<TwitchUserBasics, String>,
+    pub end_time: time::Instant,
 }
 
 // TODO: delete this

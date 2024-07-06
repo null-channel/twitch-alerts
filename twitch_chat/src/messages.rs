@@ -1,11 +1,13 @@
+use twitch_irc::message::PrivmsgMessage;
+
 #[derive(Debug, Clone)]
 pub enum Message {
-    TwitchMessage(String),
+    TwitchMessage(PrivmsgMessage),
     Debug(String),
 }
 
 impl Message {
-    pub fn new_twitch_message(message: String) -> Self {
+    pub fn new_twitch_message(message: PrivmsgMessage) -> Self {
         Self::TwitchMessage(message)
     }
 
@@ -15,7 +17,9 @@ impl Message {
 
     pub fn text(&self) -> String {
         match self {
-            Self::TwitchMessage(message) => message.clone(),
+            Self::TwitchMessage(message) => {
+                format!("{}:{}", message.sender.name, message.message_text.clone())
+            }
             Self::Debug(message) => format!("DEBUG: {}", message.clone()),
         }
     }
