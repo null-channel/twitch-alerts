@@ -5,11 +5,8 @@ members = [
     "twitch_listener_service",
     "messages",
     "monolith",
-    "kafka",
     "frontend_api",
-    "user_service",
-    "frontend/wasm",
-    "twitch_chat", "light_server",
+    "twitch_chat", 
 ]
 
 resolver = "2"

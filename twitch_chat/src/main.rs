@@ -1,8 +1,10 @@
 mod messages;
+mod twitch;
 
 use anathema::values::hashmap::HashMap;
 use messages::Message;
-use tokio::sync::mpsc;
+use rand::Rng;
+use tokio::sync::mpsc::{self, UnboundedSender};
 use twitch_irc::irc;
 use twitch_irc::login::StaticLoginCredentials;
 use twitch_irc::message::{AsRawIRC, IRCMessage, PrivmsgMessage, ServerMessage, TwitchUserBasics};
@@ -11,6 +13,7 @@ use twitch_irc::{ClientConfig, SecureTCPTransport};
 
 // Anathema Stuff
 use std::fs::read_to_string;
+use std::hash::RandomState;
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Mutex};
 use std::time;
@@ -25,76 +28,20 @@ pub async fn main() -> anyhow::Result<()> {
     // default configuration is to join chat as anonymous.
     let user = std::env::var("TC_USER")?;
     let pass = std::env::var("TC_PASS")?;
-    let config = ClientConfig::new_simple(StaticLoginCredentials::new(user, Some(pass)));
-    // let config = ClientConfig::default();
-    let (mut incoming_messages, client) =
-        TwitchIRCClient::<SecureTCPTransport, StaticLoginCredentials>::new(config);
 
-    // first thing you should do: start consuming incoming messages,
-    // otherwise they will back up.
+    let creds = tmi::client::Credentials::new(user, pass);
+
+    println!("Connecting as {}", creds.login());
+    let mut client = tmi::Client::builder().credentials(creds).connect().await?;
+
+    client.join("marekcounts".to_string()).await?;
 
     let (app_sender, app_receiver) = mpsc::unbounded_channel();
-    let c = client.clone();
     let join_handle = tokio::spawn(async move {
-        while let Some(message) = incoming_messages.recv().await {
-            match message {
-                ServerMessage::Privmsg(msg) => {
-                    let _ = app_sender.send(Message::new_twitch_message(msg.clone()));
-                    if msg.message_text == "!say_hello" {
-                        let ircmsg = irc![
-                            "PRIVMSG",
-                            "#marekcounts",
-                            "beep boop I am your friendly robot"
-                        ];
-                        let res = c.send_message(ircmsg).await;
-                        match res {
-                            Ok(_) => {
-                                let _ = app_sender.send(Message::new_debug_message(
-                                    "did not expect this".to_string(),
-                                ));
-                            }
-                            Err(e) => {
-                                let _ = app_sender.send(Message::new_debug_message(format!(
-                                    "expected this: {}",
-                                    e
-                                )));
-                            }
-                        }
-                    }
-                }
-                ServerMessage::Ping(_) => {
-                    let _ =
-                        app_sender.send(Message::new_debug_message("We got pinged".to_string()));
-                }
-                ServerMessage::Pong(_) => {
-                    let _ =
-                        app_sender.send(Message::new_debug_message("We got a Pong".to_string()));
-                }
-                ServerMessage::Notice(msg) => {
-                    let _ = app_sender.send(Message::new_debug_message(format!(
-                        "notice: {}",
-                        msg.message_text
-                    )));
-                }
-                ServerMessage::UserNotice(msg) => {
-                    let _ = app_sender.send(Message::new_debug_message(format!(
-                        "user notice: {}",
-                        msg.system_message
-                    )));
-                }
-                _ => {
-                    let _ =
-                        app_sender.send(Message::new_debug_message("other message".to_string()));
-                }
-            };
-        }
+        twitch::run(client, app_sender, "marekcounts".to_string())
+            .await
+            .unwrap();
     });
-
-    // join a channel
-    // This function only returns an error if the passed channel login name is malformed,
-    // so in this simple case where the channel name is hardcoded we can ignore the potential
-    // error with `unwrap`.
-    client.join("marekcounts".to_owned()).unwrap();
 
     // Anathema tests
     // Step one: Load and compile templates
@@ -119,10 +66,62 @@ pub async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-struct Game {
+struct WordleGame {
     pub messages: Vec<String>,
     pub game_round: GameRound,
     pub the_word: String,
+}
+
+impl WordleGame {
+    pub fn new() -> Self {
+        Self {
+            messages: Vec::new(),
+            game_round: GameRound {
+                round_number: 0,
+                players_votes: HashMap::new(),
+                end_time: time::Instant::now(),
+            },
+            the_word: String::new(),
+        }
+    }
+
+    pub async fn run(&mut self) {
+        loop {
+            // check if the round is over
+            if self.game_round.end_time < time::Instant::now() {
+                self.end_round();
+            }
+            tokio::time::sleep(time::Duration::from_millis(13)).await;
+        }
+    }
+
+    pub fn start_round(&mut self, round: GameRound) {
+        self.game_round.round_number += 1;
+        self.game_round.players_votes.clear();
+    }
+
+    fn get_next_round(&self) -> GameRound {
+        let random_time = rand::thread_rng().gen_range(10..25);
+        GameRound {
+            round_number: self.game_round.round_number + 1,
+            players_votes: HashMap::new(),
+            end_time: time::Instant::now() + time::Duration::from_secs(random_time),
+        }
+    }
+
+    pub fn end_round(&mut self) {
+        // pick a winning word
+
+        // announce the winner
+        //
+
+        // update the UI to show the winning word
+        //
+
+        // show what characters where right, wrong, or in the wrong place
+
+        // start a new round
+    }
 }
 
 struct GameRound {

@@ -4,7 +4,9 @@ use maud::{html, Markup};
 
 #[derive(askama::Template)]
 #[template(path = "index.html")]
-pub struct IndexTemplate {}
+pub struct IndexTemplate {
+    pub address: String,
+}
 
 #[derive(askama::Template)]
 #[template(path = "admin.html")]
@@ -13,7 +15,9 @@ pub struct AdminTemplate {
 }
 
 pub async fn index() -> IndexTemplate {
-    IndexTemplate {}
+    IndexTemplate {
+        address: "localhost".to_string(),
+    }
 }
 
 pub async fn admin() -> AdminTemplate {
