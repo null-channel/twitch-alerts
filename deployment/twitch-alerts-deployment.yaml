@@ -18,102 +18,116 @@ spec:
       labels:
         app: twitch-alerts
     spec:
-
       # The config map is used to pass in our Litestream configuration file.
       volumes:
-      - name: configmap
-        configMap:
-          name: litestream
-      - name: data
-        emptyDir:
-          sizeLimit: 5G
-          
+        - name: configmap
+          configMap:
+            name: litestream
+        - name: data
+          emptyDir:
+            sizeLimit: 5G
 
       # Initialize using Litestream to restore data automatically
       # before starting the application.
       initContainers:
-      - name: init-litestream
-        image: litestream/litestream:0.3.6
-        args: ['restore','-config','/etc/config/litestream.yaml', '-if-db-not-exists', '-if-replica-exists', '-v', '/var/lib/twitch-alerts/db']
-        volumeMounts:
-        - name: data
-          mountPath: /var/lib/twitch-alerts
-        - name: configmap
-          mountPath: /etc/config
-        env:
-        - name: LITESTREAM_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: litestream
-              key: LITESTREAM_ACCESS_KEY_ID
-        - name: LITESTREAM_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: litestream
-              key: LITESTREAM_SECRET_ACCESS_KEY
+        - name: init-litestream
+          image: litestream/litestream:0.3.6
+          args:
+            [
+              "restore",
+              "-config",
+              "/etc/config/litestream.yaml",
+              "-if-db-not-exists",
+              "-if-replica-exists",
+              "-v",
+              "/var/lib/twitch-alerts/db",
+            ]
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/twitch-alerts
+            - name: configmap
+              mountPath: /etc/config
+          env:
+            - name: LITESTREAM_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: litestream
+                  key: LITESTREAM_ACCESS_KEY_ID
+            - name: LITESTREAM_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litestream
+                  key: LITESTREAM_SECRET_ACCESS_KEY
 
       # Start your application & Litestream to share a PVC data directory.
       containers:
-      - name: twitch-alerts
-        image: nullchannel/twitch-alerts:0.1.24
-        ports:
-        - name: websocket
-          containerPort: 9000
-        volumeMounts:
-        - name: data
-          mountPath: /var/lib/twitch-alerts
-        env:
-        - name: GPT_KEY
-          valueFrom:
-            secretKeyRef:
-              name: twitch-alerts-secret
-              key: GPT_KEY
-        - name: ACCESS_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: twitch-alerts-secret
-              key: ACCESS_TOKEN
-        - name: CHANNEL_ID
-          valueFrom:
-            secretKeyRef:
-              name: twitch-alerts-secret
-              key: CHANNEL_ID
-        - name: DB_PATH
-          valueFrom:
-            secretKeyRef:
-              name: twitch-alerts-secret
-              key: DB_PATH
-        - name: ENV
-          valueFrom:
-            secretKeyRef:
-              name: twitch-alerts-secret
-              key: ENV
-        - name: AI_MIGRATIONS_DIR
-          valueFrom:
-            secretKeyRef:
-              name: twitch-alerts-secret
-              key: AI_MIGRATIONS_DIR
+        - name: twitch-alerts
+          image: nullchannel/twitch-alerts:0.1.35
+          ports:
+            - name: httpport
+              containerPort: 8080
+            - name: websocket
+              containerPort: 9000
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/twitch-alerts
+          env:
+            - name: FRONTEND_ASSETS
+              value: "/var/lib/assets"
+            - name: HTTP_PORT
+              value: "8080"
+            - name: WEBSOCKET_HOST
+              value: "10.1.1.53"
+            - name: GPT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: twitch-alerts-secret
+                  key: GPT_KEY
+            - name: ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: twitch-alerts-secret
+                  key: ACCESS_TOKEN
+            - name: CHANNEL_ID
+              valueFrom:
+                secretKeyRef:
+                  name: twitch-alerts-secret
+                  key: CHANNEL_ID
+            - name: DB_PATH
+              valueFrom:
+                secretKeyRef:
+                  name: twitch-alerts-secret
+                  key: DB_PATH
+            - name: ENV
+              valueFrom:
+                secretKeyRef:
+                  name: twitch-alerts-secret
+                  key: ENV
+            - name: AI_MIGRATIONS_DIR
+              valueFrom:
+                secretKeyRef:
+                  name: twitch-alerts-secret
+                  key: AI_MIGRATIONS_DIR
 
-      - name: litestream
-        image: litestream/litestream:0.3.6
-        args: ['replicate','-config','/etc/config/litestream.yaml',]
-        volumeMounts:
-        - name: data
-          mountPath: /var/lib/twitch-alerts
-        - name: configmap
-          mountPath: /etc/config
-        env:
-        - name: LITESTREAM_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: litestream
-              key: LITESTREAM_ACCESS_KEY_ID
-        - name: LITESTREAM_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: litestream
-              key: LITESTREAM_SECRET_ACCESS_KEY
-        ports:
-        - name: metrics
-          containerPort: 9090
-
+        - name: litestream
+          image: litestream/litestream:0.3.6
+          args: ["replicate", "-config", "/etc/config/litestream.yaml"]
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/twitch-alerts
+            - name: configmap
+              mountPath: /etc/config
+          env:
+            - name: LITESTREAM_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: litestream
+                  key: LITESTREAM_ACCESS_KEY_ID
+            - name: LITESTREAM_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litestream
+                  key: LITESTREAM_SECRET_ACCESS_KEY
+          ports:
+            - name: metrics
+              containerPort: 9090

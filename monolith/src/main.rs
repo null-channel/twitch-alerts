@@ -2,7 +2,7 @@
 mod util;
 use ai_manager_service::AIManager;
 use clap::Parser;
-use forntend_api_lib::FrontendApi;
+use forntend_api_lib::{FrontendApi, HostInfo};
 use twitch_api::twitch_oauth2::UserToken;
 use twitch_listener_service_lib::opts::Opts;
 use twitch_listener_service_lib::websocket::WebsocketClient;
@@ -22,6 +22,8 @@ use twitch_api::{client::ClientDefault, HelixClient};
 async fn main() -> Result<(), eyre::Report> {
     util::install_utils()?;
     let opts = Opts::parse();
+
+    eprintln!("Starting app with options: {:?}", opts);
 
     tracing::debug!(
         "App started!\n{}",
@@ -102,17 +104,16 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
     };
 
     println!(
-        "Starting frontend api on http port: {} and ws port: {}",
-        opts.http_port.clone(),
-        opts.ws_port.clone()
+        "Starting frontend api on http port: {} and ws port: {}, and host name: {}",
+        opts.http_port, opts.ws_port, opts.websocket_host,
     );
-    let ws_port = format!("0.0.0.0:{}", opts.ws_port.clone());
-    let http_port = format!("0.0.0.0:{}", opts.http_port.clone());
-    let frontend_api = FrontendApi::new(
-        ws_port.clone(),
-        http_port.clone(),
-        "frontend_api/assets".to_string(),
-    );
+    let host_info = HostInfo {
+        websocket_host: opts.websocket_host.clone(),
+        ws_port: opts.ws_port.parse().expect("ws port is required"),
+        http_port: opts.http_port.parse().expect("http port is required"),
+    };
+
+    let frontend_api = FrontendApi::new(host_info, opts.frontend_assets.clone());
 
     let twithc_clinet = twitch_websocket_client.clone();
 

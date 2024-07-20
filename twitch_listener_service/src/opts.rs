@@ -8,6 +8,7 @@ use clap::{builder::ArgPredicate, ArgGroup, Parser};
     group = ArgGroup::new("channel").multiple(true).required(false),
     //Why do these break the run???
     //group = ArgGroup::new("gpt").multiple(true).requires("gpt-key"),
+    group = ArgGroup::new("host_info").multiple(true).required(false),
 )]
 pub struct Opts {
     /// OAuth2 Access token
@@ -58,11 +59,31 @@ pub struct Opts {
     #[clap(long, env, hide_env = true, group = "db", default_value = "alerts.db")]
     pub db_path: Option<String>,
 
-    #[clap(long, env, hide_env = true, default_value = "80")]
+    /// Host Info
+
+    #[clap(
+        long,
+        env,
+        hide_env = true,
+        group = "host_info",
+        default_value = "localhost"
+    )]
+    pub websocket_host: String,
+
+    #[clap(long, env, hide_env = true, group = "host_info", default_value = "80")]
     pub http_port: String,
 
-    #[clap(long, env, hide_env = true, default_value = "9000")]
+    #[clap(
+        long,
+        env,
+        hide_env = true,
+        group = "host_info",
+        default_value = "9000"
+    )]
     pub ws_port: String,
+
+    #[clap(long, env, hide_env = true, default_value = "frontend_api/assets")]
+    pub frontend_assets: String,
 }
 
 pub fn is_token(s: String) -> eyre::Result<()> {

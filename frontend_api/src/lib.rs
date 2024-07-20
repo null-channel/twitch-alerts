@@ -1,5 +1,6 @@
 use axum::{routing::get, Router};
 use futures_channel::mpsc::unbounded;
+use futures_util::sink::With;
 use futures_util::{SinkExt, StreamExt};
 use maud::html;
 use messages::DisplayMessage;
@@ -8,6 +9,7 @@ use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
+
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::mpsc,
@@ -27,17 +29,42 @@ use routes::{admin, index};
 use crate::types::{ConnectionMap, EventQueues, Queues};
 
 pub struct FrontendApi {
-    ws_address: String,
-    http_address: String,
-    connection_state: ConnectionMap,
-    asset_path: String,
+    pub host_info: HostInfo,
+    pub connection_state: ConnectionMap,
+    pub asset_path: String,
+}
+
+#[derive(Clone)]
+pub struct HostInfo {
+    pub websocket_host: String,
+    pub ws_port: u16,
+    pub http_port: u16,
+}
+
+impl HostInfo {
+    pub fn get_http_address(&self) -> String {
+        format!("{}:{}", "0.0.0.0", self.http_port)
+    }
+
+    pub fn get_ws_address(&self) -> String {
+        format!("{}:{}", "0.0.0.0", self.ws_port)
+    }
+
+    pub fn get_frontend_ws_address(&self) -> String {
+        format!("{}:{}", self.websocket_host, self.ws_port)
+    }
+}
+
+#[derive(Clone)]
+pub struct UnitedStates {
+    pub host_info: HostInfo,
+    pub event_queues: EventQueues,
 }
 
 impl FrontendApi {
-    pub fn new(ws_address: String, http_address: String, asset_path: String) -> FrontendApi {
+    pub fn new(host_info: HostInfo, asset_path: String) -> FrontendApi {
         FrontendApi {
-            ws_address,
-            http_address,
+            host_info,
             connection_state: ConnectionMap::new(Mutex::new(HashMap::new())),
             asset_path,
         }
@@ -47,10 +74,10 @@ impl FrontendApi {
         &self,
         mut receiver: mpsc::UnboundedReceiver<DisplayMessage>,
     ) -> Result<(), eyre::Error> {
-        let listener = TcpListener::bind(&self.ws_address)
+        let listener = TcpListener::bind(&self.host_info.get_ws_address())
             .await
             .expect("Can't listen");
-        println!("Listening on: {}", self.ws_address);
+        println!("Listening on: {}", self.host_info.get_ws_address());
 
         let connection_state = self.connection_state.clone();
         let message_queue_arc: EventQueues = Arc::new(Mutex::new(Queues::new()));
@@ -139,9 +166,14 @@ impl FrontendApi {
             }
         });
 
-        let https_address = self.http_address.clone();
+        let https_address = self.host_info.get_http_address();
+
+        let united_states = UnitedStates {
+            host_info: self.host_info.clone(),
+            event_queues: message_queue_arc.clone(),
+        };
+
         print!("Frontend HTTP is Listening on: {}", https_address);
-        let event_queues = message_queue_arc.clone();
         let asset_path = self.asset_path.clone();
         tokio::spawn(async move {
             let listener = TcpListener::bind(&https_address)
@@ -160,7 +192,7 @@ impl FrontendApi {
                 //TODO: understand where to put our assets
                 // Remember that these need served by nginx in production
                 .nest_service("/assets", ServeDir::new(asset_path.clone()))
-                .with_state(event_queues.clone());
+                .with_state(united_states.clone());
 
             // run it
             axum::serve(listener, app).await.unwrap();

@@ -1,35 +1,41 @@
-use crate::types::EventQueues;
+use crate::UnitedStates;
 use axum::{extract::State, http::StatusCode};
 use maud::{html, Markup};
 
 #[derive(askama::Template)]
 #[template(path = "index.html")]
 pub struct IndexTemplate {
-    pub address: String,
+    pub hostname: String,
+    pub port: u16,
 }
 
 #[derive(askama::Template)]
 #[template(path = "admin.html")]
 pub struct AdminTemplate {
     pub enabled: bool,
+    pub hostname: String,
+    pub port: u16,
 }
 
-pub async fn index() -> IndexTemplate {
+pub async fn index(State(sw_state): State<UnitedStates>) -> IndexTemplate {
     IndexTemplate {
-        address: "localhost".to_string(),
+        hostname: sw_state.host_info.websocket_host,
+        port: sw_state.host_info.ws_port,
     }
 }
 
-pub async fn admin() -> AdminTemplate {
+pub async fn admin(State(sw_state): State<UnitedStates>) -> AdminTemplate {
     AdminTemplate {
         enabled: crate::types::EVENT_QUEUE_ACTIVE.load(std::sync::atomic::Ordering::SeqCst),
+        hostname: sw_state.host_info.websocket_host,
+        port: sw_state.host_info.ws_port,
     }
 }
 
 pub async fn get_latest_unpublished_events(
-    State(queues): State<EventQueues>,
+    State(state): State<UnitedStates>,
 ) -> Result<Markup, (StatusCode, String)> {
-    let queues = queues.lock().unwrap();
+    let queues = state.event_queues.lock().unwrap();
     let range = if queues.unpublished_events.len() < 10 {
         0..queues.unpublished_events.len()
     } else {
@@ -52,9 +58,9 @@ pub async fn get_latest_unpublished_events(
 }
 
 pub async fn get_latest_events(
-    State(queues): State<EventQueues>,
+    State(state): State<UnitedStates>,
 ) -> Result<Markup, (StatusCode, String)> {
-    let queues = queues.lock().unwrap();
+    let queues = state.event_queues.lock().unwrap();
     let events = queues.latest_events.clone();
 
     Ok(html! {
@@ -81,9 +87,9 @@ pub async fn resume_events() -> Result<Markup, (StatusCode, String)> {
 }
 
 pub async fn get_all_events_in_queue(
-    State(queues): State<EventQueues>,
+    State(state): State<UnitedStates>,
 ) -> Result<Markup, (StatusCode, String)> {
-    let queues = queues.lock().unwrap();
+    let queues = state.event_queues.lock().unwrap();
     let events = queues.unpublished_events.clone();
     Ok(html! {
         ul {

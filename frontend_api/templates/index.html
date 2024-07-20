@@ -13,7 +13,7 @@
 
 <body>
 	<main class="flex flex-row justify-center w-full">
-		<div hx-ext="ws" ws-connect="ws://localhost:9000/">
+		<div hx-ext="ws" ws-connect="ws://{{ hostname }}:{{ port }}/">
 			<div id="notifications"></div>
 		</div>
 	</main>

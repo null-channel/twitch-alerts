@@ -1,21 +1,26 @@
-use forntend_api_lib::FrontendApi;
+use forntend_api_lib::{FrontendApi, HostInfo};
+
 use tokio::sync::mpsc;
 
 //TODO: This should run like the "full app" does in the lib.rs file
+
 #[tokio::main]
 async fn main() {
     env_logger::init();
 
     // this main function should be the same as the one in the lib.rs file
     // and is expected to be used for local testing
-    let ws_address = "0.0.0.0:9000";
-    let http_address = "0.0.0.0:8080";
+    let ws_port = "9000";
+    let ws_hostname = "0.0.0.0";
+    let http_address = "8080";
 
-    let api = FrontendApi::new(
-        ws_address.to_string(),
-        http_address.to_string(),
-        "assets".to_string(),
-    );
+    let host_info = HostInfo {
+        websocket_host: ws_hostname.to_string(),
+        ws_port: ws_port.parse().unwrap(),
+        http_port: http_address.parse().unwrap(),
+    };
+    let api = FrontendApi::new(host_info, "assets".to_string());
+
     let (tx, rx) = mpsc::unbounded_channel();
 
     tokio::spawn(async move {
@@ -38,7 +43,7 @@ async fn main() {
             }),
         };
 
-        let _ = tx.send(display_message).unwrap();
+        tx.send(display_message).unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_secs(20)).await;
     }
