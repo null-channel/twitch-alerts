@@ -173,6 +173,8 @@ impl WebsocketClient {
         if let Some(url) = data.reconnect_url {
             self.connect_url = url.parse()?;
         }
+
+        // One way of doing it
         let req = twitch_api::helix::eventsub::CreateEventSubSubscriptionRequest::new();
         let body = twitch_api::helix::eventsub::CreateEventSubSubscriptionBody::new(
             twitch_api::eventsub::channel::ChannelFollowV2::new(
@@ -187,6 +189,7 @@ impl WebsocketClient {
             .await?;
         let transport = twitch_api::eventsub::Transport::websocket(data.id.clone());
 
+        // Create Channel Subscription
         self.client
             .create_eventsub_subscription(
                 twitch_api::eventsub::channel::ChannelSubscribeV1::broadcaster_user_id(
@@ -197,9 +200,21 @@ impl WebsocketClient {
             )
             .await?;
 
+        // Create Channel Raid Subscription
         self.client
             .create_eventsub_subscription(
                 twitch_api::eventsub::channel::ChannelRaidV1::to_broadcaster_user_id(
+                    self.user_id.clone(),
+                ),
+                transport.clone(),
+                &*self.token.read().await,
+            )
+            .await?;
+
+        // Create Channel Subscription Message Subscription
+        self.client
+            .create_eventsub_subscription(
+                twitch_api::eventsub::channel::ChannelSubscriptionMessageV1::broadcaster_user_id(
                     self.user_id.clone(),
                 ),
                 transport.clone(),
