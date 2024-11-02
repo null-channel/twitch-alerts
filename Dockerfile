@@ -6,21 +6,10 @@ WORKDIR /usr/src/app
 
 COPY . .
 RUN cargo build --bin monolith --release
+ADD https://github.com/benbjohnson/litestream/releases/download/v0.3.8/litestream-v0.3.8-linux-amd64-static.tar.gz /tmp/litestream.tar.gz
+RUN tar -C /usr/local/bin -xzf /tmp/litestream.tar.gz
 
-# Build the chiselled filesystem based on the desired slices.
-FROM ubuntu:$UBUNTU_RELEASE AS chiselled
-ARG UBUNTU_RELEASE
-ARG TARGETARCH
-
-# Get chisel binary
-ADD https://github.com/canonical/chisel/releases/download/v0.9.1/chisel_v0.9.1_linux_$TARGETARCH.tar.gz chisel.tar.gz
-RUN tar -xvf chisel.tar.gz -C /usr/bin/
-RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates
-
-WORKDIR /rootfs
-
-#RUN chisel cut --release ubuntu-$UBUNTU_RELEASE --root /rootfs \
+# RUN chisel cut --release ubuntu-$UBUNTU_RELEASE --root /rootfs \
 #    base-files_base \
 #    base-files_release-info \
 #    ca-certificates_data \
@@ -36,6 +25,9 @@ RUN apt-get update \
 COPY ./ai_manager_service/migrations /var/lib/db/migrations
 EXPOSE 9000
 # COPY --from=chiselled /rootfs /
+COPY --from=builder /usr/local/bin/litestream /usr/local/bin/litestream
 COPY --from=builder /usr/src/app/target/release/monolith /usr/local/bin/twitch-alerts
 COPY ./frontend_api/assets /var/lib/assets/
-CMD ["/usr/local/bin/twitch-alerts"]
+COPY scripts/start.sh /scripts/start.sh
+COPY scripts/litestream.yaml /etc/litestream.yml
+CMD ["/scripts/start.sh"]

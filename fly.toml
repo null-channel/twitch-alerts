@@ -1,0 +1,40 @@
+# fly.toml app configuration file generated for twitch-alerts on 2024-08-15T18:18:25-04:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'twitch-alerts'
+primary_region = 'atl'
+
+[build]
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 9000
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[services.ports]]
+    port = 9000
+    handlers = ["tls", "http"]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[env]
+  FRONTEND_ASSETS = "/var/lib/assets"
+  HTTP_PORT = "8080"
+  WEBSOCKET_HOST = "twitch-alerts.fly.dev"
+  CHANNEL_ID = "99431252"
+  RUST_ENV = "production"
+  ENV = "production"
+  AI_MIGRATIONS_DIR = "/var/lib/db"
+
+[[vm]]
+  size = 'shared-cpu-1x'

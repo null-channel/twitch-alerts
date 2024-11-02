@@ -1,6 +1,26 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
+pub enum EventMessage {
+    /// A new event message from Twitch.
+    TwitchEvent(NewTwitchEventMessage),
+    /// A new message to display.
+    YoutubeEvent(YoutubeEventMessage),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct YoutubeEventMessage {
+    pub event: YoutubeEvent,
+    pub message_id: String,
+    pub message_at: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum YoutubeEvent {
+    Subscribe(String),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct NewTwitchEventMessage {
     pub event: TwitchEvent,
     pub message_id: String,
