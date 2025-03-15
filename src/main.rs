@@ -1,11 +1,16 @@
 #![warn(clippy::unwrap_in_result)]
-mod util;
-use ai_manager_service::AIManager;
+mod ai_manager;
+mod frontend;
+mod opts;
+mod twitch_chat;
+mod twitch_listener;
+mod utils;
+use crate::frontend::{FrontendApi, HostInfo};
+use ai_manager::AIManager;
 use clap::Parser;
-use forntend_api_lib::{FrontendApi, HostInfo};
+use opts::Opts;
 use twitch_api::twitch_oauth2::UserToken;
-use twitch_listener_service_lib::opts::Opts;
-use twitch_listener_service_lib::websocket::WebsocketClient;
+use twitch_listener::websocket::WebsocketClient;
 
 use std::{env, path::Path, sync::Arc};
 
@@ -20,7 +25,7 @@ use twitch_api::{client::ClientDefault, HelixClient};
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 32)]
 async fn main() -> Result<(), eyre::Report> {
-    util::install_utils()?;
+    utils::install_utils()?;
     let opts = Opts::parse();
 
     eprintln!("Starting app with options: {:?}", opts);
@@ -52,7 +57,7 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
         .wrap_err_with(|| "when creating client")?,
     );
 
-    let token = util::get_access_token(client.get_client(), opts).await?;
+    let token = utils::get_access_token(client.get_client(), opts).await?;
     let token: Arc<RwLock<UserToken>> = Arc::new(RwLock::new(token));
     let retainer = Arc::new(retainer::Cache::<String, ()>::new());
     let ret = retainer.clone();
