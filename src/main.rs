@@ -1,6 +1,7 @@
 #![warn(clippy::unwrap_in_result)]
 mod ai_manager;
 mod frontend;
+mod messages;
 mod opts;
 mod twitch_chat;
 mod twitch_listener;

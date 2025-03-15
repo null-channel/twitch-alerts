@@ -1,4 +1,5 @@
-use crate::UnitedStates;
+use crate::frontend::types;
+use crate::frontend::UnitedStates;
 use axum::{extract::State, http::StatusCode};
 use maud::{html, Markup};
 
@@ -26,7 +27,7 @@ pub async fn index(State(sw_state): State<UnitedStates>) -> IndexTemplate {
 
 pub async fn admin(State(sw_state): State<UnitedStates>) -> AdminTemplate {
     AdminTemplate {
-        enabled: crate::types::EVENT_QUEUE_ACTIVE.load(std::sync::atomic::Ordering::SeqCst),
+        enabled: types::EVENT_QUEUE_ACTIVE.load(std::sync::atomic::Ordering::SeqCst),
         hostname: sw_state.host_info.websocket_host,
         port: sw_state.host_info.ws_port,
     }
@@ -43,7 +44,7 @@ pub async fn get_latest_unpublished_events(
     };
     let events = queues.unpublished_events.range(range);
 
-    let class = if crate::types::EVENT_QUEUE_ACTIVE.load(std::sync::atomic::Ordering::SeqCst) {
+    let class = if types::EVENT_QUEUE_ACTIVE.load(std::sync::atomic::Ordering::SeqCst) {
         "running"
     } else {
         "paused"
@@ -73,14 +74,14 @@ pub async fn get_latest_events(
 }
 
 pub async fn pause_events() -> Result<Markup, (StatusCode, String)> {
-    crate::types::EVENT_QUEUE_ACTIVE.store(false, std::sync::atomic::Ordering::SeqCst);
+    types::EVENT_QUEUE_ACTIVE.store(false, std::sync::atomic::Ordering::SeqCst);
     Ok(html! {
         button id="event-queue-toggle" hx-get="/events/start" hx-swap="outerHTML" hx-target="#event-queue-toggle" { "Start" }
     })
 }
 
 pub async fn resume_events() -> Result<Markup, (StatusCode, String)> {
-    crate::types::EVENT_QUEUE_ACTIVE.store(true, std::sync::atomic::Ordering::SeqCst);
+    types::EVENT_QUEUE_ACTIVE.store(true, std::sync::atomic::Ordering::SeqCst);
     Ok(html! {
         button id="event-queue-toggle" hx-get="/events/pause" hx-swap="outerHTML" hx-target="#event-queue-toggle" { "Pause" }
     })

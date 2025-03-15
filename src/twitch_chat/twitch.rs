@@ -1,6 +1,6 @@
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::messages::Message;
+use crate::twitch_chat::messages::Message;
 
 pub async fn run(
     mut client: tmi::Client,

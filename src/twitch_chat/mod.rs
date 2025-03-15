@@ -1,6 +1,6 @@
 mod messages;
 mod twitch;
-
+/*
 use anathema::values::hashmap::HashMap;
 use messages::Message;
 use rand::Rng;
@@ -181,3 +181,4 @@ impl View for MyView {
         &self.state
     }
 }
+*/

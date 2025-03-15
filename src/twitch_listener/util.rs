@@ -1,7 +1,7 @@
+//TODO: move opts to separate module
+use crate::Opts;
 use eyre::Context;
 use twitch_api::twitch_oauth2::UserToken;
-
-use crate::opts::Opts;
 
 pub fn install_utils() -> eyre::Result<()> {
     let _ = dotenvy::dotenv(); //ignore error

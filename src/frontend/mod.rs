@@ -1,9 +1,8 @@
+use crate::messages::DisplayMessage;
 use axum::{routing::get, Router};
 use futures_channel::mpsc::unbounded;
-use futures_util::sink::With;
 use futures_util::{SinkExt, StreamExt};
 use maud::html;
-use messages::DisplayMessage;
 use std::net::SocketAddr;
 use std::{
     collections::HashMap,
@@ -26,7 +25,7 @@ mod routes;
 mod types;
 use routes::{admin, index};
 
-use crate::types::{ConnectionMap, EventQueues, Queues};
+use crate::frontend::types::{ConnectionMap, EventQueues, Queues};
 
 pub struct FrontendApi {
     pub host_info: HostInfo,

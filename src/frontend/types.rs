@@ -1,5 +1,5 @@
+use crate::messages::DisplayMessage;
 use futures_channel::mpsc::UnboundedSender;
-use messages::DisplayMessage;
 use std::{
     collections::{HashMap, VecDeque},
     net::SocketAddr,

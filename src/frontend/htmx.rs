@@ -1,5 +1,8 @@
+use crate::messages::{
+    ChannelGiftMessage, CheerEvent, DisplayMessage, FollowEvent, RaidEvent, SubscribeEvent,
+    TwitchEvent,
+};
 use maud::{html, Markup};
-use messages::{DisplayMessage, TwitchEvent};
 
 pub fn get_display_html(message: DisplayMessage) -> Markup {
     html! {
@@ -38,19 +41,19 @@ pub fn get_display_html(message: DisplayMessage) -> Markup {
     }
 }
 
-fn get_html_name_cheer(cheer: &messages::CheerEvent) -> Markup {
+fn get_html_name_cheer(cheer: &CheerEvent) -> Markup {
     html! {
         h2 class="message" { (format!("{}", cheer.user_name )) }
     }
 }
 
-fn get_html_name_raid(raid: &messages::RaidEvent) -> Markup {
+fn get_html_name_raid(raid: &RaidEvent) -> Markup {
     html! {
         h2 class="message" { (format!("{}", raid.from_broadcaster_user_name)) }
     }
 }
 
-fn get_html_name_sub_gift(gift: &messages::ChannelGiftMessage) -> Markup {
+fn get_html_name_sub_gift(gift: &ChannelGiftMessage) -> Markup {
     if let Some(gifter) = gift.clone().user_name {
         html! {
             h2  class="message" { (format!("{}", gifter)) }
@@ -62,31 +65,31 @@ fn get_html_name_sub_gift(gift: &messages::ChannelGiftMessage) -> Markup {
     }
 }
 
-fn get_html_name_follow(follow: &messages::FollowEvent) -> Markup {
+fn get_html_name_follow(follow: &FollowEvent) -> Markup {
     html! {
         h2 class="message" { (format!("{}", follow.user_name)) }
     }
 }
 
-fn get_html_name_channel_subscribe(sub: &messages::SubscribeEvent) -> Markup {
+fn get_html_name_channel_subscribe(sub: &SubscribeEvent) -> Markup {
     html! {
         h2 class="message" { (format!("{}", sub.user_name)) }
     }
 }
 
-fn get_html_cheer(cheer: &messages::CheerEvent) -> Markup {
+fn get_html_cheer(cheer: &CheerEvent) -> Markup {
     html! {
         p { (format!("Thank you {} for cheering with {} bits", cheer.user_name, cheer.bits)) }
     }
 }
 
-fn get_html_raid(raid: &messages::RaidEvent) -> Markup {
+fn get_html_raid(raid: &RaidEvent) -> Markup {
     html! {
         p { (format!("Thank you {} for raiding with {} viewers", raid.from_broadcaster_user_name, raid.viewers)) }
     }
 }
 
-fn get_html_sub_gift(gift: &messages::ChannelGiftMessage) -> Markup {
+fn get_html_sub_gift(gift: &ChannelGiftMessage) -> Markup {
     if let Some(gifter) = gift.clone().user_name {
         html! {
             p { (format!("Thank you {} for gifting a sub to {}", gifter, gift.broadcaster_user_name)) }
@@ -98,13 +101,13 @@ fn get_html_sub_gift(gift: &messages::ChannelGiftMessage) -> Markup {
     }
 }
 
-fn get_html_follow(follow: &messages::FollowEvent) -> Markup {
+fn get_html_follow(follow: &FollowEvent) -> Markup {
     html! {
         p { (format!("Thank you {} for following", follow.user_name)) }
     }
 }
 
-fn get_html_channel_subscribe(sub: &messages::SubscribeEvent) -> Markup {
+fn get_html_channel_subscribe(sub: &SubscribeEvent) -> Markup {
     html! {
         p { (format!("Thank you {} for subscribing", sub.user_name)) }
     }

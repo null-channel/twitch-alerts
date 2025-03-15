@@ -1,14 +1,14 @@
 pub mod sqlite;
 
+use crate::messages::{
+    ChannelGiftMessage, DisplayMessage, FollowEvent, NewTwitchEventMessage, NullSubTier, RaidEvent,
+    SubscribeEvent, TwitchEvent,
+};
 use chatgpt::{
     config::{ChatGPTEngine, ModelConfigurationBuilder},
     prelude::{ChatGPT, Conversation},
 };
 use eyre::eyre;
-use messages::{
-    ChannelGiftMessage, DisplayMessage, FollowEvent, NewTwitchEventMessage, NullSubTier, RaidEvent,
-    SubscribeEvent, TwitchEvent,
-};
 use tokio::sync::mpsc;
 
 pub struct AIManager {

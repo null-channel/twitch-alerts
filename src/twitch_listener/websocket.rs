@@ -1,11 +1,11 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use eyre::Context;
-use messages::{
-    ChannelGiftMessage, CheerEvent, FollowEvent, NewTwitchEventMessage, RaidEvent, SubscribeEvent,
-    TwitchEvent,
+use crate::messages::{
+    ChannelGiftMessage, CheerEvent, FollowEvent, NewTwitchEventMessage, NullSubTier, RaidEvent,
+    SubscribeEvent, TwitchEvent,
 };
+use eyre::Context;
 use tokio::sync::{mpsc::UnboundedSender, RwLock};
 use tokio_tungstenite::tungstenite;
 use tracing::Instrument;
@@ -457,13 +457,13 @@ fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
     }
 }
 
-fn twitch_teir_to_teir(twithc_teir: types::SubscriptionTier) -> messages::NullSubTier {
+fn twitch_teir_to_teir(twithc_teir: types::SubscriptionTier) -> NullSubTier {
     match twithc_teir {
-        types::SubscriptionTier::Tier1 => messages::NullSubTier::Tier1("rare".to_string()),
-        types::SubscriptionTier::Tier2 => messages::NullSubTier::Tier2("epic".to_string()),
-        types::SubscriptionTier::Tier3 => messages::NullSubTier::Tier3("legendary".to_string()),
-        types::SubscriptionTier::Other(i) => messages::NullSubTier::Other(i),
-        types::SubscriptionTier::Prime => messages::NullSubTier::Prime("prime".to_string()),
+        types::SubscriptionTier::Tier1 => NullSubTier::Tier1("rare".to_string()),
+        types::SubscriptionTier::Tier2 => NullSubTier::Tier2("epic".to_string()),
+        types::SubscriptionTier::Tier3 => NullSubTier::Tier3("legendary".to_string()),
+        types::SubscriptionTier::Other(i) => NullSubTier::Other(i),
+        types::SubscriptionTier::Prime => NullSubTier::Prime("prime".to_string()),
     }
 }
 
