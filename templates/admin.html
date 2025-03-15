@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<title>TODO with HTMX</title>
+	<link rel="stylesheet" href="/assets/css/main.css">
+	<script src="https://unpkg.com/htmx.org@1.9.12"
+		integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
+		crossorigin="anonymous"></script>
+	<script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/ws.js"></script>
+</head>
+
+<body>
+	<main class="flex flex-row justify-center w-full">
+		<!-- Should display 2 queues with buttons at the bottom -->
+		<div>
+			<div class="queue" hx-get="/events/latest/all" hx-target="#latest" hx-swap="innerHTML"
+				hx-trigger="every 1s">
+				<h1>Last Events</h1>
+				<li id="latest"></li>
+				<div class="button-holder">
+				</div>
+			</div>
+			<div class="queue" hx-get="/events/latest" hx-target="#waiting" hx-swap="innerHTML"
+				hx-trigger="every 2s">
+				<h1>In Queue</h1>
+				<div id="waiting"></div>
+				<div class="button-holder">
+					{%- if enabled %}
+					<button id="event-queue-toggle" hx-get="/events/pause" hx-swap="outerHTML"
+						hx-target="#event-queue-toggle">Stop</button>
+					{% else %}
+					<button id="event-queue-toggle" class="start" hx-get="/events/start"
+						hx-swap="outerHTML" hx-target="#event-queue-toggle">Start</button>
+					{% endif %}
+				</div>
+			</div>
+			<div class="queue" hx-get="/tts" hx-swap="innerHTML" hx-target="tts" hx-trigger="every 2s">
+				<h1>TTS</h1>
+				<li id="tts"></li>
+				<div class="button-holder">
+					<button id="play-next" hx-swap="none">Play Next</button>
+				</div>
+			</div>
+		</div>
+		<!-- Should display notifications and alerts -->
+		<div hx-ext="ws" ws-connect="ws://{{ hostname }}:{{ port }}/">
+			<div id="notifications"></div>
+			<div id="alerts">
+				<h1>TODO with HTMX</h1>
+			</div>
+		</div>
+	</main>
+</body>
+
+</html>
