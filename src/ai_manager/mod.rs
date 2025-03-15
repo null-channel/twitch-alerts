@@ -27,8 +27,7 @@ impl AIManager {
             chat_key,
             ModelConfigurationBuilder::default()
                 .engine(ChatGPTEngine::Custom("gpt-4o-mini"))
-                .build()
-                .unwrap(),
+                .build()?,
         )?;
         Ok(AIManager {
             sqlite_pool: sqlite,
@@ -88,7 +87,7 @@ impl AIManager {
                 //TODO: handle resubscribe event
                 self.handle_resub_event(resub_event, conversation).await?;
             }
-            TwitchEvent::ChannelCheer(cheer_event) => {
+            TwitchEvent::ChannelCheer(_cheer_event) => {
                 println!("Channel Cheer Event!");
                 //TODO: handle cheer event
             }
@@ -99,9 +98,9 @@ impl AIManager {
     pub async fn get_story_segment(
         &self,
         user_id: i64,
-        event_type: String,
+        _event_type: String,
     ) -> anyhow::Result<String> {
-        let mut conn = self.sqlite_pool.acquire().await?;
+        let conn = self.sqlite_pool.acquire().await?;
         let db_results = sqlite::get_latest_story_segments_for_user(conn, user_id).await?;
         Ok(db_results)
     }
@@ -132,15 +131,14 @@ impl AIManager {
             .await?;
 
         println!("Response: {}", response.message().content);
-        let mut conn = self.sqlite_pool.acquire().await?;
-        let db_results = sqlite::write_new_gift_subs_event(
+        let conn = self.sqlite_pool.acquire().await?;
+        sqlite::write_new_gift_subs_event(
             conn,
             gift_sub_event,
             tier,
             response.message().content.to_string(),
         )
         .await?;
-        println!("db_results: {:?}", db_results);
 
         let display_time = response.message().content.split(" ").count() * 500;
 
@@ -170,10 +168,8 @@ impl AIManager {
 
         println!("Response: {}", response.message().content);
         let conn = self.sqlite_pool.acquire().await?;
-        let db_results =
-            sqlite::write_new_raid_event(conn, raid_event, response.message().content.to_string())
-                .await?;
-        println!("db_results: {:?}", db_results);
+        sqlite::write_new_raid_event(conn, raid_event, response.message().content.to_string())
+            .await?;
 
         let display_time = response.message().content.split(" ").count() * 500;
 
@@ -202,15 +198,13 @@ impl AIManager {
 
         println!("Response: {}", response.message().content);
         let conn = self.sqlite_pool.acquire().await?;
-        let db_results = sqlite::write_new_story_segment(
+        sqlite::write_new_story_segment(
             conn,
             subscriber_event.user_id,
             "subscribe".to_string(),
             response.message().content.to_string(),
         )
         .await?;
-
-        println!("db_results: {:?}", db_results);
 
         let display_time = response.message().content.split(" ").count() * 500;
 
@@ -239,14 +233,13 @@ impl AIManager {
 
         println!("Response: {}", response.message().content);
         let conn = self.sqlite_pool.acquire().await?;
-        let db_results = sqlite::write_new_story_segment(
+        sqlite::write_new_story_segment(
             conn,
             subscriber_event.user_id,
             "subscribe".to_string(),
             response.message().content.to_string(),
         )
         .await?;
-        println!("db_results: {:?}", db_results);
 
         let display_time = response.message().content.split(" ").count() * 500;
 
@@ -275,14 +268,13 @@ impl AIManager {
 
         println!("Response: {}", response.message().content);
         let conn = self.sqlite_pool.acquire().await?;
-        let db_results = sqlite::write_new_story_segment(
+        sqlite::write_new_story_segment(
             conn,
             follow_event.user_id,
             "follow".to_string(),
             response.message().content.to_string(),
         )
         .await?;
-        println!("db_results: {:?}", db_results);
 
         let display_time = response.message().content.split(" ").count() * 750;
         //TODO: check if there is a "MAX_DISPLAY_TIME" env var

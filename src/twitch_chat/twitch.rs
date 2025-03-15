@@ -33,7 +33,7 @@ pub async fn on_msg(
             .send()
             .await?;
     } else {
-        postman.send(Message::new_twitch_message(msg.into_owned()));
+        let _ = postman.send(Message::new_twitch_message(msg.into_owned()));
     }
     Ok(())
 }

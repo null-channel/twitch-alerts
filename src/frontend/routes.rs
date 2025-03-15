@@ -3,14 +3,17 @@ use crate::frontend::UnitedStates;
 use axum::{extract::State, http::StatusCode};
 use maud::{html, Markup};
 
-#[derive(askama::Template)]
+use askama::Template;
+use askama_web::WebTemplate;
+
+#[derive(Template, WebTemplate)]
 #[template(path = "index.html")]
 pub struct IndexTemplate {
     pub hostname: String,
     pub port: u16,
 }
 
-#[derive(askama::Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "admin.html")]
 pub struct AdminTemplate {
     pub enabled: bool,

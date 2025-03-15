@@ -30,8 +30,9 @@ chatgpt_rs = "1.2.3"
 
 maud = { version = "0.27.0", features = ["axum"] }
 axum = { version = "0.8.1", features = ["ws","macros"] }
-askama = { version = "0.12.1", features = ["with-axum"] }
-askama_axum = "0.4.0"
+askama = { version = "0.12.1" }
+askama_web = { version = "0.12.0-pre.0", features = ["axum-0.8"] }
+
 
 tower-http = { version = "0.6.2", features = ["fs", "trace"] }
 tmi = { version = "0.8.0" }

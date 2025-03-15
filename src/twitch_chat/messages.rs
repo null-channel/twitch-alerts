@@ -18,7 +18,7 @@ impl Message {
     pub fn text(&self) -> String {
         match self {
             Self::TwitchMessage(message) => {
-                format!("{}:{}", message.sender().name(), message.text().clone())
+                format!("{}:{}", message.sender().name(), message.text())
             }
             Self::Debug(message) => format!("DEBUG: {}", message.clone()),
         }
