@@ -1,34 +1,34 @@
-[workspace]
+[package]
+name = "null_twitch"
+version = "0.1.0"
+edition = "2018"
 
-members = [
-    "ai_manager_service",
-    "twitch_listener_service",
-    "messages",
-    "monolith",
-    "frontend_api",
-    "twitch_chat", 
-]
+[[bin]]
+name = "null_twitch"
+path = "src/main.rs"
 
-resolver = "2"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-exclude = [
-    "twitch_api"
-]
-
-[workspace.dependencies]
+[dependencies]
 anyhow = "1.0"
 sqlx = { version = "0.7.4", features = ["sqlite", "runtime-tokio"] }
 structopt = "0.3"
-twitch_api = { git = "https://github.com/twitch-rs/twitch_api.git", features = [
+
+# Twitch API
+twitch_api = { version = "0.7.0", features = [
     "reqwest",
     "helix",
     "eventsub",
     "hmac",
     "unsupported",
     "mock_api"] }
+twitch_oauth2 = { version = "0.15.1" }
 
+# CLI
 clap = { version = "4.1.8", features = ["derive", "env"] }
 color-eyre = { version = "0.6", features = ["capture-spantrace"] }
+
+# Networking
 dotenvy = "0.15.6"
 eyre = { version = "0.6" }
 futures = "0.3.26"
@@ -44,16 +44,4 @@ tracing-error = "0.2.0"
 tracing-log = "0.1.3"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 url = "2.3.1"
-messages = { path = "messages" }
-ai_manager_service = { path = "ai_manager_service" }
-twitch_listener_service = { path = "twitch_listener_service" }
-frontend_api = { path = "frontend_api" }
 
-# trying to fix broken dependencies
-twitch_oauth2 = { git = "https://github.com/twitch-rs/twitch_api/" }
-twitch_types = { git = "https://github.com/twitch-rs/twitch_api/" }
-# workaround for https://github.com/twitch-rs/twitch_api/issues/256
-[patch.crates-io.twitch_types]
-git = "https://github.com/twitch-rs/twitch_api"
-[patch.crates-io.twitch_oauth2]
-git = "https://github.com/twitch-rs/twitch_api"

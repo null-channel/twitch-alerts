@@ -24,6 +24,8 @@ use twitch_api::{
     HelixClient,
 };
 
+// TODO: Token should be stored in some sort of database
+//
 #[derive(Clone)]
 pub struct WebsocketClient {
     pub session_id: Option<String>,

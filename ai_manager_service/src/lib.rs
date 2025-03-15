@@ -1,14 +1,15 @@
 pub mod sqlite;
 
-use std::sync::mpsc::Receiver;
-
-use chatgpt::prelude::{ChatGPT, Conversation};
+use chatgpt::{
+    config::{ChatGPTEngine, ModelConfigurationBuilder},
+    prelude::{ChatGPT, Conversation},
+};
 use eyre::eyre;
 use messages::{
     ChannelGiftMessage, DisplayMessage, FollowEvent, NewTwitchEventMessage, NullSubTier, RaidEvent,
     SubscribeEvent, TwitchEvent,
 };
-use tokio::{runtime::Handle, sync::mpsc};
+use tokio::sync::mpsc;
 
 pub struct AIManager {
     pub sqlite_pool: sqlx::SqlitePool,
@@ -22,10 +23,16 @@ impl AIManager {
         chat_key: String,
         fs: mpsc::UnboundedSender<DisplayMessage>,
     ) -> anyhow::Result<Self> {
-        let chat = ChatGPT::new(chat_key)?;
+        let client = ChatGPT::new_with_config(
+            chat_key,
+            ModelConfigurationBuilder::default()
+                .engine(ChatGPTEngine::Custom("gpt-4o-mini"))
+                .build()
+                .unwrap(),
+        )?;
         Ok(AIManager {
             sqlite_pool: sqlite,
-            chat_gpt: chat,
+            chat_gpt: client,
             frontend_sender: fs,
         })
     }

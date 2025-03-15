@@ -1,14 +1,10 @@
 [package]
-name = "twitch_listener_service"
+name = "null_twitch"
 version = "0.1.0"
-edition = "2021"
-
-[lib]
-name = "twitch_listener_service_lib"
-path = "src/lib.rs"
+edition = "2024"
 
 [[bin]]
-name = "twitch_listener_service"
+name = "null_twitch"
 path = "src/main.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -29,7 +25,6 @@ color-eyre = { version = "0.6", features = ["capture-spantrace"] }
 dotenvy = "0.15.6"
 eyre = { version = "0.6" }
 futures = "0.3.26"
-#hyper-tls = { workspace = true }
 hyper = "0.14"
 reqwest = { workspace = true }
 retainer = "0.3.0"
@@ -42,8 +37,6 @@ tracing-error = "0.2.0"
 tracing-log = "0.1.3"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 url = "2.3.1"
-messages = { path = "../messages" }
-ai_manager_service = { path = "../ai_manager_service" }
 
 
 # workaround for https://github.com/twitch-rs/twitch_api/issues/256

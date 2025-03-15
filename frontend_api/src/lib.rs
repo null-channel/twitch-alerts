@@ -77,7 +77,7 @@ impl FrontendApi {
         let listener = TcpListener::bind(&self.host_info.get_ws_address())
             .await
             .expect("Can't listen");
-        println!("Listening on: {}", self.host_info.get_ws_address());
+        println!("Listening on: {}", self.host_info.get_http_address());
 
         let connection_state = self.connection_state.clone();
         let message_queue_arc: EventQueues = Arc::new(Mutex::new(Queues::new()));
