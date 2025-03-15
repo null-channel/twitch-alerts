@@ -21,8 +21,7 @@ use std::time;
 use anathema::runtime::Runtime;
 use anathema::vm::Templates;
 
-#[tokio::main]
-pub async fn main() -> anyhow::Result<()> {
+pub async fn start_twitch_chat() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
     // default configuration is to join chat as anonymous.
