@@ -8,7 +8,7 @@ mod twitch_listener;
 mod utils;
 use crate::frontend::{FrontendApi, HostInfo};
 use ai_manager::AIManager;
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use opts::Opts;
 use twitch_api::twitch_oauth2::UserToken;
 use twitch_listener::websocket::WebsocketClient;
@@ -23,6 +23,21 @@ use tokio::{
     task::JoinHandle,
 };
 use twitch_api::{client::ClientDefault, HelixClient};
+
+#[derive(Parser)]
+#[clap(name = "null-twitch")]
+#[clap(about = "Marek's Great Twitch Tool", long_about = None)]
+struct Cli {
+    #[clap(subcommand)]
+    cmd: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    Alerts(opts::Alerts),
+    Chat(opts::Chat),
+    Games(opts::Games),
+}
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 32)]
 async fn main() -> Result<(), eyre::Report> {

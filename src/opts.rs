@@ -10,7 +10,42 @@ use clap::{builder::ArgPredicate, ArgGroup, Parser};
     //group = ArgGroup::new("gpt").multiple(true).requires("gpt-key"),
     group = ArgGroup::new("host_info").multiple(true).required(false),
 )]
-pub struct Opts {
+pub struct Alerts {
+    #[clap(long, env, hide_env = true, group = "gpt")]
+    pub gpt_key: Option<String>,
+
+    #[clap(long, env, hide_env = true, group = "db", default_value = "alerts.db")]
+    pub db_path: Option<String>,
+
+    /// Host Info
+
+    #[clap(
+        long,
+        env,
+        hide_env = true,
+        group = "host_info",
+        default_value = "localhost"
+    )]
+    pub websocket_host: String,
+
+    #[clap(long, env, hide_env = true, group = "host_info", default_value = "80")]
+    pub http_port: String,
+
+    #[clap(
+        long,
+        env,
+        hide_env = true,
+        group = "host_info",
+        default_value = "9000"
+    )]
+    pub ws_port: String,
+
+    #[clap(long, env, hide_env = true, default_value = "frontend_api/assets")]
+    pub frontend_assets: String,
+}
+
+#[derive(clap::Args, Debug, Clone)]
+pub struct Twitch {
     /// OAuth2 Access token
     #[clap(
         long,
@@ -52,38 +87,24 @@ pub struct Opts {
         default_value_if("oauth2_service_url", ArgPredicate::IsPresent, Some("30"))
     )]
     pub oauth2_service_refresh: Option<u64>,
+}
 
-    #[clap(long, env, hide_env = true, group = "gpt")]
-    pub gpt_key: Option<String>,
+#[derive(clap::Subcommand, Debug, Clone)]
+pub enum Games {
+    Wordle(Wordle),
+    Dragons(Dragons),
+}
 
-    #[clap(long, env, hide_env = true, group = "db", default_value = "alerts.db")]
-    pub db_path: Option<String>,
+#[derive(clap::Args, Debug, Clone)]
+pub struct Wordle {
+    pub twitch: Twitch,
+    pub word: String,
+}
 
-    /// Host Info
-
-    #[clap(
-        long,
-        env,
-        hide_env = true,
-        group = "host_info",
-        default_value = "localhost"
-    )]
-    pub websocket_host: String,
-
-    #[clap(long, env, hide_env = true, group = "host_info", default_value = "80")]
-    pub http_port: String,
-
-    #[clap(
-        long,
-        env,
-        hide_env = true,
-        group = "host_info",
-        default_value = "9000"
-    )]
-    pub ws_port: String,
-
-    #[clap(long, env, hide_env = true, default_value = "frontend_api/assets")]
-    pub frontend_assets: String,
+#[derive(clap::Args, Debug, Clone)]
+pub struct Dragons {
+    pub twitch: Twitch,
+    pub dragons: u32,
 }
 
 pub fn is_token(s: String) -> eyre::Result<()> {
