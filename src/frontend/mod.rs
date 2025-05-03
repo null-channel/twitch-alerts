@@ -72,7 +72,7 @@ impl FrontendApi {
     pub async fn run(
         &self,
         mut receiver: mpsc::UnboundedReceiver<DisplayMessage>,
-    ) -> Result<(), eyre::Error> {
+    ) -> anyhow::Result<()> {
         let listener = TcpListener::bind(&self.host_info.get_ws_address())
             .await
             .expect("Can't listen");

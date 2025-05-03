@@ -8,7 +8,6 @@ use chatgpt::{
     config::{ChatGPTEngine, ModelConfigurationBuilder},
     prelude::{ChatGPT, Conversation},
 };
-use eyre::eyre;
 use tokio::sync::mpsc;
 
 pub struct AIManager {
@@ -39,7 +38,7 @@ impl AIManager {
     pub async fn run(
         &self,
         mut receiver: mpsc::UnboundedReceiver<NewTwitchEventMessage>,
-    ) -> Result<(), eyre::Error> {
+    ) -> anyhow::Result<()> {
         loop {
             let msg = (&mut receiver).recv().await;
 
@@ -55,7 +54,7 @@ impl AIManager {
                         }
                     }
                 }
-                None => return Err(eyre!("error: receiver closed")),
+                None => return Err(anyhow::anyhow!("error: receiver closed")),
             }
         }
     }

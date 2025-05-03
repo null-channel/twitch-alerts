@@ -5,7 +5,7 @@ use crate::messages::{
     ChannelGiftMessage, CheerEvent, FollowEvent, NewTwitchEventMessage, NullSubTier, RaidEvent,
     SubscribeEvent, TwitchEvent,
 };
-use eyre::Context;
+use anyhow::Context;
 use tokio::sync::{mpsc::UnboundedSender, RwLock};
 use tokio_tungstenite::tungstenite;
 use tracing::Instrument;
@@ -39,11 +39,10 @@ pub struct WebsocketClient {
 impl WebsocketClient {
     pub async fn connect(
         &self,
-    ) -> Result<
+    ) -> anyhow::Result<
         tokio_tungstenite::WebSocketStream<
             tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
         >,
-        eyre::Error,
     > {
         tracing::info!("connecting to twitch");
         let (socket, _) =
@@ -53,7 +52,7 @@ impl WebsocketClient {
         Ok(socket)
     }
 
-    pub async fn run(&mut self) -> Result<(), eyre::Error> {
+    pub async fn run(&mut self) -> anyhow::Result<()> {
         let mut socket = self
             .connect()
             .await
@@ -114,7 +113,7 @@ impl WebsocketClient {
         Some(res.unwrap())
     }
 
-    pub async fn process_message(&mut self, msg: tungstenite::Message) -> Result<(), eyre::Report> {
+    pub async fn process_message(&mut self, msg: tungstenite::Message) -> anyhow::Result<()> {
         match msg {
             tungstenite::Message::Text(s) => {
                 tracing::info!("{s}");
@@ -155,7 +154,7 @@ impl WebsocketClient {
         data: Event,
         metadata: &NotificationMetadata<'_>,
         _payload: &str,
-    ) -> Result<(), eyre::Report> {
+    ) -> anyhow::Result<()> {
         // TODO: Delete as this is wrong... but is how it still works for right now!
         let event = new_twitch_event(data)?;
         let message = NewTwitchEventMessage {
@@ -167,10 +166,7 @@ impl WebsocketClient {
         Ok(())
     }
 
-    pub async fn process_welcome_message(
-        &mut self,
-        data: SessionData<'_>,
-    ) -> Result<(), eyre::Report> {
+    pub async fn process_welcome_message(&mut self, data: SessionData<'_>) -> anyhow::Result<()> {
         self.session_id = Some(data.id.to_string());
         if let Some(url) = data.reconnect_url {
             self.connect_url = url.parse()?;
@@ -230,7 +226,7 @@ impl WebsocketClient {
 }
 
 // Creates a new TwitchEvent enum from the payload and metadata
-fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
+fn new_twitch_event(payload: Event) -> anyhow::Result<TwitchEvent> {
     match payload {
         Event::ChannelFollowV2(Payload {
             message:
@@ -373,85 +369,89 @@ fn new_twitch_event(payload: Event) -> Result<TwitchEvent, eyre::Report> {
         Event::ChannelPointsCustomRewardAddV1(Payload {
             message: Message::Notification(..),
             ..
-        }) => Err(eyre::eyre!(
+        }) => Err(anyhow::anyhow!(
             "ChannelPointsCustomRewardAddV1 is not supported"
         )),
         Event::ChannelPointsCustomRewardUpdateV1(Payload {
             message: Message::Notification(..),
             ..
-        }) => Err(eyre::eyre!(
+        }) => Err(anyhow::anyhow!(
             "ChannelPointsCustomRewardUpdateV1 is not supported"
         )),
         Event::ChannelPointsCustomRewardRemoveV1(Payload {
             message: Message::Notification(..),
             ..
-        }) => Err(eyre::eyre!(
+        }) => Err(anyhow::anyhow!(
             "ChannelPointsCustomRewardRemoveV1 is not supported"
         )),
         Event::ChannelPointsCustomRewardRedemptionAddV1(Payload {
             message: Message::Notification(..),
             ..
-        }) => Err(eyre::eyre!(
+        }) => Err(anyhow::anyhow!(
             "ChannelPointsCustomRewardRedemptionAddV1 is not supported"
         )),
         Event::ChannelPointsCustomRewardRedemptionUpdateV1(Payload {
             message: Message::Notification(..),
             ..
-        }) => Err(eyre::eyre!(
+        }) => Err(anyhow::anyhow!(
             "ChannelPointsCustomRewardRedemptionUpdateV1 is not supported"
         )),
         Event::ChannelHypeTrainBeginV1(Payload {
             message: Message::Notification(..),
             ..
-        }) => Err(eyre::eyre!("ChannelHypeTrainBeginV1 is not supported")),
+        }) => Err(anyhow::anyhow!("ChannelHypeTrainBeginV1 is not supported")),
         Event::ChannelHypeTrainProgressV1(Payload {
             message: Message::Notification(..),
             ..
-        }) => Err(eyre::eyre!("ChannelHypeTrainProgressV1 is not supported")),
+        }) => Err(anyhow::anyhow!(
+            "ChannelHypeTrainProgressV1 is not supported"
+        )),
         Event::ChannelHypeTrainEndV1(Payload {
             message: Message::Notification(..),
             ..
-        }) => Err(eyre::eyre!("ChannelHypeTrainEndV1 is not supported")),
+        }) => Err(anyhow::anyhow!("ChannelHypeTrainEndV1 is not supported")),
         Event::ChannelPollBeginV1(Payload {
             message: Message::Notification(..),
             ..
-        }) => Err(eyre::eyre!("ChannelPollBeginV1 is not supported")),
+        }) => Err(anyhow::anyhow!("ChannelPollBeginV1 is not supported")),
         Event::ChannelPollProgressV1(Payload {
             message: Message::Notification(..),
             ..
-        }) => Err(eyre::eyre!("ChannelPollProgressV1 is not supported")),
+        }) => Err(anyhow::anyhow!("ChannelPollProgressV1 is not supported")),
         Event::ChannelPollEndV1(Payload {
             message: Message::Notification(..),
             ..
-        }) => Err(eyre::eyre!("ChannelPollEndV1 is not supported")),
+        }) => Err(anyhow::anyhow!("ChannelPollEndV1 is not supported")),
         Event::ChannelPredictionBeginV1(Payload {
             message: Message::Notification(..),
             ..
-        }) => Err(eyre::eyre!("ChannelPredictionBeginV1 is not supported")),
+        }) => Err(anyhow::anyhow!("ChannelPredictionBeginV1 is not supported")),
         Event::ChannelPredictionProgressV1(Payload {
             message: Message::Notification(..),
             ..
-        }) => Err(eyre::eyre!("ChannelPredictionProgressV1 is not supported")),
+        }) => Err(anyhow::anyhow!(
+            "ChannelPredictionProgressV1 is not supported"
+        )),
         Event::ChannelPredictionLockV1(Payload {
             message: Message::Notification(..),
             ..
-        }) => Err(eyre::eyre!("ChannelPredictionLockV1 is not supported")),
+        }) => Err(anyhow::anyhow!("ChannelPredictionLockV1 is not supported")),
         Event::ChannelPredictionEndV1(Payload {
             message: Message::Notification(..),
             ..
-        }) => Err(eyre::eyre!("ChannelPredictionEndV1 is not supported")),
+        }) => Err(anyhow::anyhow!("ChannelPredictionEndV1 is not supported")),
         Event::ChannelBanV1(Payload {
             message: Message::Notification(..),
             ..
-        }) => Err(eyre::eyre!("ChannelBanV1 is not supported")),
+        }) => Err(anyhow::anyhow!("ChannelBanV1 is not supported")),
         Event::ChannelUnbanV1(Payload {
             message: Message::Notification(..),
             ..
-        }) => Err(eyre::eyre!("ChannelUnbanV1 is not supported")),
+        }) => Err(anyhow::anyhow!("ChannelUnbanV1 is not supported")),
         Event::ChannelUpdateV2(Payload {
             message: Message::Notification(..),
             ..
-        }) => Err(eyre::eyre!("ChannelUpdateV1 is not supported")),
+        }) => Err(anyhow::anyhow!("ChannelUpdateV1 is not supported")),
 
         _ => todo!(),
     }

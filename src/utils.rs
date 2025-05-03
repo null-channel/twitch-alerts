@@ -1,21 +1,9 @@
-use eyre::Context;
+use anyhow::Context;
 use twitch_api::twitch_oauth2::UserToken;
 
-pub fn install_utils() -> eyre::Result<()> {
+pub fn install_utils() -> anyhow::Result<()> {
     let _ = dotenvy::dotenv(); //ignore error
     install_tracing();
-    install_eyre()?;
-    Ok(())
-}
-
-fn install_eyre() -> eyre::Result<()> {
-    let (panic_hook, eyre_hook) = color_eyre::config::HookBuilder::default().into_hooks();
-
-    eyre_hook.install()?;
-
-    std::panic::set_hook(Box::new(move |pi| {
-        tracing::error!("{}", panic_hook.panic_report(pi));
-    }));
     Ok(())
 }
 
@@ -55,18 +43,17 @@ fn install_tracing() {
 pub async fn make_token<'a>(
     client: &'a impl twitch_api::twitch_oauth2::client::Client,
     token: impl Into<twitch_api::twitch_oauth2::AccessToken>,
-) -> Result<UserToken, eyre::Report> {
+) -> anyhow::Result<UserToken> {
     UserToken::from_existing(client, token.into(), None, None)
         .await
-        .context("could not get/make access token")
         .map_err(Into::into)
 }
 
 #[tracing::instrument(skip(client, opts))]
 pub async fn get_access_token(
     client: &reqwest::Client,
-    opts: &crate::Opts,
-) -> Result<UserToken, eyre::Report> {
+    opts: &crate::opts::TwitchBotArgs,
+) -> anyhow::Result<UserToken> {
     if let Some(ref access_token) = opts.access_token {
         make_token(client, access_token.to_string()).await
     } else if let (Some(ref oauth_service_url), Some(ref pointer)) =
@@ -89,17 +76,16 @@ pub async fn get_access_token(
                 if !(response.status().is_client_error()
                     || response.status().is_server_error()) =>
             {
-                let service_response: serde_json::Value = response
-                    .json()
-                    .await
-                    .context("when transforming oauth service response to json")?;
+                let service_response: serde_json::Value = response.json().await?;
                 make_token(
                     client,
                     service_response
                         .pointer(pointer)
-                        .ok_or_else(|| eyre::eyre!("could not get a field on `{}`", pointer))?
+                        .ok_or_else(|| {
+                            anyhow::format_err!("could not get a field on `{}`", pointer)
+                        })?
                         .as_str()
-                        .ok_or_else(|| eyre::eyre!("token is not a string"))?
+                        .ok_or_else(|| anyhow::format_err!("token is not a string"))?
                         .to_string(),
                 )
                 .await
@@ -107,14 +93,13 @@ pub async fn get_access_token(
             Ok(response_error) => {
                 let status = response_error.status();
                 let error = response_error.text().await?;
-                eyre::bail!(
+                anyhow::bail!(
                     "oauth service returned error code: {} with body: {:?}",
                     status,
                     error
                 );
             }
-            Err(e) => Err(e)
-                .wrap_err_with(|| eyre::eyre!("calling oauth service on `{}`", &oauth_service_url)),
+            Err(e) => Err(e).context(format!("calling oauth service on")),
         }
     } else {
         panic!("got empty vals for token cli group")

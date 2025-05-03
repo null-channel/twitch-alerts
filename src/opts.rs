@@ -1,51 +1,46 @@
-use clap::{builder::ArgPredicate, ArgGroup, Parser};
+use clap::{builder::ArgPredicate, Parser};
 
-#[derive(Parser, Debug, Clone)]
-#[clap(about, version,
-    group = ArgGroup::new("token").multiple(false).required(false),
-    //Why do these break the run???
-    //group = ArgGroup::new("service").multiple(true).requires("oauth2-service-url"),
-    group = ArgGroup::new("channel").multiple(true).required(false),
-    //Why do these break the run???
-    //group = ArgGroup::new("gpt").multiple(true).requires("gpt-key"),
-    group = ArgGroup::new("host_info").multiple(true).required(false),
-)]
-pub struct Alerts {
-    #[clap(long, env, hide_env = true, group = "gpt")]
-    pub gpt_key: Option<String>,
+/*
+* null-twitch cli
+* TODO: add moderation options to mock cheap viewer ads
+*
+* twinkle server
+* twinkle bot
+* twinkle chat
+* twinkle game
+* twinkle game --mode=dnd
+*
+* bruce server
+*
+* tx server
+* tx bot
+* tx chat
+* tx game
+* tx game --mode=dnd
+* */
 
-    #[clap(long, env, hide_env = true, group = "db", default_value = "alerts.db")]
-    pub db_path: Option<String>,
-
-    /// Host Info
-
-    #[clap(
-        long,
-        env,
-        hide_env = true,
-        group = "host_info",
-        default_value = "localhost"
-    )]
-    pub websocket_host: String,
-
-    #[clap(long, env, hide_env = true, group = "host_info", default_value = "80")]
-    pub http_port: String,
-
-    #[clap(
-        long,
-        env,
-        hide_env = true,
-        group = "host_info",
-        default_value = "9000"
-    )]
-    pub ws_port: String,
-
-    #[clap(long, env, hide_env = true, default_value = "frontend_api/assets")]
-    pub frontend_assets: String,
+#[derive(clap::Args, Debug, Clone)]
+pub struct HttpServer {
+    /// The host to run the server on
+    #[clap(long, env, hide_env = true, default_value = "localhost")]
+    pub host: String,
+    /// The port to run the server on
+    #[clap(long, env, hide_env = true, default_value = "8080")]
+    pub port: u16,
 }
 
 #[derive(clap::Args, Debug, Clone)]
-pub struct Twitch {
+pub struct WSHttpServer {
+    /// The host to run the server on
+    #[clap(long, env, hide_env = true, default_value = "localhost")]
+    pub ws_host: String,
+    /// The port to run the server on
+    #[clap(long, env, hide_env = true, default_value = "9000")]
+    pub ws_port: u16,
+}
+
+#[derive(clap::Args, Debug, Clone)]
+pub struct TwitchBotArgs {
     /// OAuth2 Access token
     #[clap(
         long,
@@ -89,22 +84,96 @@ pub struct Twitch {
     pub oauth2_service_refresh: Option<u64>,
 }
 
+#[derive(Parser, Debug, Clone)]
+#[clap(name = "null-twitch")]
+#[clap(about = "Marek's Great Twitch Tool", long_about = None)]
+pub struct Cli {
+    #[clap(subcommand)]
+    pub command: Commands,
+}
+
 #[derive(clap::Subcommand, Debug, Clone)]
-pub enum Games {
+pub enum Commands {
+    Server(ServerArgs),
+    Chat,
+    Bot,
+    #[command(subcommand)]
+    Game(GamesSubCommand),
+}
+
+#[derive(clap::Args, Debug, Clone)]
+pub struct LLMArgs {
+    #[clap(flatten)]
+    pub openai: OpenAIArgs,
+}
+
+#[derive(clap::Args, Debug, Clone)]
+pub struct OpenAIArgs {
+    #[clap(long, env, hide_env = true)]
+    pub openai_key: Option<String>,
+    #[clap(long, env, hide_env = true)]
+    pub openai_model: Option<String>,
+}
+
+#[derive(clap::Args, Debug, Clone)]
+pub struct ServerArgs {
+    /// The Twitch API client
+    #[clap(flatten)]
+    pub twitch: TwitchBotArgs,
+
+    /// The HTTP server
+    #[clap(flatten)]
+    pub http: HttpServer,
+
+    /// The Websocket Server
+    #[clap(flatten)]
+    pub ws: WSHttpServer,
+
+    /// The LLM to use
+    #[clap(flatten)]
+    pub llm: LLMArgs,
+    /// The path to the database file
+    #[clap(long, env, hide_env = true, default_value = "alerts.db")]
+    pub db_path: Option<String>,
+    /// The path to the frontend assets
+    #[clap(long, env, hide_env = true, default_value = "frontend_api/assets")]
+    pub frontend_assets: String,
+}
+
+#[derive(clap::Subcommand, Debug, Clone)]
+pub enum GamesSubCommand {
+    #[command()]
     Wordle(Wordle),
+    #[command()]
     Dragons(Dragons),
+    #[command()]
+    TestGame,
 }
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct Wordle {
-    pub twitch: Twitch,
+    #[command(flatten)]
+    pub twitch: TwitchChatArgs,
+    #[arg(short, long)]
     pub word: String,
 }
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct Dragons {
-    pub twitch: Twitch,
+    #[command(flatten)]
+    pub twitch: TwitchChatArgs,
     pub dragons: u32,
+}
+
+#[derive(clap::Args, Debug, Clone)]
+pub struct TwitchChatArgs {
+    #[clap(long, short, env, hide_env = true)]
+    pub username: String,
+    #[clap(long, short, env, hide_env = true)]
+    pub password: String,
+    /// The channel to connect to
+    #[clap(long, env, hide_env = true)]
+    pub channel: String,
 }
 
 pub fn is_token(s: String) -> eyre::Result<()> {
