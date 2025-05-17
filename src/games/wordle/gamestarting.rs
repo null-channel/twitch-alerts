@@ -1,25 +1,43 @@
-use chrono::Local;
 use iocraft::prelude::*;
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 
 #[derive(Default, Props)]
-struct CountdownProps {
+pub struct CountdownProps {
     // gamestate message receiver
-    gamestate_message_receiver: Option<Sender<bool>>,
+    pub gamestate_message_receiver: Option<Sender<bool>>,
+    pub one_shot: Option<Sender<bool>>,
 }
 
 #[component]
-fn CountDown(mut hooks: Hooks, props: &CountdownProps) -> impl Into<AnyElement<'static>> {
+pub fn CountDown(mut hooks: Hooks, props: &CountdownProps) -> impl Into<AnyElement<'static>> {
     let (width, height) = hooks.use_terminal_size();
     let mut system = hooks.use_context_mut::<SystemContext>();
     let mut should_exit = hooks.use_state(|| false);
     let mut countdown = 5;
 
+    let Some(sender) = props.one_shot.clone() else {
+        // Return an empty view element instead of unit type
+        return element! {
+            View(
+                width,
+                height,
+                background_color: Color::DarkGrey,
+            ) {
+                Text(content: "Error: Failed to get sender")
+            }
+        };
+    };
     hooks.use_future(async move {
         loop {
             tokio::time::sleep(Duration::from_secs(1)).await;
             countdown -= 1;
+            if countdown <= 0 {
+                if let Err(_) = sender.send(true).await {
+                    eprintln!("Failed to send countdown message");
+                }
+            }
+            break;
         }
     });
 
@@ -72,7 +90,7 @@ fn CountDown(mut hooks: Hooks, props: &CountdownProps) -> impl Into<AnyElement<'
                     padding_left: 8,
                     padding_right: 8,
                 ) {
-                    Text(content: format!("{}", countdown))
+                    Text(content: format!("Current Game Time: {}", "marek"))
                 }
                 View(
                     border_style: BorderStyle::Round,
@@ -85,7 +103,7 @@ fn CountDown(mut hooks: Hooks, props: &CountdownProps) -> impl Into<AnyElement<'
                     padding_left: 8,
                     padding_right: 8,
                 ) {
-                    Text(content: "Chat")
+                    Text(content: format!("Countdown: {}", countdown))
                 }
             }
             Text(content: "Press \"q\" to quit.")

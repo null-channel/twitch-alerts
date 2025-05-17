@@ -40,9 +40,8 @@ impl TwitchChat {
         let msg = message?;
         match msg.as_typed()? {
             tmi::Message::Privmsg(msg) => {
-                let thing = msg.clone();
-                self.history.push(thing);
-
+                let msg = msg.into_owned();
+                self.history.push(msg.clone());
                 on_msg(&mut self.client, msg, &sender).await?;
             }
             tmi::Message::Reconnect => {

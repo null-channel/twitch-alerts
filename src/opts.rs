@@ -167,10 +167,10 @@ pub struct Dragons {
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct TwitchChatArgs {
-    #[clap(long, short, env, hide_env = true)]
-    pub username: String,
-    #[clap(long, short, env, hide_env = true)]
-    pub password: String,
+    #[clap(long, short = 'u', env, hide_env = true)]
+    pub tc_username: String,
+    #[clap(long, short = 'p', env, hide_env = true, hide_env_values = true)]
+    pub tc_password: String,
     /// The channel to connect to
     #[clap(long, env, hide_env = true)]
     pub channel: String,

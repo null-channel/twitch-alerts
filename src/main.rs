@@ -32,7 +32,8 @@ async fn main() -> anyhow::Result<()> {
     utils::install_utils()?;
     let cmd = Cli::parse();
 
-    eprintln!("Starting app with options: {:?}", cmd);
+    // WILL PRINT CREDINTIALS!!!!
+    // eprintln!("Starting app with options: {:?}", cmd);
 
     tracing::debug!(
         "App started!\n{}",
@@ -75,7 +76,10 @@ pub async fn run_game(opts: &GamesSubCommand) -> anyhow::Result<()> {
         }
         GamesSubCommand::Wordle(args) => {
             let twitch = get_twitch_chat(&args.twitch).await?;
-            anyhow::bail!("Wordle game is not implemented yet");
+            let game = games::wordle::WordleGameCommandCenter::new(
+                args.sender.clone(),
+                args.twitch_chat.clone(),
+            );
         }
         GamesSubCommand::Dragons(args) => {
             anyhow::bail!("Dragons game is not implemented yet");
@@ -87,8 +91,8 @@ pub async fn run_game(opts: &GamesSubCommand) -> anyhow::Result<()> {
 pub async fn get_twitch_chat(opts: &TwitchChatArgs) -> anyhow::Result<TwitchChat> {
     let chat = TwitchChat::new(
         opts.channel.clone(),
-        opts.username.clone(),
-        opts.password.clone(),
+        opts.tc_username.clone(),
+        opts.tc_password.clone(),
     )
     .await?;
     Ok(chat)
