@@ -13,8 +13,8 @@ mod utils;
 use crate::frontend::{FrontendApi, HostInfo};
 use ai_manager::AIManager;
 use clap::Parser;
-use games::twitch_chat::TwitchChat;
-use opts::{Cli, Commands, GamesSubCommand, ServerArgs, TwitchBotArgs, TwitchChatArgs};
+use games::{twitch_chat::TwitchChat, wordle};
+use opts::{Cli, Commands, GamesSubCommand, ServerArgs, TwitchChatArgs};
 use twitch_api::twitch_oauth2::UserToken;
 use twitch_listener::websocket::WebsocketClient;
 
@@ -75,11 +75,11 @@ pub async fn run_game(opts: &GamesSubCommand) -> anyhow::Result<()> {
             println!("Test game is finished");
         }
         GamesSubCommand::Wordle(args) => {
-            let twitch = get_twitch_chat(&args.twitch).await?;
-            let game = games::wordle::WordleGameCommandCenter::new(
-                args.sender.clone(),
-                args.twitch_chat.clone(),
-            );
+            let mut twitch = get_twitch_chat(&args.twitch).await?;
+            let (_, receiver) = tokio::sync::mpsc::unbounded_channel();
+            let (chat_sender, chat_receiver) = tokio::sync::mpsc::unbounded_channel();
+            tokio::spawn(async move { twitch.run(chat_sender, "marekcounts".to_owned()).await });
+            wordle::game::run_game(receiver).await
         }
         GamesSubCommand::Dragons(args) => {
             anyhow::bail!("Dragons game is not implemented yet");

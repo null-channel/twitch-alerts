@@ -1,25 +1,42 @@
 use chrono::Local;
 use iocraft::prelude::*;
 use std::{thread::JoinHandle, time::Duration};
-use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::mpsc::{Receiver, Sender, UnboundedReceiver};
+
+use super::game::WordleGameState;
 
 #[derive(Default, Props)]
-struct WordleProps {
+pub struct WordleGameProps {
     // gamestate message receiver
-    gamestate_message_receiver: Option<Receiver<String>>,
+    pub gamestate_message_receiver: Option<UnboundedReceiver<WordleGameState>>,
+    pub chat_message_receiver: Option<UnboundedReceiver<String>>,
 }
 
 #[component]
-fn Example(mut hooks: Hooks, props: &WordleProps) -> impl Into<AnyElement<'static>> {
+pub fn WordleGameView(mut hooks: Hooks, props: &WordleGameProps) -> impl Into<AnyElement<'static>> {
     let (width, height) = hooks.use_terminal_size();
     let mut system = hooks.use_context_mut::<SystemContext>();
     let mut time = hooks.use_state(|| Local::now());
     let mut should_exit = hooks.use_state(|| false);
+    let mut chat_messages = vec!["Start of Chat".to_owned()];
 
     hooks.use_future(async move {
         loop {
             tokio::time::sleep(Duration::from_secs(1)).await;
             time.set(Local::now());
+        }
+    });
+
+    hooks.use_future(async move {
+        let Some(cmr) = props.chat_message_receiver else {
+            panic!("please give me a chat message receiver");
+        };
+        let Some(gsmr) = Some(props.gamestate_message_receiver) else {
+            panic!("please give me a chat message receiver");
+        };
+
+        loop {
+            let chat_message = cmr.try_recv();
         }
     });
 
@@ -85,8 +102,21 @@ fn Example(mut hooks: Hooks, props: &WordleProps) -> impl Into<AnyElement<'stati
                     padding_left: 8,
                     padding_right: 8,
                 ) {
-                    Text(content: "Chat")
-                }
+                    #(
+                    chat_messages.iter().enumerate().map(|item| {
+                        element!(View(
+                                    border_style: BorderStyle::Round,
+                                    border_color: Color::Blue,
+                                    height: 100pct,
+                                    width: 100pct,
+                                    margin_bottom: 1,
+                                    padding_top: 1,
+                                ) {
+                                Text(content: item.1.as_str())
+                                }
+                        )}
+                    )
+                    )}
             }
             Text(content: "Press \"q\" to quit.")
         }
@@ -94,7 +124,7 @@ fn Example(mut hooks: Hooks, props: &WordleProps) -> impl Into<AnyElement<'stati
 }
 
 pub async fn run() {
-    let mut system = element!(Example);
+    let mut system = element!(WordleGameView);
     //smol::block_on(element!(Example).fullscreen()).unwrap();
     let r = tokio::join!(system.fullscreen());
     if let Err(e) = r.0 {

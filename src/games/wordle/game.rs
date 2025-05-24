@@ -1,7 +1,6 @@
-use crate::games::twitch_chat::TwitchChat;
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
-use crate::games::wordle::gamestarting::{CountDown, CountdownProps};
+use crate::games::wordle::{gamestarting::CountDown, view::WordleGameView};
 use iocraft::prelude::*;
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 /// Start game -> get word from wordlist
 /// Start game countdown timer
@@ -14,8 +13,8 @@ use iocraft::prelude::*;
 
 pub struct WordleGame {
     pub word: String,
-    pub attempts: Vec<String>,
-    pub current_attempt: String,
+    pub guesses: Vec<String>,
+    pub current_attempt: i8,
     pub game_over: bool,
     pub game_won: bool,
 }
@@ -28,38 +27,36 @@ pub enum WordleGameState {
     GameOver(WordleGame),
 }
 
-pub struct WordleGameCommandCenter {
-    pub game_state: WordleGameState,
-    // Channels to frontend
-    pub sender: UnboundedSender<WordleGameState>,
-    pub receiver: UnboundedReceiver<WordleGameState>,
-    pub twitch_chat: UnboundedReceiver<tmi::Privmsg<'static>>,
+pub async fn run_game(twitch_chat: UnboundedReceiver<tmi::Privmsg<'static>>) {
+    println!("Starting Wordle game...");
+    let mut system: Element<CountDown> = element! {CountDown};
+    let r = tokio::join!(system.fullscreen());
+    println!("hold up. we don't need that one shot now do we.");
+    if let Err(e) = r.0 {
+        eprintln!("Error: {}", e);
+    };
+    let mut wordle_game = WordleGame {
+        word: "words".to_owned(),
+        guesses: Vec::new(),
+        current_attempt: 0,
+        game_over: false,
+        game_won: false,
+    };
+    let mut game_state = WordleGameState::WaitingForGuess(wordle_game);
+
+    let (game_state_sender, gamestate_rec) = tokio::sync::mpsc::unbounded_channel();
+    let (frontend_sender, frontend_rec) = tokio::sync::mpsc::unbounded_channel();
+    let mut system: Element<WordleGameView> = element! {WordleGameView (gamestate_message_receiver: Some(gamestate_rec), chat_message_receiver: Some(frontend_rec))};
+    let h = tokio::spawn(async move {
+        game_loop(game_state, twitch_chat, frontend_sender, game_state_sender).await
+    });
+    let r = tokio::join!(system.fullscreen());
 }
 
-impl WordleGameCommandCenter {
-    pub fn new(twitch_chat: UnboundedReceiver<tmi::Privmsg<'static>>) -> Self {
-        let (sender, receiver) = tokio::sync::mpsc::unbounded_channel();
-        Self {
-            game_state: WordleGameState::WaitingForStart,
-            sender,
-            receiver,
-            twitch_chat,
-        }
-    }
-
-    pub async fn run(&mut self) {
-        println!("Starting Wordle game...");
-        self.game_state = WordleGameState::Starting;
-
-        let (sender, _) = tokio::sync::mpsc::channel(1);
-        let props = CountdownProps {
-            gamestate_message_receiver: None,
-            one_shot: Some(sender),
-        };
-        let mut system: Element<CountDown> = element! {CountDown ( gamestate_message_receiver: props.gamestate_message_receiver, one_shot: props.one_shot ) };
-        let r = tokio::join!(system.fullscreen());
-        if let Err(e) = r.0 {
-            eprintln!("Error: {}", e);
-        };
-    }
+async fn game_loop(
+    game_state: WordleGameState,
+    twitch_chat: UnboundedReceiver<tmi::Privmsg<'static>>,
+    twitch_chat_frontend_sender: UnboundedSender<String>,
+    game_state_sender: UnboundedSender<WordleGameState>,
+) {
 }

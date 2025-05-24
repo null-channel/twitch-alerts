@@ -1,43 +1,21 @@
 use iocraft::prelude::*;
 use std::time::Duration;
-use tokio::sync::mpsc::Sender;
-
-#[derive(Default, Props)]
-pub struct CountdownProps {
-    // gamestate message receiver
-    pub gamestate_message_receiver: Option<Sender<bool>>,
-    pub one_shot: Option<Sender<bool>>,
-}
 
 #[component]
-pub fn CountDown(mut hooks: Hooks, props: &CountdownProps) -> impl Into<AnyElement<'static>> {
+pub fn CountDown(mut hooks: Hooks) -> impl Into<AnyElement<'static>> {
     let (width, height) = hooks.use_terminal_size();
     let mut system = hooks.use_context_mut::<SystemContext>();
     let mut should_exit = hooks.use_state(|| false);
-    let mut countdown = 5;
+    let mut countdown = hooks.use_state(|| 5);
 
-    let Some(sender) = props.one_shot.clone() else {
-        // Return an empty view element instead of unit type
-        return element! {
-            View(
-                width,
-                height,
-                background_color: Color::DarkGrey,
-            ) {
-                Text(content: "Error: Failed to get sender")
-            }
-        };
-    };
+    // Return an empty view element instead of unit type
     hooks.use_future(async move {
         loop {
             tokio::time::sleep(Duration::from_secs(1)).await;
             countdown -= 1;
             if countdown <= 0 {
-                if let Err(_) = sender.send(true).await {
-                    eprintln!("Failed to send countdown message");
-                }
+                should_exit.set(true);
             }
-            break;
         }
     });
 
@@ -83,27 +61,19 @@ pub fn CountDown(mut hooks: Hooks, props: &CountdownProps) -> impl Into<AnyEleme
                     border_style: BorderStyle::Round,
                     border_color: Color::Blue,
                     height: 100pct,
-                    width: 70pct,
+                    width: 100pct,
                     margin_bottom: 2,
                     padding_top: 2,
                     padding_bottom: 2,
                     padding_left: 8,
                     padding_right: 8,
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
                 ) {
-                    Text(content: format!("Current Game Time: {}", "marek"))
-                }
-                View(
-                    border_style: BorderStyle::Round,
-                    border_color: Color::Blue,
-                    height: 100pct,
-                    width: 30pct,
-                    margin_bottom: 2,
-                    padding_top: 2,
-                    padding_bottom: 2,
-                    padding_left: 8,
-                    padding_right: 8,
-                ) {
-                    Text(content: format!("Countdown: {}", countdown))
+                    //TODO: Big number would be awesome!
+                    Text(
+                        content: format!("Games starts in: {}", countdown))
                 }
             }
             Text(content: "Press \"q\" to quit.")
