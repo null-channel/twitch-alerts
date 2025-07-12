@@ -1,0 +1,24 @@
+hstack [background: reset]
+    expand [factor: 2]
+        border
+            text "Leader Board"
+    expand [factor: 4]
+        border [sides: []]
+            vstack 
+                border 
+                    text "ROUND: "
+                        span state.round
+                        span " | "
+                        span "Time: "
+                        span state.timer
+                @stack [id: 1]
+                @stack [id: 2]
+                @stack [id: 3]
+                @stack [id: 4]
+                @stack [id: 5]
+                @stack [id: 6]
+
+    expand [factor: 3]
+        border
+            expand
+                @messages
