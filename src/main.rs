@@ -13,6 +13,7 @@ mod utils;
 use crate::frontend::{FrontendApi, HostInfo};
 use ai_manager::AIManager;
 use clap::Parser;
+use futures::{FutureExt, StreamExt};
 use games::{twitch_chat::TwitchChat, wordle};
 use opts::{Cli, Commands, GamesSubCommand, ServerArgs, TwitchChatArgs};
 use twitch_api::twitch_oauth2::UserToken;
@@ -42,6 +43,8 @@ async fn main() -> anyhow::Result<()> {
             .to_string()
     );
 
+    // Initialize the tracing
+
     tracing::debug!(opts = ?cmd);
 
     match cmd.command {
@@ -70,16 +73,13 @@ pub async fn run_bot() -> anyhow::Result<()> {
 }
 pub async fn run_game(opts: &GamesSubCommand) -> anyhow::Result<()> {
     match opts {
-        GamesSubCommand::TestGame => {
-            games::testgame::run().await;
-            println!("Test game is finished");
-        }
         GamesSubCommand::Wordle(args) => {
             let mut twitch = get_twitch_chat(&args.twitch).await?;
-            let (_, receiver) = tokio::sync::mpsc::unbounded_channel();
             let (chat_sender, chat_receiver) = tokio::sync::mpsc::unbounded_channel();
             tokio::spawn(async move { twitch.run(chat_sender, "marekcounts".to_owned()).await });
-            wordle::game::run_game(receiver).await
+
+            //TODO: Start the game
+            games::wordle::game::start_game(chat_receiver);
         }
         GamesSubCommand::Dragons(args) => {
             anyhow::bail!("Dragons game is not implemented yet");

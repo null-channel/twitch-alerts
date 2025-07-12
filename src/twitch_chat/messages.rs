@@ -23,4 +23,18 @@ impl Message {
             Self::Debug(message) => format!("DEBUG: {}", message.clone()),
         }
     }
+
+    pub fn content(&self) -> String {
+        match self {
+            Self::TwitchMessage(message) => message.text().to_string(),
+            Self::Debug(message) => message.clone(),
+        }
+    }
+
+    pub fn sender(&self) -> String {
+        match self {
+            Self::TwitchMessage(message) => message.sender().name().to_string(),
+            Self::Debug(_) => "Debug".to_string(),
+        }
+    }
 }

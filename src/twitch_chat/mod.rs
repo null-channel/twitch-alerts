@@ -1,4 +1,4 @@
-mod messages;
+pub mod messages;
 mod twitch;
 /*
 use anathema::values::hashmap::HashMap;

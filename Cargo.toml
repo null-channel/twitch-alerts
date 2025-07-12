@@ -30,9 +30,8 @@ chatgpt_rs = "1.2.3"
 
 maud = { version = "0.27.0", features = ["axum"] }
 axum = { version = "0.8.1", features = ["ws","macros"] }
-askama = { version = "0.12.1" }
-askama_web = { version = "0.12.0-pre.0", features = ["axum-0.8"] }
-
+askama = { version = "0.14.0" }
+askama_web = { version = "0.14.4", features = ["axum-0.8"] }
 
 tower-http = { version = "0.6.2", features = ["fs", "trace"] }
 tmi = { version = "0.8.0" }
@@ -43,7 +42,7 @@ futures-util = "0.3.31"
 # Networking
 dotenvy = "0.15.6"
 eyre = { version = "0.6" }
-futures = "0.3.26"
+futures = "0.3.31"
 hyper = { version = "0.14", features = [] }
 reqwest = { version = "0.12.4", features = ["json"] }
 retainer = "0.3.0"
@@ -57,10 +56,11 @@ tracing-log = "0.1.3"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 url = "2.3.1"
 
+# Wordle
+random_word = { version = "0.5.0", features = ["en"] }
 
 # CLI
 clap = { version = "4.1.8", features = ["derive", "env"] }
-color-eyre = { version = "0.6", features = ["capture-spantrace"] }
-anathema = { git = "https://github.com/togglebyte/anathema", branch = "main" }
-iocraft = "0.7.7"
 chrono = "0.4.38"
+crossterm = { version = "0.28.1", features = ["event-stream"] }
+anathema = "0.2.7"

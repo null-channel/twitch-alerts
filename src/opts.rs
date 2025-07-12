@@ -146,8 +146,6 @@ pub enum GamesSubCommand {
     Wordle(Wordle),
     #[command()]
     Dragons(Dragons),
-    #[command()]
-    TestGame,
 }
 
 #[derive(clap::Args, Debug, Clone)]

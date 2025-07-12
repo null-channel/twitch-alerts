@@ -1,5 +1,8 @@
+pub mod messages;
 use tmi::{irc, Privmsg};
 use tokio::sync::mpsc::{self, UnboundedSender};
+
+use crate::twitch_chat::messages::Message;
 
 pub struct TwitchChat {
     pub client: tmi::Client,
@@ -31,26 +34,28 @@ impl TwitchChat {
 
     pub async fn run(
         &mut self,
-        sender: UnboundedSender<Privmsg<'_>>,
+        sender: UnboundedSender<Message>,
         channel: String,
     ) -> anyhow::Result<()> {
         self.client.join(&channel).await?;
 
-        let message = self.client.recv().await;
-        let msg = message?;
-        match msg.as_typed()? {
-            tmi::Message::Privmsg(msg) => {
-                let msg = msg.into_owned();
-                self.history.push(msg.clone());
-                on_msg(&mut self.client, msg, &sender).await?;
-            }
-            tmi::Message::Reconnect => {
-                self.client.reconnect().await?;
-                self.client.join(&channel).await?;
-            }
-            tmi::Message::Ping(ping) => self.client.pong(&ping).await?,
-            _ => {}
-        };
+        loop {
+            let message = self.client.recv().await;
+            let msg = message?;
+            match msg.as_typed()? {
+                tmi::Message::Privmsg(msg) => {
+                    let msg = msg.into_owned();
+                    self.history.push(msg.clone());
+                    on_msg(&mut self.client, msg, &sender).await?;
+                }
+                tmi::Message::Reconnect => {
+                    self.client.reconnect().await?;
+                    self.client.join(&channel).await?;
+                }
+                tmi::Message::Ping(ping) => self.client.pong(&ping).await?,
+                _ => {}
+            };
+        }
         Ok(())
     }
 }
@@ -58,7 +63,7 @@ impl TwitchChat {
 pub async fn on_msg(
     client: &mut tmi::Client,
     msg: tmi::Privmsg<'_>,
-    postman: &UnboundedSender<tmi::Privmsg<'_>>,
+    postman: &UnboundedSender<Message>,
 ) -> anyhow::Result<()> {
     if msg.text() == "!say_hello" {
         client
@@ -67,7 +72,7 @@ pub async fn on_msg(
             .send()
             .await?;
     } else {
-        let _ = postman.send(msg.into_owned());
+        let _ = postman.send(Message::new_twitch_message(msg.into_owned()));
     }
     Ok(())
 }

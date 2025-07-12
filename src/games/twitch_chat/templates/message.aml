@@ -1,0 +1,21 @@
+let platform_collors = [
+    "#9146FF", // twitch purple
+    "#FF4500", // reddit orange
+    "#1DA1F2", // twitter blue
+]
+
+vstack
+    expand
+        overflow
+            for value in state.messages
+                hstack
+                    border [background: platform_collors[to_int(value.platform)],sides: [], width: 1, height: 1]
+                    text " "
+                        span value.author
+                        span ": "
+                        span value.content
+
+    padding [top: 1]
+        vstack
+            text "Received messages: " state.message_count
+            text "thing: " state.thing
