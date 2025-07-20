@@ -6,10 +6,10 @@ let platform_collors = [
 
 vstack
     expand
-        overflow
+        overflow [direction: "back"]
             for value in state.messages
                 hstack
-                    border [background: platform_collors[to_int(value.platform)],sides: [], width: 1, height: 1]
+                    container [background: platform_collors[to_int(value.platform)],sides: [], width: 1, height: 1]
                     text " "
                         span value.author
                         span ": "

@@ -12,10 +12,14 @@ use anathema::component::{Children, Component, ComponentId, Context, Emitter, Mo
 use anathema::runtime::Runtime;
 use anathema::state::{State, Value};
 use anathema::templates::Document;
+use futures::io::empty;
 use random_word::Lang;
 use tokio::sync::mpsc::UnboundedReceiver;
 
 use super::view::row::{Cell, LetterStatus, RowMessage};
+
+// Game round time limit
+const GAME_ROUND_TIME_LIMIT: u64 = 30; // seconds
 
 pub struct Index;
 
@@ -51,6 +55,9 @@ impl Component for Index {
     ) {
         match message {
             IndexMessage::Row(row_update) => {
+                if row_update.row == 7 {
+                    //println!("Solution row: {:?}", row_update.row_message.data);
+                }
                 context
                     .components
                     .by_attribute("id", row_update.row)
@@ -134,7 +141,7 @@ fn get_random_word(spell_checker: &HashSet<String>) -> Word {
     while !spell_checker.contains(&word) {
         // Generate a random word of length 5
         // This is a placeholder, you should replace it with your own logic to get a random
-        word = random_word::get_len(5, Lang::En)
+        word = random_word::get_len(5, Lang::Simple)
             .expect("Failed to get a random word from the spell checker")
             .to_uppercase()
     }
@@ -152,12 +159,12 @@ async fn game_loop(
     emitter: Emitter,
     spell_checker: HashSet<String>,
 ) {
+    let guess_duration = std::time::Duration::from_secs(GAME_ROUND_TIME_LIMIT);
     loop {
-        // TODO: update round count (right now it starts at 0? do we default it to 1?)
+        let mut correct_cells = [Cell::default(); 5];
         let mut round_count = 0;
         increment_round_count(&mut round_count, &emitter, main_id).await;
         let mut start_time = std::time::Instant::now();
-        let guess_duration = std::time::Duration::from_secs(20); // 20 seconds for each guess
 
         let word = get_random_word(&spell_checker);
 
@@ -165,26 +172,39 @@ async fn game_loop(
         let mut game_over = false;
 
         // Play a round
-        while round_count <= 6 || !game_over {
+        while round_count <= 6 && !game_over {
             // Check if the time limit for the current guess has been reached
             if start_time.elapsed() >= guess_duration {
                 // increment the guess count and reset the timer
-                let winning_word = game_round.select_round_winner();
+                let winning_word = game_round.select_round_winner(word);
 
                 // println!("Round {round_count}: Winning word is {winning_word:?}");
                 // Update the UI with the winning word
                 let row_message = game_round.build_cells(winning_word.unwrap_or([97; 5]));
                 emitter
-                    .emit_async(
+                    .emit(
                         main_id,
                         IndexMessage::Row(RowUpdate {
                             row: round_count,
                             row_message,
                         }),
                     )
-                    .await
                     .expect("failed to send winning word message");
 
+                update_correct_cells(&mut correct_cells, &row_message.data);
+
+                emitter
+                    .emit_async(
+                        main_id,
+                        IndexMessage::Row(RowUpdate {
+                            row: 7, // Solution row
+                            row_message: RowMessage {
+                                data: correct_cells,
+                            },
+                        }),
+                    )
+                    .await
+                    .expect("failed to send winning word message");
                 // Check win condition
                 // TODO: Check if the winning word is correct
                 let mut did_win = true;
@@ -201,7 +221,6 @@ async fn game_loop(
 
                 // They won
                 if game_over {
-                    tokio::time::sleep(std::time::Duration::from_secs(30)).await;
                     break;
                 }
                 // Reset the game round for the next guess
@@ -226,7 +245,6 @@ async fn game_loop(
                 let player = message.sender();
                 let guess = message.content();
                 game_round.new_guess(player, guess);
-
                 // emit the chat message to the twitch chat component
 
                 emitter
@@ -246,9 +264,49 @@ async fn game_loop(
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             }
         }
+
+        let correct_word = game_round.build_cells(word);
+
+        // Toggle bit has a bug in this UI threading.
+        // messages are not recived in the order they are sent
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        //update the UI with the final state of the game
+        for i in 0..5 {
+            if correct_cells[i].status != LetterStatus::Correct {
+                correct_cells[i] = Cell {
+                    letter: word[i],
+                    status: LetterStatus::Absent,
+                };
+            }
+        }
+
+        emitter
+            .emit_async(
+                main_id,
+                IndexMessage::Row(RowUpdate {
+                    row: 7, // Solution row
+                    row_message: RowMessage {
+                        data: correct_cells,
+                    },
+                }),
+            )
+            .await
+            .expect("failed to send winning word message");
+        // build correct cells from the winning word
+        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
         // Reset the board for the next round
         reset_board(&emitter, main_id).await;
     } // Game loop
+}
+
+fn update_correct_cells(correct_cells: &mut [Cell; 5], row_data: &[Cell; 5]) {
+    // Update the correct cells with the new row data
+    for (i, cell) in row_data.iter().enumerate() {
+        if cell.status == LetterStatus::Correct {
+            correct_cells[i] = *cell;
+        }
+    }
 }
 
 async fn next_round(
@@ -264,7 +322,7 @@ async fn next_round(
 
 async fn reset_board(emitter: &Emitter, main_id: ComponentId<IndexMessage>) {
     // Reset the board by emitting a reset message
-    for i in 0..6 {
+    for i in 1..=7 {
         // Emit
         emitter
             .emit_async(
@@ -305,11 +363,18 @@ async fn update_timer(timer: u8, emitter: &Emitter, main_id: ComponentId<IndexMe
 
 struct GameRound<'a> {
     word: [u8; 5],
-    players_votes: std::collections::HashMap<String, [u8; 5]>,
+    players_votes: HashMap<String, ([u8; 5], u32)>,
     spell_checker: &'a HashSet<String>,
+    guess_position: u32,
 }
 
 type Word = [u8; 5];
+
+struct VoteIndexer {
+    votes: u32,
+    voters: Vec<String>,
+    position_in_round: u32,
+}
 
 impl<'a> GameRound<'a> {
     // Creates a new game round with a predefined word
@@ -317,19 +382,23 @@ impl<'a> GameRound<'a> {
     pub fn new(word: Word, spell_checker: &'a HashSet<String>) -> Self {
         Self {
             word,
-            players_votes: std::collections::HashMap::new(),
+            players_votes: HashMap::new(),
             spell_checker,
+            guess_position: 0,
         }
     }
 
-    pub fn new_guess(&mut self, player: String, guess: String) {
+    pub fn new_guess(&mut self, player: String, guess: String) -> bool {
         let upper = guess.to_uppercase();
         if !self.validate_guess(&upper) {
-            return;
+            return false;
         }
+        self.guess_position += 1;
         let mut arrays_of_u8 = Word::default();
         arrays_of_u8.copy_from_slice(upper.as_bytes());
-        self.players_votes.insert(player, arrays_of_u8);
+        self.players_votes
+            .insert(player, (arrays_of_u8, self.guess_position));
+        true
     }
 
     // Validate guess
@@ -391,38 +460,46 @@ impl<'a> GameRound<'a> {
         RowMessage { data: cells }
     }
 
-    // Select the winning guess based on the votes
-    pub fn select_round_winner(&self) -> Option<[u8; 5]> {
-        let mut votes = HashMap::new();
+    //TODO: Select the winning guess based on the votes
+    pub fn select_round_winner(&self, word: Word) -> Option<Word> {
+        // If there are multiple words with the same number of votes, first check to see if any of
+        // them are the correct word, and pick that word.
+        // Second if there are no correct words, pick the lowest position word with the most votes.
+        let mut total_votes = HashMap::new();
+        let mut highest_vote = 0;
 
         // Build a map of all votes
-        for word in self.players_votes.values() {
-            let mut count = 0;
-            {
-                count = *votes.entry(word.clone()).or_insert(0);
-                count += 1;
+        for (name, (voted_word, pos)) in self.players_votes.iter() {
+            let votes = total_votes.entry(*voted_word).or_insert(VoteIndexer {
+                votes: 0,
+                voters: Vec::new(),
+                position_in_round: 10000,
+            });
+            votes.votes += 1;
+            votes.voters.push(name.clone());
+            if pos < &votes.position_in_round {
+                votes.position_in_round = *pos;
             }
-            votes.insert(word.clone(), count);
+            if votes.votes > highest_vote {
+                highest_vote = votes.votes;
+            }
         }
 
         // Find the word with the most votes
-        // If there is a tie, pick a random one
-        let mut winner = None;
-        let mut max_votes = 0;
-
-        for (word, count) in &votes {
-            if *count > max_votes {
-                max_votes = *count;
-                winner = Some(word.clone());
-            } else if *count == max_votes {
-                // If there's a tie, randomly select one of the tied words
-                if rand::random::<bool>() {
-                    winner = Some(word.clone());
+        // If there is a tie, pick the word with the lowest position in the round
+        let mut winning_word = ([0; 5], 1000000);
+        for (voted_word, vote_indexer) in total_votes.iter() {
+            if vote_indexer.votes == highest_vote {
+                // Check if the voted word is the correct word
+                if *voted_word == word {
+                    return Some(*voted_word);
+                }
+                if winning_word.1 > vote_indexer.position_in_round {
+                    winning_word = (*voted_word, vote_indexer.position_in_round);
                 }
             }
         }
-
-        winner
+        Some(winning_word.0)
     }
 
     pub fn reset_votes(&mut self) {

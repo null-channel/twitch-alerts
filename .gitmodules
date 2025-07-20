@@ -1,0 +1,3 @@
+[submodule "wordle_word"]
+	path = wordle_word
+	url = git@github.com:null-channel/wordle_word.git
