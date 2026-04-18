@@ -1,4 +1,5 @@
 use clap::{builder::ArgPredicate, Parser};
+use random_word::WordList;
 
 /*
 * null-twitch cli
@@ -153,7 +154,13 @@ pub struct Wordle {
     #[command(flatten)]
     pub twitch: TwitchChatArgs,
     #[arg(short, long)]
-    pub word: String,
+    pub word_list: String,
+    #[arg(
+        short,
+        long,
+        default_value = "sqlite:src/games/wordle/wordle_scoreboard.db"
+    )]
+    pub db_ags: String,
 }
 
 #[derive(clap::Args, Debug, Clone)]

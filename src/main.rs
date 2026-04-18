@@ -5,6 +5,7 @@ mod frontend;
 mod games;
 mod messages;
 mod opts;
+mod sql_utils;
 mod twitch_chat;
 mod twitch_listener;
 mod utils;
@@ -13,9 +14,9 @@ mod utils;
 use crate::frontend::{FrontendApi, HostInfo};
 use ai_manager::AIManager;
 use clap::Parser;
-use futures::{FutureExt, StreamExt};
 use games::{twitch_chat::TwitchChat, wordle};
 use opts::{Cli, Commands, GamesSubCommand, ServerArgs, TwitchChatArgs};
+use random_word::WordList;
 use twitch_api::twitch_oauth2::UserToken;
 use twitch_listener::websocket::WebsocketClient;
 
@@ -71,6 +72,7 @@ pub async fn run_chat() -> anyhow::Result<()> {
 pub async fn run_bot() -> anyhow::Result<()> {
     Ok(())
 }
+
 pub async fn run_game(opts: &GamesSubCommand) -> anyhow::Result<()> {
     match opts {
         GamesSubCommand::Wordle(args) => {
@@ -78,8 +80,13 @@ pub async fn run_game(opts: &GamesSubCommand) -> anyhow::Result<()> {
             let (chat_sender, chat_receiver) = tokio::sync::mpsc::unbounded_channel();
             tokio::spawn(async move { twitch.run(chat_sender, "marekcounts".to_owned()).await });
 
+            let sqlite_pool = sql_utils::setup::setup_sqlite_migrations(
+                args.db_ags.clone(),
+                sql_utils::setup::get_migrations_from_cargo_dir("src/games/wordle/migrations")?,
+            )
+            .await?;
             //TODO: Start the game
-            games::wordle::game::start_game(chat_receiver);
+            games::wordle::game::start_game(chat_receiver, WordList::from(args.word_list.as_str()));
         }
         GamesSubCommand::Dragons(args) => {
             anyhow::bail!("Dragons game is not implemented yet");
@@ -134,7 +141,11 @@ pub async fn run_server(opts: &ServerArgs) -> anyhow::Result<()> {
         anyhow::bail!("db path is required");
     };
 
-    let sqlite_pool = setup_sqlite(db_path.clone()).await?;
+    let sqlite_pool = sql_utils::setup::setup_sqlite_migrations(
+        db_path.clone(),
+        sql_utils::setup::get_migrations_from_cargo_dir("src/migrations")?,
+    )
+    .await?;
 
     let (sender, receiver) = mpsc::unbounded_channel();
     let (frentend_sender, frontend_receiver) = mpsc::unbounded_channel();
@@ -182,40 +193,6 @@ pub async fn run_server(opts: &ServerArgs) -> anyhow::Result<()> {
     );
     r?;
     Ok(())
-}
-
-async fn setup_sqlite(db: String) -> anyhow::Result<SqlitePool> {
-    // will create the db if needed
-    let url = SqliteConnectOptions::new()
-        .filename(db)
-        .create_if_missing(true);
-    let pool = SqlitePool::connect_with(url).await?;
-
-    // Run migrations
-    let migrations = if env::var("ENV") == Ok("production".to_string()) {
-        // Productions migrations dir
-
-        let crate_dir = std::env::var("AI_MIGRATIONS_DIR")?;
-        Path::new(&crate_dir).join("migrations")
-    } else {
-        // Development migrations dir
-        let crate_dir = std::env::var("CARGO_MANIFEST_DIR")?;
-        let Some(path) = Path::new(&crate_dir).parent() else {
-            panic!()
-        };
-
-        path.join("ai_manager_service/migrations")
-    };
-
-    println!("Running migrations from: {:?}", migrations.clone());
-
-    sqlx::migrate::Migrator::new(migrations)
-        .await?
-        .run(&pool)
-        .await?;
-
-    // Return the connection manager
-    Ok(pool)
 }
 
 async fn flatten<T>(handle: JoinHandle<anyhow::Result<T>>) -> anyhow::Result<T> {

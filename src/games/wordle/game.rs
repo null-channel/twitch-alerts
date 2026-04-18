@@ -8,12 +8,11 @@ use crate::twitch_chat::messages::Message;
 use crate::wordle::view::row::RowState;
 use anathema::backend::tui::TuiBackend;
 use anathema::backend::Backend;
-use anathema::component::{Children, Component, ComponentId, Context, Emitter, MouseEvent};
+use anathema::component::{Children, Component, ComponentId, Context, Emitter};
 use anathema::runtime::Runtime;
 use anathema::state::{State, Value};
 use anathema::templates::Document;
-use futures::io::empty;
-use random_word::Lang;
+use random_word::WordList;
 use tokio::sync::mpsc::UnboundedReceiver;
 
 use super::view::row::{Cell, LetterStatus, RowMessage};
@@ -43,6 +42,8 @@ pub struct IndexState {
     pub round: Value<u8>,
     pub timer: Value<u8>,
 }
+
+// twitch_[username],games_played,guesses,correct_guesses,total_points
 
 impl Component for Index {
     type Message = IndexMessage;
@@ -75,7 +76,7 @@ impl Component for Index {
     }
 }
 
-pub fn start_game(chat: UnboundedReceiver<Message>) {
+pub fn start_game(chat: UnboundedReceiver<Message>, word_list: WordList) {
     let doc = Document::new("@index");
     let mut backend = TuiBackend::builder()
         .enable_raw_mode()
@@ -112,18 +113,31 @@ pub fn start_game(chat: UnboundedReceiver<Message>) {
         .expect("failed to register index component");
     let emitter = builder.emitter();
     tokio::spawn(async move {
-        game_loop(chat, main_id, twitch_chat_id, emitter, get_spell_checker()).await
+        game_loop(
+            chat,
+            main_id,
+            twitch_chat_id,
+            emitter,
+            get_spell_checker(word_list),
+            word_list,
+        )
+        .await
     });
     builder
         .finish(&mut backend, |runtime, backend| runtime.run(backend))
         .unwrap();
 }
 
-fn get_spell_checker() -> HashSet<String> {
+fn get_spell_checker(word_list: WordList) -> HashSet<String> {
     // Read the spell checker file from the src/games/wordle/assets/wordlist.txt and read each line
     // into the hashmap
     let mut spell_checker = HashSet::new();
-    let file_path = "src/games/wordle/assets/combined_unique.txt";
+    let file_path = match word_list {
+        WordList::Challenge => "wordle_word/src/txt/challange.txt",
+        WordList::Nerd => "wordle_word/src/txt/nerd.txt",
+        WordList::Standard => "wordle_word/src/txt/standard.txt",
+    };
+
     if let Ok(lines) = std::fs::read_to_string(file_path) {
         for line in lines.lines() {
             let word = line.trim().to_uppercase();
@@ -137,19 +151,11 @@ fn get_spell_checker() -> HashSet<String> {
     spell_checker
 }
 
-fn get_random_word(spell_checker: &HashSet<String>) -> Word {
-    let mut word = "ABCDE".to_string();
-
-    while !spell_checker.contains(&word) {
-        // Generate a random word of length 5
-        // This is a placeholder, you should replace it with your own logic to get a random
-        word = random_word::get_len(5, Lang::Full)
-            .expect("Failed to get a random word from the spell checker")
-            .to_uppercase()
-    }
-    // Get a random word from the spell checker
-
-    word.as_bytes()
+fn get_random_word(list: WordList) -> Word {
+    random_word::get_len(5, list)
+        .expect("Failed to get a random word from the spell checker")
+        .to_uppercase()
+        .as_bytes()
         .try_into()
         .expect("Failed to convert random word to [u8; 5]")
 }
@@ -160,6 +166,7 @@ async fn game_loop(
     twitch_chat_id: ComponentId<ChatMessages>,
     emitter: Emitter,
     spell_checker: HashSet<String>,
+    word_list: WordList,
 ) {
     let guess_duration = std::time::Duration::from_secs(GAME_ROUND_TIME_LIMIT as u64);
     loop {
@@ -170,7 +177,7 @@ async fn game_loop(
         let mut start_time = std::time::Instant::now();
         update_timer(GAME_ROUND_TIME_LIMIT, &emitter, main_id).await;
 
-        let word = get_random_word(&spell_checker);
+        let word = get_random_word(word_list);
 
         let mut game_round = GameRound::new(word, &spell_checker);
         let mut game_over = false;
