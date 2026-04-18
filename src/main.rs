@@ -20,9 +20,8 @@ use random_word::WordList;
 use twitch_api::twitch_oauth2::UserToken;
 use twitch_listener::websocket::WebsocketClient;
 
-use std::{env, path::Path, sync::Arc};
+use std::sync::Arc;
 
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use tokio::{
     sync::{mpsc, RwLock},
     task::JoinHandle,
@@ -78,15 +77,26 @@ pub async fn run_game(opts: &GamesSubCommand) -> anyhow::Result<()> {
         GamesSubCommand::Wordle(args) => {
             let mut twitch = get_twitch_chat(&args.twitch).await?;
             let (chat_sender, chat_receiver) = tokio::sync::mpsc::unbounded_channel();
-            tokio::spawn(async move { twitch.run(chat_sender, "marekcounts".to_owned()).await });
+            let channel = args.twitch.channel.clone();
+            tokio::spawn(async move {
+                match twitch.run(chat_sender, channel).await {
+                    Ok(()) => {}
+                    Err(e) => tracing::error!(error = %e, "Twitch chat task exited with error"),
+                }
+            });
 
-            let sqlite_pool = sql_utils::setup::setup_sqlite_migrations(
+            let _sqlite_pool = sql_utils::setup::setup_sqlite_migrations(
                 args.db_ags.clone(),
                 sql_utils::setup::get_migrations_from_cargo_dir("src/games/wordle/migrations")?,
             )
             .await?;
-            //TODO: Start the game
-            games::wordle::game::start_game(chat_receiver, WordList::from(args.word_list.as_str()));
+            let word_list = WordList::from(args.word_list.as_str());
+            // Anathema's `runtime.run` blocks a thread for the whole session. Running it on a
+            // Tokio worker can strand `tokio::spawn` tasks (e.g. `game_loop`, IRC) on that same
+            // worker, so drive the TUI from the blocking pool instead.
+            tokio::task::spawn_blocking(move || games::wordle::game::start_game(chat_receiver, word_list))
+                .await
+                .map_err(|e| anyhow::anyhow!("Wordle TUI thread panicked or was cancelled: {e}"))?;
         }
         GamesSubCommand::Dragons(args) => {
             anyhow::bail!("Dragons game is not implemented yet");
