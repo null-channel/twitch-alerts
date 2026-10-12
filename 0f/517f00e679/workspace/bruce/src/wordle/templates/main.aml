@@ -1,0 +1,37 @@
+hstack [background: reset]
+    expand [factor: 2]
+        vstack 
+            border 
+                text "ROUND: "
+                    span state.round
+                    span " | "
+                    span "Time: "
+                    span state.timer
+            expand
+                border
+                    vstack
+                        text [bold: true] "Leader Board"
+                        for leader in state.leaders
+                            hstack
+                                container [width: 4]
+                                    text leader.rank
+                                        span "."
+                                expand [axis: "horizontal"]
+                                    text leader.name
+                                text [text_align: "right"] leader.points
+    expand [factor: 4]
+        border [sides: []]
+            vstack
+                @stack [id: 1]
+                @stack [id: 2]
+                @stack [id: 3]
+                @stack [id: 4]
+                @stack [id: 5]
+                @stack [id: 6]
+                border [sides: ["top"]]
+                    @stack [id: 7]
+
+    expand [factor: 3]
+        border
+            expand
+                @messages

@@ -1,0 +1,4 @@
+dbs:
+  - path: /var/lib/myapp/db
+    replicas:
+      - url: s3://YOURBUCKET/db

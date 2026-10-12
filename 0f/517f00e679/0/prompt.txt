@@ -1,0 +1,5 @@
+I want to add youtube live to the system for playing wordle, it should be added in such a way as to make it so that other platforms can be supported in the future and the current system should be extended as much as possible to support it.
+
+---
+
+ensure to do the work in a worktree! and it should end in a PR to the repo!

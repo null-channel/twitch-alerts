@@ -1,0 +1,965 @@
+{
+  "agent": "Claude Code",
+  "base_commit": "def412b64a41d96731bd9d8b7447f7315cd036b3",
+  "branch": "worktree-youtube-live-chat",
+  "checkpoint_id": "0f517f00e679",
+  "checkpoint_transcript_start": 0,
+  "checkpoints_count": 2,
+  "cli_version": "0.1.0",
+  "code_commit": "d6d0ac6db7b42a34b9ec1cbb1936b37f17ffdce2",
+  "committed_at": "2026-10-12T04:26:05.960303505Z",
+  "compact_transcript_start": 0,
+  "context_tokens": null,
+  "context_window_size": null,
+  "created_at": "2026-10-12T04:26:05.960303505Z",
+  "files_touched": [
+    ".dockerignore",
+    ".github/workflows/build-backend-container.yaml",
+    ".github/workflows/build-ui-container.yaml",
+    ".github/workflows/fly-deploy.yml",
+    ".github/workflows/rust-checks.yml",
+    ".gitignore",
+    "Cargo.lock",
+    "Cargo.toml",
+    "Dockerfile",
+    "README.md",
+    "bruce/.env.example",
+    "bruce/Cargo.toml",
+    "bruce/games.db",
+    "bruce/null_twitch.log",
+    "bruce/src/main.rs",
+    "bruce/src/opts.rs",
+    "bruce/src/utils.rs",
+    "bruce/src/wordle/game.rs",
+    "bruce/src/wordle/mod.rs",
+    "bruce/src/wordle/scoreboard.rs",
+    "bruce/src/wordle/sqlx.toml",
+    "bruce/src/wordle/state.rs",
+    "bruce/src/wordle/templates/main.aml",
+    "bruce/src/wordle/templates/message.aml",
+    "bruce/src/wordle/view/chat.rs",
+    "bruce/src/wordle/view/mod.rs",
+    "bruce/src/wordle/view/row.rs",
+    "bruce/tests/cli.rs",
+    "fly.toml",
+    "hack/start.sh",
+    "sql_common/Cargo.toml",
+    "sql_common/src/setup.rs",
+    "twitch_alerts/.env.example",
+    "twitch_alerts/Cargo.toml",
+    "twitch_alerts/deployment/frontend-deployment.yaml",
+    "twitch_alerts/deployment/twitch-alerts-deployment.yaml",
+    "twitch_alerts/src/ai_manager/mod.rs",
+    "twitch_alerts/src/ai_manager/sqlite.rs",
+    "twitch_alerts/src/frontend/assets/websocket.js",
+    "twitch_alerts/src/frontend/how_to_test_in_main.rs",
+    "twitch_alerts/src/frontend/htmx.rs",
+    "twitch_alerts/src/frontend/mod.rs",
+    "twitch_alerts/src/frontend/network.rs",
+    "twitch_alerts/src/frontend/routes.rs",
+    "twitch_alerts/src/frontend/types.rs",
+    "twitch_alerts/src/main.rs",
+    "twitch_alerts/src/messages.rs",
+    "twitch_alerts/src/migrations/20260911000000_allow_anonymous_gift_subscriptions.sql",
+    "twitch_alerts/src/opts.rs",
+    "twitch_alerts/src/templates/admin.html",
+    "twitch_alerts/src/templates/index.html",
+    "twitch_alerts/src/utils.rs",
+    "twitch_alerts/templates/admin.html",
+    "twitch_alerts/templates/index.html",
+    "twitch_alerts/tests/cli.rs",
+    "twitch_common/Cargo.toml",
+    "twitch_common/src/chat/messages.rs",
+    "twitch_common/src/chat/twitch_chat/mod.rs",
+    "twitch_common/src/chat/twitch_chat/templates/message.aml",
+    "twitch_common/src/chat/twitch_chat/twitch.rs",
+    "twitch_common/src/lib.rs",
+    "twitch_common/src/messages/mod.rs",
+    "twitch_common/src/network.rs",
+    "twitch_common/src/twitch_chat/app.rs",
+    "twitch_common/src/twitch_chat/index.aml",
+    "twitch_common/src/twitch_chat/messages.rs",
+    "twitch_common/src/twitch_chat/mod.rs",
+    "twitch_common/src/twitch_chat/twitch.rs",
+    "twitch_common/src/twitch_listener/websocket.rs",
+    "twitch_common/src/types.rs"
+  ],
+  "initial_attribution": {
+    "agent_lines": 6210,
+    "agent_percentage": 100.0,
+    "agent_removed": 0,
+    "calculated_at": "2026-10-12T04:26:05.960303505Z",
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "metric_version": 2,
+    "total_committed": 6210,
+    "total_lines_changed": 6210
+  },
+  "model": "claude-fable-5-1",
+  "prompt_count": 2,
+  "rewrite": {
+    "events": [
+      {
+        "actor": "ai",
+        "added_lines": 1557,
+        "at": "2026-10-12T04:26:05.922313018Z",
+        "files": [
+          {
+            "added_lines": 12,
+            "path": "Dockerfile",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 23,
+            "removed_lines": 23,
+            "rewritten_lines": 8,
+            "status": "M"
+          },
+          {
+            "added_lines": 20,
+            "path": "bruce/src/main.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 43,
+            "removed_lines": 43,
+            "rewritten_lines": 10,
+            "status": "M"
+          },
+          {
+            "added_lines": 11,
+            "path": "bruce/src/opts.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 137,
+            "removed_lines": 137,
+            "rewritten_lines": 5,
+            "status": "M"
+          },
+          {
+            "added_lines": 24,
+            "path": "bruce/src/utils.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 94,
+            "removed_lines": 94,
+            "rewritten_lines": 21,
+            "status": "M"
+          },
+          {
+            "added_lines": 368,
+            "path": "bruce/src/wordle/game.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 228,
+            "removed_lines": 228,
+            "rewritten_lines": 72,
+            "status": "M"
+          },
+          {
+            "added_lines": 1,
+            "path": "bruce/src/wordle/mod.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 1,
+            "removed_lines": 1,
+            "rewritten_lines": 1,
+            "status": "M"
+          },
+          {
+            "added_lines": 183,
+            "path": "bruce/src/wordle/scoreboard.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 0,
+            "removed_lines": 0,
+            "rewritten_lines": 0,
+            "status": "A"
+          },
+          {
+            "added_lines": 58,
+            "path": "bruce/src/wordle/view/chat.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 0,
+            "removed_lines": 0,
+            "rewritten_lines": 0,
+            "status": "A"
+          },
+          {
+            "added_lines": 1,
+            "path": "bruce/src/wordle/view/mod.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 0,
+            "removed_lines": 0,
+            "rewritten_lines": 0,
+            "status": "M"
+          },
+          {
+            "added_lines": 2,
+            "path": "bruce/src/wordle/view/row.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 18,
+            "removed_lines": 18,
+            "rewritten_lines": 2,
+            "status": "M"
+          },
+          {
+            "added_lines": 23,
+            "path": "bruce/tests/cli.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 0,
+            "removed_lines": 0,
+            "rewritten_lines": 0,
+            "status": "A"
+          },
+          {
+            "added_lines": 1,
+            "path": "hack/start.sh",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 1,
+            "removed_lines": 1,
+            "rewritten_lines": 1,
+            "status": "M"
+          },
+          {
+            "added_lines": 10,
+            "path": "sql_common/src/setup.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 29,
+            "removed_lines": 29,
+            "rewritten_lines": 6,
+            "status": "M"
+          },
+          {
+            "added_lines": 6,
+            "path": "twitch_alerts/src/ai_manager/mod.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 16,
+            "removed_lines": 16,
+            "rewritten_lines": 6,
+            "status": "M"
+          },
+          {
+            "added_lines": 199,
+            "path": "twitch_alerts/src/ai_manager/sqlite.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 80,
+            "removed_lines": 80,
+            "rewritten_lines": 58,
+            "status": "M"
+          },
+          {
+            "added_lines": 8,
+            "path": "twitch_alerts/src/frontend/assets/websocket.js",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 0,
+            "removed_lines": 0,
+            "rewritten_lines": 0,
+            "status": "A"
+          },
+          {
+            "added_lines": 0,
+            "path": "twitch_alerts/src/frontend/how_to_test_in_main.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 50,
+            "removed_lines": 50,
+            "rewritten_lines": 0,
+            "status": "D"
+          },
+          {
+            "added_lines": 1,
+            "path": "twitch_alerts/src/frontend/htmx.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 37,
+            "removed_lines": 37,
+            "rewritten_lines": 1,
+            "status": "M"
+          },
+          {
+            "added_lines": 284,
+            "path": "twitch_alerts/src/frontend/mod.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 197,
+            "removed_lines": 197,
+            "rewritten_lines": 64,
+            "status": "M"
+          },
+          {
+            "added_lines": 25,
+            "path": "twitch_alerts/src/frontend/network.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 0,
+            "removed_lines": 0,
+            "rewritten_lines": 0,
+            "status": "A"
+          },
+          {
+            "added_lines": 6,
+            "path": "twitch_alerts/src/frontend/routes.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 6,
+            "removed_lines": 6,
+            "rewritten_lines": 6,
+            "status": "M"
+          },
+          {
+            "added_lines": 28,
+            "path": "twitch_alerts/src/frontend/types.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 0,
+            "removed_lines": 0,
+            "rewritten_lines": 0,
+            "status": "A"
+          },
+          {
+            "added_lines": 28,
+            "path": "twitch_alerts/src/main.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 129,
+            "removed_lines": 129,
+            "rewritten_lines": 25,
+            "status": "M"
+          },
+          {
+            "added_lines": 11,
+            "path": "twitch_alerts/src/messages.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 0,
+            "removed_lines": 0,
+            "rewritten_lines": 0,
+            "status": "A"
+          },
+          {
+            "added_lines": 25,
+            "path": "twitch_alerts/src/migrations/20260911000000_allow_anonymous_gift_subscriptions.sql",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 0,
+            "removed_lines": 0,
+            "rewritten_lines": 0,
+            "status": "A"
+          },
+          {
+            "added_lines": 13,
+            "path": "twitch_alerts/src/opts.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 83,
+            "removed_lines": 83,
+            "rewritten_lines": 8,
+            "status": "M"
+          },
+          {
+            "added_lines": 0,
+            "path": "twitch_alerts/src/templates/admin.html",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 57,
+            "removed_lines": 57,
+            "rewritten_lines": 0,
+            "status": "D"
+          },
+          {
+            "added_lines": 0,
+            "path": "twitch_alerts/src/templates/index.html",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 40,
+            "removed_lines": 40,
+            "rewritten_lines": 0,
+            "status": "D"
+          },
+          {
+            "added_lines": 25,
+            "path": "twitch_alerts/src/utils.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 24,
+            "removed_lines": 24,
+            "rewritten_lines": 22,
+            "status": "M"
+          },
+          {
+            "added_lines": 58,
+            "path": "twitch_alerts/templates/admin.html",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 0,
+            "removed_lines": 0,
+            "rewritten_lines": 0,
+            "status": "A"
+          },
+          {
+            "added_lines": 41,
+            "path": "twitch_alerts/templates/index.html",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 0,
+            "removed_lines": 0,
+            "rewritten_lines": 0,
+            "status": "A"
+          },
+          {
+            "added_lines": 23,
+            "path": "twitch_alerts/tests/cli.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 0,
+            "removed_lines": 0,
+            "rewritten_lines": 0,
+            "status": "A"
+          },
+          {
+            "added_lines": 47,
+            "path": "twitch_common/src/chat/messages.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 54,
+            "removed_lines": 54,
+            "rewritten_lines": 30,
+            "status": "M"
+          },
+          {
+            "added_lines": 2,
+            "path": "twitch_common/src/chat/twitch_chat/mod.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 3,
+            "removed_lines": 3,
+            "rewritten_lines": 2,
+            "status": "M"
+          },
+          {
+            "added_lines": 3,
+            "path": "twitch_common/src/lib.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 3,
+            "removed_lines": 3,
+            "rewritten_lines": 1,
+            "status": "M"
+          },
+          {
+            "added_lines": 0,
+            "path": "twitch_common/src/messages/mod.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 11,
+            "removed_lines": 11,
+            "rewritten_lines": 0,
+            "status": "M"
+          },
+          {
+            "added_lines": 0,
+            "path": "twitch_common/src/network.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 28,
+            "removed_lines": 28,
+            "rewritten_lines": 0,
+            "status": "D"
+          },
+          {
+            "added_lines": 0,
+            "path": "twitch_common/src/twitch_chat/app.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 172,
+            "removed_lines": 172,
+            "rewritten_lines": 0,
+            "status": "D"
+          },
+          {
+            "added_lines": 0,
+            "path": "twitch_common/src/twitch_chat/messages.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 56,
+            "removed_lines": 56,
+            "rewritten_lines": 0,
+            "status": "D"
+          },
+          {
+            "added_lines": 0,
+            "path": "twitch_common/src/twitch_chat/mod.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 2,
+            "removed_lines": 2,
+            "rewritten_lines": 0,
+            "status": "D"
+          },
+          {
+            "added_lines": 0,
+            "path": "twitch_common/src/twitch_chat/twitch.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 39,
+            "removed_lines": 39,
+            "rewritten_lines": 0,
+            "status": "D"
+          },
+          {
+            "added_lines": 10,
+            "path": "twitch_common/src/twitch_listener/websocket.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 13,
+            "removed_lines": 13,
+            "rewritten_lines": 10,
+            "status": "M"
+          },
+          {
+            "added_lines": 0,
+            "path": "twitch_common/src/types.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 32,
+            "removed_lines": 32,
+            "rewritten_lines": 0,
+            "status": "D"
+          }
+        ],
+        "from_tree": "def412b64a41d96731bd9d8b7447f7315cd036b3",
+        "model": "claude-fable-5-1",
+        "prior_ai_lines": 0,
+        "prior_human_lines": 0,
+        "prior_preexisting_lines": 1706,
+        "removed_lines": 1706,
+        "rewritten_lines": 359,
+        "sequence": 1,
+        "superseded_lines": 0,
+        "surviving_lines": 1557,
+        "to_tree": "b4c831ca7138689e43528655a89041df8a699575",
+        "trigger": "cross-worktree-commit",
+        "turn_sequence": 2
+      }
+    ],
+    "final_files": [
+      {
+        "ai_lines": 12,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "Dockerfile",
+        "preexisting_lines": 10
+      },
+      {
+        "ai_lines": 20,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "bruce/src/main.rs",
+        "preexisting_lines": 61
+      },
+      {
+        "ai_lines": 11,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "bruce/src/opts.rs",
+        "preexisting_lines": 46
+      },
+      {
+        "ai_lines": 24,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "bruce/src/utils.rs",
+        "preexisting_lines": 47
+      },
+      {
+        "ai_lines": 368,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "bruce/src/wordle/game.rs",
+        "preexisting_lines": 450
+      },
+      {
+        "ai_lines": 1,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "bruce/src/wordle/mod.rs",
+        "preexisting_lines": 2
+      },
+      {
+        "ai_lines": 183,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "bruce/src/wordle/scoreboard.rs",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 58,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "bruce/src/wordle/view/chat.rs",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 1,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "bruce/src/wordle/view/mod.rs",
+        "preexisting_lines": 1
+      },
+      {
+        "ai_lines": 2,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "bruce/src/wordle/view/row.rs",
+        "preexisting_lines": 107
+      },
+      {
+        "ai_lines": 23,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "bruce/tests/cli.rs",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 1,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "hack/start.sh",
+        "preexisting_lines": 12
+      },
+      {
+        "ai_lines": 10,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "sql_common/src/setup.rs",
+        "preexisting_lines": 7
+      },
+      {
+        "ai_lines": 6,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/ai_manager/mod.rs",
+        "preexisting_lines": 275
+      },
+      {
+        "ai_lines": 199,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/ai_manager/sqlite.rs",
+        "preexisting_lines": 40
+      },
+      {
+        "ai_lines": 8,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/frontend/assets/websocket.js",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 0,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/frontend/how_to_test_in_main.rs",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 1,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/frontend/htmx.rs",
+        "preexisting_lines": 77
+      },
+      {
+        "ai_lines": 284,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/frontend/mod.rs",
+        "preexisting_lines": 72
+      },
+      {
+        "ai_lines": 25,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/frontend/network.rs",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 6,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/frontend/routes.rs",
+        "preexisting_lines": 99
+      },
+      {
+        "ai_lines": 28,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/frontend/types.rs",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 28,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/main.rs",
+        "preexisting_lines": 83
+      },
+      {
+        "ai_lines": 11,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/messages.rs",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 25,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/migrations/20260911000000_allow_anonymous_gift_subscriptions.sql",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 13,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/opts.rs",
+        "preexisting_lines": 132
+      },
+      {
+        "ai_lines": 0,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/templates/admin.html",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 0,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/templates/index.html",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 25,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/utils.rs",
+        "preexisting_lines": 117
+      },
+      {
+        "ai_lines": 58,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/templates/admin.html",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 41,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/templates/index.html",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 23,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/tests/cli.rs",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 47,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_common/src/chat/messages.rs",
+        "preexisting_lines": 31
+      },
+      {
+        "ai_lines": 2,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_common/src/chat/twitch_chat/mod.rs",
+        "preexisting_lines": 74
+      },
+      {
+        "ai_lines": 3,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_common/src/lib.rs",
+        "preexisting_lines": 3
+      },
+      {
+        "ai_lines": 0,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_common/src/messages/mod.rs",
+        "preexisting_lines": 115
+      },
+      {
+        "ai_lines": 0,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_common/src/network.rs",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 0,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_common/src/twitch_chat/app.rs",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 0,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_common/src/twitch_chat/messages.rs",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 0,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_common/src/twitch_chat/mod.rs",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 0,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_common/src/twitch_chat/twitch.rs",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 10,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_common/src/twitch_listener/websocket.rs",
+        "preexisting_lines": 462
+      },
+      {
+        "ai_lines": 0,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_common/src/types.rs",
+        "preexisting_lines": 0
+      }
+    ],
+    "limitations": [
+      "Tool-level rewrite boundaries were re-baselined when the agent committed from a linked worktree; the final target-worktree diff was attributed to the executing agent session.",
+      "Human versus AI is inferred from prompt and agent hook boundaries; edits made concurrently between boundaries can be ambiguous.",
+      "Estimated wasted tokens allocate a turn's observed usage in proportion to AI-added lines later superseded; providers do not report token-to-line causality.",
+      "Token deltas are assigned to the turn active at the reporting hook; provider telemetry reported late can shift usage to the following prompt.",
+      "Multiple writes between native hook callbacks appear as one rewrite event; agents without post-tool hooks expose turn-level rather than tool-level revisions."
+    ],
+    "observed_tokens_on_ai_rewrite_turns_by_model": {
+      "claude-fable-5-1": {
+        "api_call_count": 0,
+        "cache_creation_tokens": 29167,
+        "cache_read_tokens": 144390,
+        "input_tokens": 34,
+        "output_tokens": 16669,
+        "subagent_total": 0
+      }
+    },
+    "schema_version": 1,
+    "summary": {
+      "ai_added_lines": 1557,
+      "ai_event_count": 1,
+      "ai_replaced_ai_lines": 0,
+      "ai_replaced_human_lines": 0,
+      "ai_rewrite_events": 1,
+      "ai_rewritten_lines": 359,
+      "event_count": 1,
+      "final_ai_lines": 1557,
+      "final_human_lines": 0,
+      "final_human_percent": 0,
+      "final_preexisting_lines": 2323,
+      "human_added_lines": 0,
+      "human_event_count": 0,
+      "human_replaced_ai_lines": 0,
+      "human_replaced_human_lines": 0,
+      "human_rewrite_events": 0,
+      "human_rewritten_lines": 0,
+      "observed_tokens_on_ai_rewrite_turns": {
+        "api_call_count": 0,
+        "cache_creation_tokens": 29167,
+        "cache_read_tokens": 144390,
+        "input_tokens": 34,
+        "output_tokens": 16669,
+        "subagent_total": 0
+      }
+    },
+    "turns": [
+      {
+        "ai_added_lines": 0,
+        "observed_tokens_by_model": {
+          "claude-fable-5-1": {
+            "api_call_count": 0,
+            "cache_creation_tokens": 21875,
+            "cache_read_tokens": 85888,
+            "input_tokens": 34,
+            "output_tokens": 926,
+            "subagent_total": 0
+          }
+        },
+        "prompt": "I want to add youtube live to the system for playing wordle, it should be added in such a way as to make it so that other platforms can be supported in the future and the current system should be extended as much as possible to support it.",
+        "sequence": 1,
+        "superseded_ai_lines": 0
+      },
+      {
+        "ai_added_lines": 1557,
+        "observed_tokens_by_model": {
+          "claude-fable-5-1": {
+            "api_call_count": 0,
+            "cache_creation_tokens": 29167,
+            "cache_read_tokens": 144390,
+            "input_tokens": 34,
+            "output_tokens": 16669,
+            "subagent_total": 0
+          }
+        },
+        "prompt": "ensure to do the work in a worktree! and it should end in a PR to the repo!",
+        "sequence": 2,
+        "superseded_ai_lines": 0
+      }
+    ]
+  },
+  "save_step_count": 2,
+  "session_id": "b12a4837-a8bc-4d93-a491-365f56fbb157",
+  "shadow_commit": "e2332efce9c03969ea0e8d23de6c355b61c2fd6a",
+  "started_at": "2026-10-12T04:19:45.590422988Z",
+  "strategy": "manual-commit",
+  "token_usage": {
+    "api_call_count": 0,
+    "cache_creation_tokens": 74332,
+    "cache_read_tokens": 470566,
+    "input_tokens": 196,
+    "output_tokens": 20082,
+    "subagent_total": 0
+  },
+  "token_usage_by_model": {
+    "claude-fable-5-1": {
+      "api_call_count": 0,
+      "cache_creation_tokens": 74332,
+      "cache_read_tokens": 470566,
+      "input_tokens": 196,
+      "output_tokens": 20082,
+      "subagent_total": 0
+    }
+  },
+  "transcript_lines_at_start": 0,
+  "transcript_start": 0,
+  "workspace_stored": true,
+  "worktree_tree": "b4c831ca7138689e43528655a89041df8a699575",
+  "xo_agent": "claude-code"
+}
