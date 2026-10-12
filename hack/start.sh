@@ -10,4 +10,4 @@ else
 fi
 
 # Run litestream with your app as the subprocess.
-exec litestream replicate -exec "/usr/local/bin/twitch-alerts --db-path /data/db"
+exec litestream replicate -exec "/usr/local/bin/twitch-alerts server --db-path /data/db"
