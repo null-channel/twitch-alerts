@@ -1,0 +1,15 @@
+I want to add youtube live to the system for playing wordle, it should be added in such a way as to make it so that other platforms can be supported in the future and the current system should be extended as much as possible to support it.
+
+---
+
+ensure to do the work in a worktree! and it should end in a PR to the repo!
+
+---
+
+<task-notification>
+<task-id>b7ieuaf2i</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/tmp/claude-1000/-home-marek-code-twitch-twitch-alerts/b12a4837-a8bc-4d93-a491-365f56fbb157/tasks/b7ieuaf2i.output</output-file>
+<status>completed</status>
+<summary>Background command "Run clippy with the CI toolchain 1.95 into a separate target directory" completed (exit code 0)</summary>
+</task-notification>

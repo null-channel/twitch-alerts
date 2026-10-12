@@ -1,0 +1,241 @@
+{
+  "schema_version": 1,
+  "summary": {
+    "event_count": 1,
+    "ai_event_count": 1,
+    "human_event_count": 0,
+    "ai_rewrite_events": 1,
+    "human_rewrite_events": 0,
+    "ai_added_lines": 1444,
+    "human_added_lines": 0,
+    "ai_rewritten_lines": 30,
+    "human_rewritten_lines": 0,
+    "ai_replaced_ai_lines": 0,
+    "ai_replaced_human_lines": 0,
+    "human_replaced_ai_lines": 0,
+    "human_replaced_human_lines": 0,
+    "final_ai_lines": 1444,
+    "final_human_lines": 0,
+    "final_preexisting_lines": 1097,
+    "final_human_percent": 0,
+    "observed_tokens_on_ai_rewrite_turns": {
+      "input_tokens": 514,
+      "cache_read_tokens": 2481135,
+      "cache_creation_tokens": 78714,
+      "output_tokens": 54830,
+      "api_call_count": 0,
+      "subagent_total": 0
+    }
+  },
+  "events": [
+    {
+      "sequence": 1,
+      "at": "2026-10-12T04:36:44.093351217Z",
+      "actor": "ai",
+      "trigger": "cross-worktree-commit",
+      "from_tree": "d6d0ac6db7b42a34b9ec1cbb1936b37f17ffdce2",
+      "to_tree": "337bc19e2f0becbd6b8b8d5cd12a1e66f2448253",
+      "turn_sequence": 3,
+      "files": [
+        {
+          "path": "bruce/src/main.rs",
+          "status": "M",
+          "added_lines": 39,
+          "removed_lines": 24,
+          "rewritten_lines": 16,
+          "prior_ai_lines": 0,
+          "prior_human_lines": 0,
+          "prior_preexisting_lines": 24
+        },
+        {
+          "path": "bruce/src/opts.rs",
+          "status": "M",
+          "added_lines": 228,
+          "removed_lines": 7,
+          "rewritten_lines": 7,
+          "prior_ai_lines": 0,
+          "prior_human_lines": 0,
+          "prior_preexisting_lines": 7
+        },
+        {
+          "path": "bruce/src/wordle/game.rs",
+          "status": "M",
+          "added_lines": 24,
+          "removed_lines": 0,
+          "rewritten_lines": 0,
+          "prior_ai_lines": 0,
+          "prior_human_lines": 0,
+          "prior_preexisting_lines": 0
+        },
+        {
+          "path": "bruce/tests/cli.rs",
+          "status": "M",
+          "added_lines": 35,
+          "removed_lines": 0,
+          "rewritten_lines": 0,
+          "prior_ai_lines": 0,
+          "prior_human_lines": 0,
+          "prior_preexisting_lines": 0
+        },
+        {
+          "path": "twitch_common/src/chat/messages.rs",
+          "status": "M",
+          "added_lines": 81,
+          "removed_lines": 0,
+          "rewritten_lines": 0,
+          "prior_ai_lines": 0,
+          "prior_human_lines": 0,
+          "prior_preexisting_lines": 0
+        },
+        {
+          "path": "twitch_common/src/chat/mod.rs",
+          "status": "M",
+          "added_lines": 15,
+          "removed_lines": 0,
+          "rewritten_lines": 0,
+          "prior_ai_lines": 0,
+          "prior_human_lines": 0,
+          "prior_preexisting_lines": 0
+        },
+        {
+          "path": "twitch_common/src/chat/source.rs",
+          "status": "A",
+          "added_lines": 185,
+          "removed_lines": 0,
+          "rewritten_lines": 0,
+          "prior_ai_lines": 0,
+          "prior_human_lines": 0,
+          "prior_preexisting_lines": 0
+        },
+        {
+          "path": "twitch_common/src/chat/twitch_chat/mod.rs",
+          "status": "M",
+          "added_lines": 41,
+          "removed_lines": 7,
+          "rewritten_lines": 7,
+          "prior_ai_lines": 0,
+          "prior_human_lines": 0,
+          "prior_preexisting_lines": 7
+        },
+        {
+          "path": "twitch_common/src/chat/youtube_chat/mod.rs",
+          "status": "A",
+          "added_lines": 796,
+          "removed_lines": 0,
+          "rewritten_lines": 0,
+          "prior_ai_lines": 0,
+          "prior_human_lines": 0,
+          "prior_preexisting_lines": 0
+        }
+      ],
+      "added_lines": 1444,
+      "removed_lines": 38,
+      "rewritten_lines": 30,
+      "prior_ai_lines": 0,
+      "prior_human_lines": 0,
+      "prior_preexisting_lines": 38,
+      "superseded_lines": 0,
+      "surviving_lines": 1444
+    }
+  ],
+  "turns": [
+    {
+      "sequence": 3,
+      "prompt": "<task-notification>\n<task-id>b7ieuaf2i</task-id>\n<tool-use-id>REDACTED</tool-use-id>\n<output-file>/tmp/claude-1000/-home-marek-code-twitch-twitch-alerts/b12a4837-a8bc-4d93-a491-365f56fbb157/tasks/b7ieuaf2i.output</output-file>\n<status>completed</status>\n<summary>Background command \"Run clippy with the CI toolchain 1.95 into a separate target directory\" completed (exit code 0)</summary>\n</task-notification>",
+      "ai_added_lines": 1444,
+      "superseded_ai_lines": 0,
+      "observed_tokens_by_model": {
+        "unknown": {
+          "input_tokens": 514,
+          "cache_read_tokens": 2481135,
+          "cache_creation_tokens": 78714,
+          "output_tokens": 54830,
+          "api_call_count": 0,
+          "subagent_total": 0
+        }
+      }
+    }
+  ],
+  "final_files": [
+    {
+      "path": "bruce/src/main.rs",
+      "ai_lines": 39,
+      "human_lines": 0,
+      "preexisting_lines": 57,
+      "human_percent": 0
+    },
+    {
+      "path": "bruce/src/opts.rs",
+      "ai_lines": 228,
+      "human_lines": 0,
+      "preexisting_lines": 50,
+      "human_percent": 0
+    },
+    {
+      "path": "bruce/src/wordle/game.rs",
+      "ai_lines": 24,
+      "human_lines": 0,
+      "preexisting_lines": 818,
+      "human_percent": 0
+    },
+    {
+      "path": "bruce/tests/cli.rs",
+      "ai_lines": 35,
+      "human_lines": 0,
+      "preexisting_lines": 23,
+      "human_percent": 0
+    },
+    {
+      "path": "twitch_common/src/chat/messages.rs",
+      "ai_lines": 81,
+      "human_lines": 0,
+      "preexisting_lines": 78,
+      "human_percent": 0
+    },
+    {
+      "path": "twitch_common/src/chat/mod.rs",
+      "ai_lines": 15,
+      "human_lines": 0,
+      "preexisting_lines": 2,
+      "human_percent": 0
+    },
+    {
+      "path": "twitch_common/src/chat/source.rs",
+      "ai_lines": 185,
+      "human_lines": 0,
+      "preexisting_lines": 0,
+      "human_percent": 0
+    },
+    {
+      "path": "twitch_common/src/chat/twitch_chat/mod.rs",
+      "ai_lines": 41,
+      "human_lines": 0,
+      "preexisting_lines": 69,
+      "human_percent": 0
+    },
+    {
+      "path": "twitch_common/src/chat/youtube_chat/mod.rs",
+      "ai_lines": 796,
+      "human_lines": 0,
+      "preexisting_lines": 0,
+      "human_percent": 0
+    }
+  ],
+  "observed_tokens_on_ai_rewrite_turns_by_model": {
+    "unknown": {
+      "input_tokens": 514,
+      "cache_read_tokens": 2481135,
+      "cache_creation_tokens": 78714,
+      "output_tokens": 54830,
+      "api_call_count": 0,
+      "subagent_total": 0
+    }
+  },
+  "limitations": [
+    "Tool-level rewrite boundaries were re-baselined when the agent committed from a linked worktree; the final target-worktree diff was attributed to the executing agent session.",
+    "Human versus AI is inferred from prompt and agent hook boundaries; edits made concurrently between boundaries can be ambiguous.",
+    "Estimated wasted tokens allocate a turn's observed usage in proportion to AI-added lines later superseded; providers do not report token-to-line causality.",
+    "Token deltas are assigned to the turn active at the reporting hook; provider telemetry reported late can shift usage to the following prompt.",
+    "Multiple writes between native hook callbacks appear as one rewrite event; agents without post-tool hooks expose turn-level rather than tool-level revisions."
+  ]
+}

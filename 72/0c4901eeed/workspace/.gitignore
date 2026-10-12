@@ -1,0 +1,16 @@
+# Build output and editor backups.
+**/target/
+**/dist/
+**/*.rs.bk
+
+# Local configuration and runtime data. Keep Cargo.lock for application builds.
+.env
+.env.*
+!.env.example
+*.log
+*.db
+*.db-*
+*.db.old
+/.xo/logs/
+/.xo/tmp/
+/.xo/settings.local.json

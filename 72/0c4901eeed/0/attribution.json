@@ -1,0 +1,370 @@
+{
+  "schemaVersion": 1,
+  "checkpointId": "720c4901eeed",
+  "sessionId": "b12a4837-a8bc-4d93-a491-365f56fbb157",
+  "agent": "claude-code",
+  "codeCommit": "939bcd599a6d54ee9131d1408a34905fee4cae17",
+  "baseCommit": "d6d0ac6db7b42a34b9ec1cbb1936b37f17ffdce2",
+  "files": [
+    {
+      "path": "Cargo.lock",
+      "status": "M",
+      "addedLines": [
+        {
+          "start": 3496,
+          "end": 3496
+        }
+      ]
+    },
+    {
+      "path": "README.md",
+      "status": "M",
+      "addedLines": [
+        {
+          "start": 8,
+          "end": 9
+        },
+        {
+          "start": 51,
+          "end": 59
+        },
+        {
+          "start": 66,
+          "end": 85
+        }
+      ]
+    },
+    {
+      "path": "bruce/.env.example",
+      "status": "M",
+      "addedLines": [
+        {
+          "start": 1,
+          "end": 4
+        },
+        {
+          "start": 8,
+          "end": 17
+        }
+      ]
+    },
+    {
+      "path": "bruce/Cargo.toml",
+      "status": "M",
+      "addedLines": [
+        {
+          "start": 15,
+          "end": 15
+        }
+      ]
+    },
+    {
+      "path": "bruce/src/main.rs",
+      "status": "M",
+      "addedLines": [
+        {
+          "start": 6,
+          "end": 6
+        },
+        {
+          "start": 8,
+          "end": 8
+        },
+        {
+          "start": 11,
+          "end": 12
+        },
+        {
+          "start": 42,
+          "end": 44
+        },
+        {
+          "start": 52,
+          "end": 53
+        },
+        {
+          "start": 55,
+          "end": 55
+        },
+        {
+          "start": 67,
+          "end": 95
+        }
+      ]
+    },
+    {
+      "path": "bruce/src/opts.rs",
+      "status": "M",
+      "addedLines": [
+        {
+          "start": 1,
+          "end": 2
+        },
+        {
+          "start": 4,
+          "end": 5
+        },
+        {
+          "start": 9,
+          "end": 9
+        },
+        {
+          "start": 32,
+          "end": 32
+        },
+        {
+          "start": 48,
+          "end": 48
+        },
+        {
+          "start": 52,
+          "end": 55
+        },
+        {
+          "start": 57,
+          "end": 95
+        },
+        {
+          "start": 97,
+          "end": 97
+        },
+        {
+          "start": 99,
+          "end": 100
+        },
+        {
+          "start": 102,
+          "end": 103
+        },
+        {
+          "start": 105,
+          "end": 277
+        }
+      ]
+    },
+    {
+      "path": "bruce/src/wordle/game.rs",
+      "status": "M",
+      "addedLines": [
+        {
+          "start": 43,
+          "end": 44
+        },
+        {
+          "start": 58,
+          "end": 58
+        },
+        {
+          "start": 103,
+          "end": 105
+        },
+        {
+          "start": 110,
+          "end": 118
+        },
+        {
+          "start": 121,
+          "end": 121
+        },
+        {
+          "start": 162,
+          "end": 164
+        },
+        {
+          "start": 799,
+          "end": 802
+        },
+        {
+          "start": 822,
+          "end": 822
+        }
+      ]
+    },
+    {
+      "path": "bruce/src/wordle/templates/main.aml",
+      "status": "M",
+      "addedLines": [
+        {
+          "start": 3,
+          "end": 12
+        }
+      ]
+    },
+    {
+      "path": "bruce/src/wordle/templates/message.aml",
+      "status": "M",
+      "addedLines": [
+        {
+          "start": 1,
+          "end": 2
+        },
+        {
+          "start": 4,
+          "end": 6
+        },
+        {
+          "start": 14,
+          "end": 14
+        }
+      ]
+    },
+    {
+      "path": "bruce/tests/cli.rs",
+      "status": "M",
+      "addedLines": [
+        {
+          "start": 15,
+          "end": 18
+        },
+        {
+          "start": 28,
+          "end": 58
+        }
+      ]
+    },
+    {
+      "path": "twitch_common/Cargo.toml",
+      "status": "M",
+      "addedLines": [
+        {
+          "start": 8,
+          "end": 8
+        },
+        {
+          "start": 10,
+          "end": 11
+        },
+        {
+          "start": 16,
+          "end": 16
+        },
+        {
+          "start": 22,
+          "end": 22
+        },
+        {
+          "start": 26,
+          "end": 28
+        }
+      ]
+    },
+    {
+      "path": "twitch_common/src/chat/messages.rs",
+      "status": "M",
+      "addedLines": [
+        {
+          "start": 4,
+          "end": 4
+        },
+        {
+          "start": 20,
+          "end": 23
+        },
+        {
+          "start": 32,
+          "end": 62
+        },
+        {
+          "start": 66,
+          "end": 66
+        },
+        {
+          "start": 75,
+          "end": 78
+        },
+        {
+          "start": 88,
+          "end": 88
+        },
+        {
+          "start": 96,
+          "end": 96
+        },
+        {
+          "start": 104,
+          "end": 104
+        },
+        {
+          "start": 109,
+          "end": 109
+        },
+        {
+          "start": 113,
+          "end": 113
+        },
+        {
+          "start": 121,
+          "end": 121
+        },
+        {
+          "start": 126,
+          "end": 159
+        }
+      ]
+    },
+    {
+      "path": "twitch_common/src/chat/mod.rs",
+      "status": "M",
+      "addedLines": [
+        {
+          "start": 1,
+          "end": 10
+        },
+        {
+          "start": 12,
+          "end": 12
+        },
+        {
+          "start": 14,
+          "end": 17
+        }
+      ]
+    },
+    {
+      "path": "twitch_common/src/chat/source.rs",
+      "status": "A",
+      "addedLines": [
+        {
+          "start": 1,
+          "end": 185
+        }
+      ]
+    },
+    {
+      "path": "twitch_common/src/chat/twitch_chat/mod.rs",
+      "status": "M",
+      "addedLines": [
+        {
+          "start": 1,
+          "end": 3
+        },
+        {
+          "start": 7,
+          "end": 19
+        },
+        {
+          "start": 31,
+          "end": 31
+        },
+        {
+          "start": 49,
+          "end": 55
+        },
+        {
+          "start": 78,
+          "end": 94
+        }
+      ]
+    },
+    {
+      "path": "twitch_common/src/chat/youtube_chat/mod.rs",
+      "status": "A",
+      "addedLines": [
+        {
+          "start": 1,
+          "end": 796
+        }
+      ]
+    }
+  ]
+}

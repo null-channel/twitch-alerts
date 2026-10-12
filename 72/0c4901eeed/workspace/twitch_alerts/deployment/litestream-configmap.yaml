@@ -1,0 +1,11 @@
+apiVersion: v1
+data:
+  litestream.yaml: |
+    dbs:
+      - path: /var/lib/twitch-alerts/db
+        replicas:
+          - url: s3://twitch-alerts.us-ord-1.linodeobjects.com/db
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: litestream

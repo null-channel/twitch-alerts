@@ -1,0 +1,23 @@
+// Indexed by MessagePlatform's discriminant: twitch, youtube, discord, debug.
+let platform_colours = [
+    "#9146FF", // twitch purple
+    "#FF0000", // youtube red
+    "#5865F2", // discord blurple
+    "#808080", // debug grey
+]
+
+vstack
+    expand
+        overflow [direction: "back"]
+            for value in state.messages
+                hstack
+                    container [background: platform_colours[to_int(value.platform)],sides: [], width: 1, height: 1]
+                    text " "
+                        span value.author
+                        span ": "
+                        span value.content
+
+    padding [top: 1]
+        vstack
+            text "Received messages: " state.message_count
+            text "thing: " state.thing

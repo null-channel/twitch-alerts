@@ -1,0 +1,97 @@
+{
+  "agent": "Claude Code",
+  "base_commit": "d6d0ac6db7b42a34b9ec1cbb1936b37f17ffdce2",
+  "branch": "worktree-youtube-live-chat",
+  "checkpoint_id": "720c4901eeed",
+  "checkpoint_transcript_start": 195,
+  "checkpoints_count": 3,
+  "cli_version": "0.1.0",
+  "code_commit": "939bcd599a6d54ee9131d1408a34905fee4cae17",
+  "combined_attribution": {
+    "agent_lines": 1515,
+    "agent_percentage": 100.0,
+    "agent_removed": 0,
+    "calculated_at": "2026-10-12T04:36:44.126346272Z",
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "metric_version": 2,
+    "total_committed": 1515,
+    "total_lines_changed": 1515
+  },
+  "committed_at": "2026-10-12T04:36:44.126346272Z",
+  "context_tokens": null,
+  "context_window_size": null,
+  "created_at": "2026-10-12T04:36:44.126346272Z",
+  "files_touched": [
+    "Cargo.lock",
+    "README.md",
+    "bruce/.env.example",
+    "bruce/Cargo.toml",
+    "bruce/src/main.rs",
+    "bruce/src/opts.rs",
+    "bruce/src/wordle/game.rs",
+    "bruce/src/wordle/templates/main.aml",
+    "bruce/src/wordle/templates/message.aml",
+    "bruce/tests/cli.rs",
+    "twitch_common/Cargo.toml",
+    "twitch_common/src/chat/messages.rs",
+    "twitch_common/src/chat/mod.rs",
+    "twitch_common/src/chat/source.rs",
+    "twitch_common/src/chat/twitch_chat/mod.rs",
+    "twitch_common/src/chat/youtube_chat/mod.rs"
+  ],
+  "imported": false,
+  "initial_attribution": {
+    "agent_lines": 1515,
+    "agent_percentage": 100.0,
+    "agent_removed": 0,
+    "calculated_at": "2026-10-12T04:36:44.126346272Z",
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "metric_version": 2,
+    "total_committed": 1515,
+    "total_lines_changed": 1515
+  },
+  "model": "",
+  "prompt_count": 3,
+  "save_step_count": 3,
+  "session_id": "b12a4837-a8bc-4d93-a491-365f56fbb157",
+  "sessions": [
+    {
+      "compact_transcript": "/72/0c4901eeed/0/transcript.jsonl",
+      "content_hash": "/72/0c4901eeed/0/content_hash.txt",
+      "metadata": "/72/0c4901eeed/0/metadata.json",
+      "prompt": "/72/0c4901eeed/0/prompt.txt",
+      "rewrite": "/72/0c4901eeed/0/rewrite.json",
+      "transcript": "/72/0c4901eeed/0/full.jsonl"
+    }
+  ],
+  "shadow_commit": "2093c8ff20f8e497a9053b8a98a2af52dd1f555d",
+  "started_at": "2026-10-12T04:35:51.272318472Z",
+  "strategy": "manual-commit",
+  "token_usage": {
+    "api_call_count": 0,
+    "cache_creation_tokens": 78714,
+    "cache_read_tokens": 2481135,
+    "input_tokens": 514,
+    "output_tokens": 54830,
+    "subagent_total": 0
+  },
+  "token_usage_by_model": {
+    "unknown": {
+      "api_call_count": 0,
+      "cache_creation_tokens": 78714,
+      "cache_read_tokens": 2481135,
+      "input_tokens": 514,
+      "output_tokens": 54830,
+      "subagent_total": 0
+    }
+  },
+  "transcript_lines_at_start": 195,
+  "transcript_start": 195,
+  "workspace_stored": true,
+  "worktree_tree": "337bc19e2f0becbd6b8b8d5cd12a1e66f2448253",
+  "xo_agent": "claude-code"
+}
