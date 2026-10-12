@@ -1,37 +1,31 @@
 #![warn(clippy::unwrap_in_result)]
-/// Mods
-mod wordle;
 mod opts;
 mod utils;
+mod wordle;
 
-use twitch_common::chat::twitch_chat::TwitchChat;
+use std::fs::OpenOptions;
+
 use clap::Parser;
 use opts::{Cli, Commands, GamesSubCommand, TwitchChatArgs};
 use random_word::WordList;
+use tracing_subscriber::{fmt, prelude::*, Registry};
+use twitch_common::chat::twitch_chat::TwitchChat;
 
+static MIGRATIONS: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
 
-use tokio::{
-    task::JoinHandle,
-};
+fn main() -> anyhow::Result<()> {
+    tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(32)
+        .enable_all()
+        .build()?
+        .block_on(run())
+}
 
-#[tokio::main(flavor = "multi_thread", worker_threads = 32)]
-async fn main() -> anyhow::Result<()> {
+async fn run() -> anyhow::Result<()> {
     utils::install_utils()?;
     let cmd = Cli::parse();
 
-    // WILL PRINT CREDINTIALS!!!!
-    // eprintln!("Starting app with options: {:?}", cmd);
-
-    tracing::debug!(
-        "App started!\n{}",
-        Cli::try_parse_from(["app", "--version"])
-            .unwrap_err()
-            .to_string()
-    );
-
-    // Initialize the tracing
-
-    tracing::debug!(opts = ?cmd);
+    tracing::debug!("Starting bruce {}", env!("CARGO_PKG_VERSION"));
 
     match cmd.command {
         Commands::Game(opts) => {
@@ -39,13 +33,6 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    Ok(())
-}
-
-pub async fn run_chat() -> anyhow::Result<()> {
-    Ok(())
-}
-pub async fn run_bot() -> anyhow::Result<()> {
     Ok(())
 }
 
@@ -62,11 +49,9 @@ pub async fn run_game(opts: &GamesSubCommand) -> anyhow::Result<()> {
                 }
             });
 
-            let sqlite_pool = sql_common::setup::setup_sqlite_migrations(
-                args.db_ags.clone(),
-                sql_common::setup::get_migrations_from_cargo_dir("migrations")?,
-            )
-            .await?;
+            let sqlite_pool =
+                sql_common::setup::setup_sqlite_migrations(args.db_path.clone(), &MIGRATIONS)
+                    .await?;
             let word_list = WordList::from(args.word_list.as_str());
 
             // Anathema's `runtime.run` blocks a thread for the whole session. Running it on a
@@ -76,9 +61,9 @@ pub async fn run_game(opts: &GamesSubCommand) -> anyhow::Result<()> {
                 crate::wordle::game::start_game(chat_receiver, word_list, sqlite_pool)
             })
             .await
-            .map_err(|e| anyhow::anyhow!("Wordle TUI thread panicked or was cancelled: {e}"))?;
+            .map_err(|e| anyhow::anyhow!("Wordle TUI thread panicked or was cancelled: {e}"))??;
         }
-        GamesSubCommand::Dragons(args) => {
+        GamesSubCommand::Dragons(_) => {
             anyhow::bail!("Dragons game is not implemented yet");
         }
     }
@@ -93,12 +78,4 @@ pub async fn get_twitch_chat(opts: &TwitchChatArgs) -> anyhow::Result<TwitchChat
     )
     .await?;
     Ok(chat)
-}
-
-async fn flatten<T>(handle: JoinHandle<anyhow::Result<T>>) -> anyhow::Result<T> {
-    match handle.await {
-        Ok(Ok(result)) => Ok(result),
-        Ok(Err(err)) => Err(err),
-        Err(e) => Err(anyhow::anyhow!(e)),
-    }
 }

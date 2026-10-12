@@ -1,0 +1,30 @@
+name: Rust checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+        with:
+          submodules: recursive
+      - name: Install Rust
+        run: rustup toolchain install 1.95.0 --profile minimal --component rustfmt,clippy
+      - name: Check formatting
+        run: cargo +1.95.0 fmt --all -- --check
+      - name: Check each application independently
+        run: |
+          cargo +1.95.0 check --locked --all-targets -p twitch_alerts
+          cargo +1.95.0 check --locked --all-targets -p bruce
+      - name: Test
+        run: cargo +1.95.0 test --locked --workspace
+      - name: Clippy
+        run: cargo +1.95.0 clippy --locked --workspace --all-targets --all-features -- -D warnings

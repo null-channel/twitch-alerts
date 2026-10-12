@@ -16,3 +16,11 @@
 2026-07-05T18:10:09.700969Z  INFO bruce::utils: bruce/src/utils.rs:72: tracing file sink enabled path=null_twitch.log
 2026-07-18T15:12:05.046696Z  INFO bruce::utils: bruce/src/utils.rs:72: tracing file sink enabled path=null_twitch.log
 2026-07-18T15:29:04.949826Z  INFO bruce::utils: bruce/src/utils.rs:72: tracing file sink enabled path=null_twitch.log
+2026-07-25T16:19:27.585651Z  INFO bruce::utils: bruce/src/utils.rs:72: tracing file sink enabled path=null_twitch.log
+2026-08-01T16:13:14.590500Z  INFO bruce::utils: bruce/src/utils.rs:72: tracing file sink enabled path=null_twitch.log
+2026-08-01T16:32:00.679218Z  INFO bruce::utils: bruce/src/utils.rs:72: tracing file sink enabled path=null_twitch.log
+2026-08-15T17:19:01.632440Z  INFO bruce::utils: bruce/src/utils.rs:72: tracing file sink enabled path=null_twitch.log
+2026-08-29T18:03:33.229462Z  INFO bruce::utils: bruce/src/utils.rs:72: tracing file sink enabled path=null_twitch.log
+2026-08-29T18:03:42.766912Z  INFO bruce::utils: bruce/src/utils.rs:72: tracing file sink enabled path=null_twitch.log
+2026-09-05T16:50:42.002592Z  INFO bruce::utils: bruce/src/utils.rs:72: tracing file sink enabled path=null_twitch.log
+2026-09-05T16:52:08.645694Z  INFO bruce::utils: bruce/src/utils.rs:72: tracing file sink enabled path=null_twitch.log

@@ -10,21 +10,23 @@ pub fn install_utils() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Log file path: `NULL_TWITCH_LOG` env, else `null_twitch.log` in the current directory.
+/// Log file path: `TWITCH_ALERTS_LOG`, then `NULL_TWITCH_LOG`, else `twitch_alerts.log`.
 /// Logs go to stderr and to this file (append mode); use the file when a TUI owns the terminal.
 fn install_tracing() -> anyhow::Result<()> {
     use tracing_error::ErrorLayer;
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::{fmt, EnvFilter};
 
-    let log_path: PathBuf = std::env::var_os("NULL_TWITCH_LOG")
+    let log_path: PathBuf = std::env::var_os("TWITCH_ALERTS_LOG")
+        .or_else(|| std::env::var_os("NULL_TWITCH_LOG"))
         .filter(|s| !s.is_empty())
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("null_twitch.log"));
+        .unwrap_or_else(|| PathBuf::from("twitch_alerts.log"));
 
     if let Some(dir) = log_path.parent() {
         if !dir.as_os_str().is_empty() {
-            std::fs::create_dir_all(dir).with_context(|| format!("create log dir {}", dir.display()))?;
+            std::fs::create_dir_all(dir)
+                .with_context(|| format!("create log dir {}", dir.display()))?;
         }
     }
 
@@ -46,36 +48,35 @@ fn install_tracing() -> anyhow::Result<()> {
         .with_target(true)
         .with_ansi(false);
 
-    #[rustfmt::skip]
-    let filter_layer = EnvFilter::try_from_default_env()
-        .or_else(|_| EnvFilter::try_new("info"))
-        .map(|f| {
-            f.add_directive("hyper=error".parse().expect("could not make directive"))
-                .add_directive("h2=error".parse().expect("could not make directive"))
-                .add_directive("rustls=error".parse().expect("could not make directive"))
-                .add_directive("tungstenite=error".parse().expect("could not make directive"))
-                .add_directive("retainer=info".parse().expect("could not make directive"))
-                .add_directive("want=info".parse().expect("could not make directive"))
-                .add_directive("reqwest=info".parse().expect("could not make directive"))
-                .add_directive("mio=info".parse().expect("could not make directive"))
-            //.add_directive("tower_http=error".parse().unwrap())
-        })
-        .expect("could not make filter layer");
+    let mut filter_layer =
+        EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("info"))?;
+    for directive in [
+        "hyper=error",
+        "h2=error",
+        "rustls=error",
+        "tungstenite=error",
+        "want=info",
+        "reqwest=info",
+        "mio=info",
+    ] {
+        filter_layer = filter_layer.add_directive(directive.parse()?);
+    }
 
     tracing_subscriber::registry()
         .with(filter_layer)
         .with(fmt_stderr)
         .with(fmt_file)
         .with(ErrorLayer::default())
-        .init();
+        .try_init()
+        .map_err(|error| anyhow::anyhow!("initialize tracing: {error}"))?;
 
     tracing::info!(path = %log_path.display(), "tracing file sink enabled");
     Ok(())
 }
 
 #[tracing::instrument(skip(client, token))]
-pub async fn make_token<'a>(
-    client: &'a impl twitch_api::twitch_oauth2::client::Client,
+pub async fn make_token(
+    client: &impl twitch_api::twitch_oauth2::client::Client,
     token: impl Into<twitch_api::twitch_oauth2::AccessToken>,
 ) -> anyhow::Result<UserToken> {
     UserToken::from_existing(client, token.into(), None, None)
@@ -133,9 +134,9 @@ pub async fn get_access_token(
                     error
                 );
             }
-            Err(e) => Err(e).context(format!("calling oauth service on")),
+            Err(e) => Err(e).context("calling OAuth service"),
         }
     } else {
-        panic!("got empty vals for token cli group")
+        anyhow::bail!("an access token or OAuth service URL and token pointer are required")
     }
 }

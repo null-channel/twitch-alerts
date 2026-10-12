@@ -1,29 +1,6 @@
+use tmi::Privmsg;
+
 use std::convert::TryFrom;
-
-use anathema::component::{Children, Component, Context};
-use anathema::state::{List, State, Value};
-
-#[derive(Default, State)]
-pub struct MessagesState {
-    messages: Value<List<ChatMessageState>>,
-    message_count: Value<usize>,
-    thing: Value<String>,
-}
-
-#[derive(Default, State)]
-pub struct ChatMessageState {
-    pub author: Value<String>,
-    pub content: Value<String>,
-    pub platform: Value<i8>,
-}
-
-pub struct Message {
-    pub author: String,
-    pub content: String,
-}
-
-#[derive(Default)]
-pub struct Messages;
 
 impl TryFrom<u8> for MessagePlatform {
     type Error = ();
@@ -39,7 +16,7 @@ impl TryFrom<u8> for MessagePlatform {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MessagePlatform {
     Twitch,
     Youtube,
@@ -47,39 +24,55 @@ pub enum MessagePlatform {
     Debug,
 }
 
-pub struct ChatMessages {
-    pub author: String,
-    pub content: String,
-    pub platform: MessagePlatform,
+#[derive(Debug, Clone)]
+pub enum Message {
+    TwitchMessage(Box<Privmsg<'static>>),
+    Debug(String),
 }
 
-impl ChatMessages {
-    pub fn new(author: String, content: String, platform: MessagePlatform) -> Self {
-        Self {
-            author,
-            content,
-            platform,
+impl Message {
+    pub fn new_twitch_message(message: Privmsg<'static>) -> Self {
+        Self::TwitchMessage(Box::new(message))
+    }
+
+    pub fn new_debug_message(message: String) -> Self {
+        Self::Debug(message)
+    }
+
+    pub fn text(&self) -> String {
+        match self {
+            Self::TwitchMessage(message) => {
+                format!("{}:{}", message.sender().name(), message.text())
+            }
+            Self::Debug(message) => format!("DEBUG: {}", message),
         }
     }
-}
 
-impl Component for Messages {
-    type Message = ChatMessages;
-    type State = MessagesState;
+    pub fn content(&self) -> String {
+        match self {
+            Self::TwitchMessage(message) => message.text().to_string(),
+            Self::Debug(message) => message.clone(),
+        }
+    }
 
-    fn on_message(
-        &mut self,
-        message: Self::Message,
-        state: &mut Self::State,
-        _: Children<'_, '_>,
-        _: Context<'_, '_, Self::State>,
-    ) {
-        let message_count = state.message_count.copy_value() + 1;
-        state.message_count.set(message_count);
-        state.messages.push_front(ChatMessageState {
-            author: Value::new(message.author),
-            content: Value::new(message.content),
-            platform: Value::new(message.platform as i8),
-        });
+    pub fn platform(&self) -> MessagePlatform {
+        match self {
+            Self::TwitchMessage(_) => MessagePlatform::Twitch,
+            Self::Debug(_) => MessagePlatform::Debug,
+        }
+    }
+
+    pub fn platform_id(&self) -> String {
+        match self {
+            Self::TwitchMessage(message) => message.sender().id().into(),
+            Self::Debug(_) => "debug id".into(),
+        }
+    }
+
+    pub fn sender(&self) -> String {
+        match self {
+            Self::TwitchMessage(message) => message.sender().name().to_string(),
+            Self::Debug(_) => "Debug".to_string(),
+        }
     }
 }

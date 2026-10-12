@@ -1,7 +1,0 @@
-viewport [direction: "vertical"]
-    text "This is the start of chat!"
-    for i in chats
-        if i == 1
-            text [foreground: "red"] i 
-        else
-            text [foreground: "green"] i

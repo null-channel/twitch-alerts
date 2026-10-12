@@ -258,7 +258,7 @@ fn new_twitch_event(payload: Event) -> anyhow::Result<TwitchEvent> {
                 broadcaster_user_id: broadcaster_user_id.to_string().parse::<i64>()?,
                 broadcaster_user_name: broadcaster_user_name.to_string(),
                 is_gift,
-                tier: twitch_teir_to_teir(tier),
+                tier: subscription_tier(tier),
                 streak_months: Some(1),
                 cumulative_months: 1,
                 duration_months: 1,
@@ -310,11 +310,11 @@ fn new_twitch_event(payload: Event) -> anyhow::Result<TwitchEvent> {
             broadcaster_user_name: broadcaster_user_name.to_string(),
             cumulative_total,
             is_anonymous,
-            tier: twitch_teir_to_teir(tier),
+            tier: subscription_tier(tier),
             total,
-            user_id: braid_optional_to_string_optional(user_id),
-            user_login: braid_optional_to_string_optional(user_login),
-            user_name: braid_optional_to_string_optional(user_name),
+            user_id: optional_string(user_id),
+            user_login: optional_string(user_login),
+            user_name: optional_string(user_name),
         })),
 
         Event::ChannelSubscriptionMessageV1(Payload {
@@ -340,7 +340,7 @@ fn new_twitch_event(payload: Event) -> anyhow::Result<TwitchEvent> {
                 broadcaster_user_id: broadcaster_user_id.to_string().parse::<i64>()?,
                 broadcaster_user_name: broadcaster_user_name.to_string(),
                 is_gift: false,
-                tier: twitch_teir_to_teir(tier),
+                tier: subscription_tier(tier),
                 cumulative_months,
                 duration_months,
                 //TODO: deal with emotes
@@ -457,8 +457,8 @@ fn new_twitch_event(payload: Event) -> anyhow::Result<TwitchEvent> {
     }
 }
 
-fn twitch_teir_to_teir(twithc_teir: types::SubscriptionTier) -> NullSubTier {
-    match twithc_teir {
+fn subscription_tier(tier: types::SubscriptionTier) -> NullSubTier {
+    match tier {
         types::SubscriptionTier::Tier1 => NullSubTier::Tier1("rare".to_string()),
         types::SubscriptionTier::Tier2 => NullSubTier::Tier2("epic".to_string()),
         types::SubscriptionTier::Tier3 => NullSubTier::Tier3("legendary".to_string()),
@@ -467,9 +467,6 @@ fn twitch_teir_to_teir(twithc_teir: types::SubscriptionTier) -> NullSubTier {
     }
 }
 
-fn braid_optional_to_string_optional<T: ToString>(input: Option<T>) -> Option<String> {
-    match input {
-        None => None,
-        Some(thing) => Some(thing.to_string()),
-    }
+fn optional_string<T: ToString>(input: Option<T>) -> Option<String> {
+    input.map(|value| value.to_string())
 }

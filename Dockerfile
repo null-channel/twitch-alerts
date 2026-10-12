@@ -1,33 +1,22 @@
-ARG UBUNTU_RELEASE=22.04
-
-FROM rust:1.79 AS builder
+FROM rust:1.95-bookworm AS builder
 
 WORKDIR /usr/src/app
-
 COPY . .
-RUN cargo build --bin monolith --release
+RUN cargo build --locked --release -p twitch_alerts
 ADD https://github.com/benbjohnson/litestream/releases/download/v0.3.8/litestream-v0.3.8-linux-amd64-static.tar.gz /tmp/litestream.tar.gz
 RUN tar -C /usr/local/bin -xzf /tmp/litestream.tar.gz
 
-# RUN chisel cut --release ubuntu-$UBUNTU_RELEASE --root /rootfs \
-#    base-files_base \
-#    base-files_release-info \
-#    ca-certificates_data \
-#    libgcc-s1_libs \
-#    libc6_libs \
-#    libssl3_libs \
-#    openssl_bins
-
-FROM ubuntu:22.04
+FROM debian:bookworm-slim
 RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates
+    && apt-get install -y --no-install-recommends ca-certificates libssl3 \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /data
 
-COPY ./ai_manager_service/migrations /var/lib/db/migrations
-EXPOSE 9000
-# COPY --from=chiselled /rootfs /
 COPY --from=builder /usr/local/bin/litestream /usr/local/bin/litestream
-COPY --from=builder /usr/src/app/target/release/monolith /usr/local/bin/twitch-alerts
-COPY ./frontend_api/assets /var/lib/assets/
-COPY scripts/start.sh /scripts/start.sh
-COPY scripts/litestream.yaml /etc/litestream.yml
+COPY --from=builder /usr/src/app/target/release/twitch_alerts /usr/local/bin/twitch-alerts
+COPY twitch_alerts/src/frontend/assets /var/lib/assets/
+COPY --chmod=755 hack/start.sh /scripts/start.sh
+COPY hack/litestream.yaml /etc/litestream.yml
+ENV FRONTEND_ASSETS=/var/lib/assets
+EXPOSE 8080 9000
 CMD ["/scripts/start.sh"]

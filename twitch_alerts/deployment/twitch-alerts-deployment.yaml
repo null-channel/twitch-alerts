@@ -63,6 +63,8 @@ spec:
       containers:
         - name: twitch-alerts
           image: nullchannel/twitch-alerts:0.1.37
+          command: ["/usr/local/bin/twitch-alerts"]
+          args: ["server"]
           ports:
             - name: httpport
               containerPort: 8080
@@ -78,7 +80,7 @@ spec:
               value: "8080"
             - name: WEBSOCKET_HOST
               value: "10.1.1.53"
-            - name: GPT_KEY
+            - name: OPENAI_KEY
               valueFrom:
                 secretKeyRef:
                   name: twitch-alerts-secret
@@ -103,11 +105,6 @@ spec:
                 secretKeyRef:
                   name: twitch-alerts-secret
                   key: ENV
-            - name: AI_MIGRATIONS_DIR
-              valueFrom:
-                secretKeyRef:
-                  name: twitch-alerts-secret
-                  key: AI_MIGRATIONS_DIR
 
         - name: litestream
           image: litestream/litestream:0.3.6

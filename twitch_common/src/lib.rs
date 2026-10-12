@@ -1,6 +1,6 @@
+#[cfg(feature = "chat")]
 pub mod chat;
+#[cfg(feature = "eventsub")]
 pub mod messages;
-pub mod twitch_chat;
+#[cfg(feature = "eventsub")]
 pub mod twitch_listener;
-pub mod network;
-pub mod types;

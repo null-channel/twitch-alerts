@@ -1,7 +1,7 @@
-use tmi::{irc, Privmsg};
+use tmi::Privmsg;
 use tokio::sync::mpsc::{self, UnboundedSender};
 
-use crate::twitch_chat::messages::Message;
+use crate::chat::messages::Message;
 
 pub struct TwitchChat {
     pub client: tmi::Client,
@@ -55,7 +55,6 @@ impl TwitchChat {
                 _ => {}
             };
         }
-        Ok(())
     }
 }
 

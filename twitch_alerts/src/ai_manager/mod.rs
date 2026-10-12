@@ -40,7 +40,7 @@ impl AIManager {
         mut receiver: mpsc::UnboundedReceiver<NewTwitchEventMessage>,
     ) -> anyhow::Result<()> {
         loop {
-            let msg = (&mut receiver).recv().await;
+            let msg = receiver.recv().await;
 
             match msg {
                 Some(message) => {
@@ -94,16 +94,6 @@ impl AIManager {
         Ok(())
     }
 
-    pub async fn get_story_segment(
-        &self,
-        user_id: i64,
-        _event_type: String,
-    ) -> anyhow::Result<String> {
-        let conn = self.sqlite_pool.acquire().await?;
-        let db_results = sqlite::get_latest_story_segments_for_user(conn, user_id).await?;
-        Ok(db_results)
-    }
-
     pub async fn handle_gift_sub_event(
         &self,
         gift_sub_event: &ChannelGiftMessage,
@@ -139,7 +129,7 @@ impl AIManager {
         )
         .await?;
 
-        let display_time = response.message().content.split(" ").count() * 500;
+        let display_time = response.message().content.split_whitespace().count() * 500;
 
         let display_message = DisplayMessage {
             message: response.message().content.to_string(),
@@ -170,7 +160,7 @@ impl AIManager {
         sqlite::write_new_raid_event(conn, raid_event, response.message().content.to_string())
             .await?;
 
-        let display_time = response.message().content.split(" ").count() * 500;
+        let display_time = response.message().content.split_whitespace().count() * 500;
 
         let display_message = DisplayMessage {
             message: response.message().content.to_string(),
@@ -205,7 +195,7 @@ impl AIManager {
         )
         .await?;
 
-        let display_time = response.message().content.split(" ").count() * 500;
+        let display_time = response.message().content.split_whitespace().count() * 500;
 
         let display_message = DisplayMessage {
             message: response.message().content.to_string(),
@@ -240,7 +230,7 @@ impl AIManager {
         )
         .await?;
 
-        let display_time = response.message().content.split(" ").count() * 500;
+        let display_time = response.message().content.split_whitespace().count() * 500;
 
         let display_message = DisplayMessage {
             message: response.message().content.to_string(),
@@ -275,7 +265,7 @@ impl AIManager {
         )
         .await?;
 
-        let display_time = response.message().content.split(" ").count() * 750;
+        let display_time = response.message().content.split_whitespace().count() * 750;
         //TODO: check if there is a "MAX_DISPLAY_TIME" env var
 
         let display_message = DisplayMessage {
