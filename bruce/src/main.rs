@@ -3,13 +3,13 @@ mod opts;
 mod utils;
 mod wordle;
 
-use std::fs::OpenOptions;
-
+use anyhow::Context as _;
 use clap::Parser;
-use opts::{Cli, Commands, GamesSubCommand, TwitchChatArgs};
+use opts::{ChatArgs, Cli, Commands, GamesSubCommand, PlatformConfig};
 use random_word::WordList;
-use tracing_subscriber::{fmt, prelude::*, Registry};
 use twitch_common::chat::twitch_chat::TwitchChat;
+use twitch_common::chat::youtube_chat::YoutubeChat;
+use twitch_common::chat::ChatHub;
 
 static MIGRATIONS: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
 
@@ -39,15 +39,9 @@ async fn run() -> anyhow::Result<()> {
 pub async fn run_game(opts: &GamesSubCommand) -> anyhow::Result<()> {
     match opts {
         GamesSubCommand::Wordle(args) => {
-            let mut twitch = get_twitch_chat(&args.twitch).await?;
-            let (chat_sender, chat_receiver) = tokio::sync::mpsc::unbounded_channel();
-            let channel = args.twitch.channel.clone();
-            tokio::spawn(async move {
-                match twitch.run(chat_sender, channel).await {
-                    Ok(()) => {}
-                    Err(e) => tracing::error!(error = %e, "Twitch chat task exited with error"),
-                }
-            });
+            let chat = connect_chat(&args.chat).await?;
+            let platforms = chat.platforms();
+            let chat_receiver = chat.spawn();
 
             let sqlite_pool =
                 sql_common::setup::setup_sqlite_migrations(args.db_path.clone(), &MIGRATIONS)
@@ -55,10 +49,10 @@ pub async fn run_game(opts: &GamesSubCommand) -> anyhow::Result<()> {
             let word_list = WordList::from(args.word_list.as_str());
 
             // Anathema's `runtime.run` blocks a thread for the whole session. Running it on a
-            // Tokio worker can strand `tokio::spawn` tasks (e.g. `game_loop`, IRC) on that same
-            // worker, so drive the TUI from the blocking pool instead.
+            // Tokio worker can strand `tokio::spawn` tasks (e.g. `game_loop`, chat sources) on
+            // that same worker, so drive the TUI from the blocking pool instead.
             tokio::task::spawn_blocking(move || {
-                crate::wordle::game::start_game(chat_receiver, word_list, sqlite_pool)
+                crate::wordle::game::start_game(chat_receiver, platforms, word_list, sqlite_pool)
             })
             .await
             .map_err(|e| anyhow::anyhow!("Wordle TUI thread panicked or was cancelled: {e}"))??;
@@ -70,12 +64,33 @@ pub async fn run_game(opts: &GamesSubCommand) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn get_twitch_chat(opts: &TwitchChatArgs) -> anyhow::Result<TwitchChat> {
-    let chat = TwitchChat::new(
-        opts.channel.clone(),
-        opts.tc_username.clone(),
-        opts.tc_password.clone(),
-    )
-    .await?;
-    Ok(chat)
+/// Connect to every configured chat platform.
+///
+/// Connections are made before the game starts so that bad credentials, an offline YouTube
+/// broadcast and similar problems are reported on the terminal instead of inside the TUI.
+pub async fn connect_chat(args: &ChatArgs) -> anyhow::Result<ChatHub> {
+    let mut hub = ChatHub::new();
+    for platform in args.platforms()? {
+        match platform {
+            PlatformConfig::Twitch(config) => {
+                let source = TwitchChat::connect(config)
+                    .await
+                    .context("connect to Twitch chat")?;
+                tracing::info!(source = %source_name(&source), "chat source ready");
+                hub.add(source);
+            }
+            PlatformConfig::Youtube(config) => {
+                let source = YoutubeChat::connect(config)
+                    .await
+                    .context("connect to YouTube live chat")?;
+                tracing::info!(source = %source_name(&source), "chat source ready");
+                hub.add(source);
+            }
+        }
+    }
+    Ok(hub)
+}
+
+fn source_name(source: &impl twitch_common::chat::ChatSource) -> String {
+    source.name()
 }

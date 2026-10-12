@@ -5,8 +5,8 @@ Two independent applications live in this Rust workspace:
 | Package | Responsibility |
 | --- | --- |
 | `twitch_alerts` | Twitch EventSub, generated alert messages, browser overlay, and admin UI |
-| `bruce` | Games played with Twitch chat, currently Wordle in a terminal UI |
-| `twitch_common` | Twitch transport and event types; opt into `chat` or `eventsub` |
+| `bruce` | Games played with Twitch and YouTube chat, currently Wordle in a terminal UI |
+| `twitch_common` | Twitch and YouTube transports and event types; opt into `chat`, `youtube_chat` or `eventsub` |
 | `sql_common` | SQLite connection setup and migration execution |
 | `wordle_word` | Bruce's word-list dependency, maintained as a Git submodule |
 
@@ -48,17 +48,41 @@ The database defaults to `alerts.db` in the current directory. Set `DB_PATH` or
 
 ## Run Bruce
 
-Configure `TC_USERNAME`, `TC_PASSWORD`, and `CHANNEL` in `bruce/.env` or your
-shell environment; see [bruce/.env.example](bruce/.env.example).
+Bruce plays with Twitch chat, YouTube live chat, or both at once. Configure at
+least one platform in `bruce/.env` or your shell environment; see
+[bruce/.env.example](bruce/.env.example). A platform is enabled by setting all
+of its variables and disabled by setting none of them.
+
+| Platform | Variables |
+| --- | --- |
+| Twitch | `TC_USERNAME`, `TC_PASSWORD`, `CHANNEL` |
+| YouTube | `YT_API_KEY` plus `YT_VIDEO_ID` or `YT_CHANNEL_ID` |
 
 ```bash
 cd bruce
 cargo run -- game wordle --word-list standard
 ```
 
-Word lists are `standard`, `challenge`, and `nerd`. Bruce needs Twitch chat
-credentials. It does not require an alerts token, an AI key, or a running alerts
-server. The `dragons` command remains an unimplemented placeholder.
+Word lists are `standard`, `challenge`, and `nerd`. Bruce does not require an
+alerts token, an AI key, or a running alerts server. The `dragons` command
+remains an unimplemented placeholder.
+
+### YouTube live chat
+
+Create an API key in the Google Cloud console for a project with the YouTube
+Data API v3 enabled; no OAuth sign-in is needed to read a public broadcast's
+chat. Point Bruce at the broadcast with `YT_VIDEO_ID` (the `v=` parameter of
+the watch URL) or, to find the channel's current live broadcast automatically,
+`YT_CHANNEL_ID`. The broadcast must already be live when Bruce starts, and chat
+history from before start-up is not replayed.
+
+YouTube chat is polled, and every poll costs 5 of the project's 10,000 daily
+quota units. At the default `YT_POLL_INTERVAL_MS=5000` that is roughly 2.5
+hours of play per day; raise the interval for longer streams or request a quota
+increase from Google. Looking a broadcast up by channel id costs a further 100
+units at start-up. Viewers are identified by their YouTube channel id, so
+scores follow them across display-name changes and never collide with Twitch
+scores.
 
 Bruce defaults to `games.db` in the current directory. Use `--db-path` or
 `BRUCE_DB_PATH` to select an existing scoreboard; `--db-ags` remains an alias

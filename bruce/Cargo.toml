@@ -12,7 +12,7 @@ tracing = "0.1.44"
 tracing-error = "0.2.1"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 random_word = { path = "../wordle_word/"}
-twitch_common = { path = "../twitch_common", features = ["chat"] }
+twitch_common = { path = "../twitch_common", features = ["chat", "youtube_chat"] }
 sql_common = { path = "../sql_common/"}
 clap = { version = "4.1.8", features = ["derive", "env"] }
 anathema = "0.2.7"

@@ -1,12 +1,15 @@
 hstack [background: reset]
     expand [factor: 2]
-        vstack 
-            border 
-                text "ROUND: "
-                    span state.round
-                    span " | "
-                    span "Time: "
-                    span state.timer
+        vstack
+            border
+                vstack
+                    text "ROUND: "
+                        span state.round
+                        span " | "
+                        span "Time: "
+                        span state.timer
+                    text "Chat: "
+                        span state.platforms
             expand
                 border
                     vstack

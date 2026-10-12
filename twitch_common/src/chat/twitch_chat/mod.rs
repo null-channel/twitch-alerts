@@ -1,7 +1,22 @@
+use std::future::Future;
+use std::pin::Pin;
+
 use tmi::Privmsg;
 use tokio::sync::mpsc::{self, UnboundedSender};
 
-use crate::chat::messages::Message;
+use crate::chat::messages::{Message, MessagePlatform};
+use crate::chat::source::ChatSource;
+
+/// Everything needed to join one Twitch channel as a bot user.
+#[derive(Debug, Clone)]
+pub struct TwitchChatConfig {
+    /// The channel to join, with or without the leading `#`.
+    pub channel: String,
+    /// The bot's Twitch login.
+    pub username: String,
+    /// The bot's chat OAuth token.
+    pub password: String,
+}
 
 pub struct TwitchChat {
     pub client: tmi::Client,
@@ -13,7 +28,7 @@ pub struct TwitchChat {
 }
 
 /// A struct representing a Twitch chat client.
-/// It does not actually connect to the Twitch chat server until the `run` method is called.
+/// It connects to Twitch in `new` but only joins `channel` once `run` is called.
 impl TwitchChat {
     pub async fn new(channel: String, username: String, password: String) -> anyhow::Result<Self> {
         let creds = tmi::client::Credentials::new(username, password);
@@ -31,11 +46,13 @@ impl TwitchChat {
         })
     }
 
-    pub async fn run(
-        &mut self,
-        sender: UnboundedSender<Message>,
-        channel: String,
-    ) -> anyhow::Result<()> {
+    pub async fn connect(config: TwitchChatConfig) -> anyhow::Result<Self> {
+        Self::new(config.channel, config.username, config.password).await
+    }
+
+    /// Join the configured channel and forward its messages until the connection fails.
+    pub async fn run(&mut self, sender: UnboundedSender<Message>) -> anyhow::Result<()> {
+        let channel = self.channel.clone();
         self.client.join(&channel).await?;
 
         loop {
@@ -55,6 +72,23 @@ impl TwitchChat {
                 _ => {}
             };
         }
+    }
+}
+
+impl ChatSource for TwitchChat {
+    fn platform(&self) -> MessagePlatform {
+        MessagePlatform::Twitch
+    }
+
+    fn name(&self) -> String {
+        format!("twitch:#{}", self.channel.trim_start_matches('#'))
+    }
+
+    fn run(
+        mut self: Box<Self>,
+        sender: UnboundedSender<Message>,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send>> {
+        Box::pin(async move { TwitchChat::run(&mut self, sender).await })
     }
 }
 

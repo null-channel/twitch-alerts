@@ -1,7 +1,9 @@
-let platform_collors = [
+// Indexed by MessagePlatform's discriminant: twitch, youtube, discord, debug.
+let platform_colours = [
     "#9146FF", // twitch purple
-    "#FF4500", // reddit orange
-    "#1DA1F2", // twitter blue
+    "#FF0000", // youtube red
+    "#5865F2", // discord blurple
+    "#808080", // debug grey
 ]
 
 vstack
@@ -9,7 +11,7 @@ vstack
         overflow [direction: "back"]
             for value in state.messages
                 hstack
-                    container [background: platform_collors[to_int(value.platform)],sides: [], width: 1, height: 1]
+                    container [background: platform_colours[to_int(value.platform)],sides: [], width: 1, height: 1]
                     text " "
                         span value.author
                         span ": "

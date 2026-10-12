@@ -40,6 +40,8 @@ pub enum IndexMessage {
     Timer(u8),
     Round(u8),
     LeaderBoard(Vec<LeaderboardEntry>),
+    /// The chat platforms feeding the game, shown in the header.
+    Platforms(Vec<MessagePlatform>),
 }
 
 #[derive(Debug, Clone)]
@@ -53,6 +55,7 @@ pub struct IndexState {
     pub round: Value<u8>,
     pub timer: Value<u8>,
     pub leaders: Value<List<LeaderState>>,
+    pub platforms: Value<String>,
 }
 
 #[derive(Debug, State)]
@@ -97,12 +100,25 @@ impl Component for Index {
                     });
                 state.leaders.set(List::from_iter(leaders));
             }
+            IndexMessage::Platforms(platforms) => {
+                state.platforms.set(platform_names(&platforms));
+            }
         }
     }
 }
 
+/// `twitch, youtube` style list for the header.
+fn platform_names(platforms: &[MessagePlatform]) -> String {
+    platforms
+        .iter()
+        .map(|platform| platform.name())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 pub fn start_game(
     chat: UnboundedReceiver<Message>,
+    platforms: Vec<MessagePlatform>,
     word_list: WordList,
     leader_board: Pool<Sqlite>,
 ) -> anyhow::Result<()> {
@@ -143,6 +159,9 @@ pub fn start_game(
         )
         .context("register index component")?;
     let emitter = builder.emitter();
+    emitter
+        .emit(main_id, IndexMessage::Platforms(platforms))
+        .context("send chat platforms")?;
     let game_task = tokio::spawn(async move {
         if let Err(error) = game_loop(
             chat,
@@ -779,6 +798,10 @@ mod tests {
         let emitter = builder.emitter();
         emitter.emit(
             main_id,
+            IndexMessage::Platforms(vec![MessagePlatform::Twitch, MessagePlatform::Youtube]),
+        )?;
+        emitter.emit(
+            main_id,
             IndexMessage::LeaderBoard(vec![
                 LeaderboardEntry {
                     username: "alice".into(),
@@ -796,6 +819,7 @@ mod tests {
         let rendered = screen.join("\n");
         println!("{rendered}");
         assert!(rendered.contains("Leader Board"), "{}", rendered);
+        assert!(rendered.contains("twitch, youtube"), "{}", rendered);
         let alice = screen.iter().position(|line| line.contains("alice"));
         let bob = screen.iter().position(|line| line.contains("bob"));
         assert!(alice.is_some() && bob.is_some(), "{}", rendered);
