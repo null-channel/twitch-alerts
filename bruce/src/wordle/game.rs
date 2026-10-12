@@ -1,31 +1,36 @@
-use core::panic;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
-use std::ops::DerefMut;
-use std::sync::LazyLock;
+use std::iter::FromIterator;
 
+use super::scoreboard::{add_points, get_player_score, top_scores, LeaderboardEntry};
+use super::view::chat::{ChatMessages, Messages};
 use crate::wordle::view::row::Row;
 use crate::wordle::view::row::RowState;
 use anathema::backend::tui::TuiBackend;
 use anathema::backend::Backend;
 use anathema::component::{Children, Component, ComponentId, Context, Emitter};
-use anathema::derive;
 use anathema::runtime::Runtime;
-use anathema::state::{State, Value};
-use anathema::templates::Document;
+use anathema::state::{List, State, Value};
+use anathema::templates::{Document, ToSourceKind};
+use anyhow::Context as _;
 use random_word::WordList;
-use sqlx::{pool::PoolConnection, Pool, Sqlite};
+use sqlx::{Pool, Sqlite};
 use tokio::sync::mpsc::UnboundedReceiver;
-use tokio::sync::Mutex;
-use twitch_common::chat::messages::{ChatMessages, MessagePlatform, Messages};
-use twitch_common::twitch_chat::messages::Message;
+use twitch_common::chat::messages::{Message, MessagePlatform};
 
 use super::view::row::{Cell, LetterStatus, RowMessage};
 
-// Game round time limit
 const GAME_ROUND_TIME_LIMIT: u8 = 30; // seconds
-                                      // TODO: Make this a thing
-const START_AI_ROUND_TIME_LIMIT: u64 = 120; // seconds
+
+// Points awarded for the word that lands on the board each row.
+const CORRECT_LETTER_POINTS: u32 = 2;
+const PRESENT_LETTER_POINTS: u32 = 1;
+// Solving the word earns `SOLVE_BONUS_BASE - SOLVE_BONUS_PENALTY_PER_ROW * row`.
+const SOLVE_BONUS_BASE: u32 = 40;
+const SOLVE_BONUS_PENALTY_PER_ROW: u32 = 5;
+
+// How many players the on-screen leaderboard shows.
+const LEADER_BOARD_SIZE: u32 = 10;
 
 pub struct Index;
 
@@ -34,6 +39,9 @@ pub enum IndexMessage {
     Row(RowUpdate),
     Timer(u8),
     Round(u8),
+    LeaderBoard(Vec<LeaderboardEntry>),
+    /// The chat platforms feeding the game, shown in the header.
+    Platforms(Vec<MessagePlatform>),
 }
 
 #[derive(Debug, Clone)]
@@ -46,9 +54,16 @@ pub struct RowUpdate {
 pub struct IndexState {
     pub round: Value<u8>,
     pub timer: Value<u8>,
+    pub leaders: Value<List<LeaderState>>,
+    pub platforms: Value<String>,
 }
 
-// twitch_[username],games_played,guesses,correct_guesses,total_points
+#[derive(Debug, State)]
+pub struct LeaderState {
+    pub rank: Value<usize>,
+    pub name: Value<String>,
+    pub points: Value<i64>,
+}
 
 impl Component for Index {
     type Message = IndexMessage;
@@ -58,14 +73,11 @@ impl Component for Index {
         &mut self,
         message: Self::Message,
         state: &mut Self::State,
-        mut children: Children<'_, '_>,
+        _: Children<'_, '_>,
         mut context: Context<'_, '_, Self::State>,
     ) {
         match message {
             IndexMessage::Row(row_update) => {
-                if row_update.row == 7 {
-                    //println!("Solution row: {:?}", row_update.row_message.data);
-                }
                 context
                     .components
                     .by_attribute("id", row_update.row)
@@ -77,52 +89,81 @@ impl Component for Index {
             IndexMessage::Round(round) => {
                 state.round.set(round);
             }
+            IndexMessage::LeaderBoard(entries) => {
+                let leaders = entries
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, entry)| LeaderState {
+                        rank: Value::new(index + 1),
+                        name: Value::new(entry.username),
+                        points: Value::new(entry.total_points),
+                    });
+                state.leaders.set(List::from_iter(leaders));
+            }
+            IndexMessage::Platforms(platforms) => {
+                state.platforms.set(platform_names(&platforms));
+            }
         }
     }
 }
 
+/// `twitch, youtube` style list for the header.
+fn platform_names(platforms: &[MessagePlatform]) -> String {
+    platforms
+        .iter()
+        .map(|platform| platform.name())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 pub fn start_game(
     chat: UnboundedReceiver<Message>,
+    platforms: Vec<MessagePlatform>,
     word_list: WordList,
     leader_board: Pool<Sqlite>,
-) {
+) -> anyhow::Result<()> {
     let doc = Document::new("@index");
     let mut backend = TuiBackend::builder()
         .enable_raw_mode()
-        //.enable_alt_screen()
         .enable_mouse()
         .hide_cursor()
         .clear()
         .finish()
-        .unwrap();
+        .context("initialize Wordle terminal")?;
     backend.finalize();
 
     let mut builder = Runtime::builder(doc, &backend);
 
     let twitch_chat_id = builder
-        .default::<Messages>("messages", "../twitch_common/src/chat/twitch_chat/templates/message.aml")
-        .expect("failed to register messages component");
+        .default::<Messages>(
+            "messages",
+            include_str!("templates/message.aml").to_template(),
+        )
+        .context("register messages component")?;
 
     builder
         .prototype(
             "stack",
-            "src/wordle/templates/row.aml",
-            || Row::default(),
-            || RowState::default(),
+            include_str!("templates/row.aml").to_template(),
+            || Row,
+            RowState::default,
         )
-        .expect("failed to register row component");
+        .context("register row component")?;
 
     let main_id = builder
         .component(
             "index",
-            "src/wordle/templates/main.aml",
+            include_str!("templates/main.aml").to_template(),
             Index,
             IndexState::default(),
         )
-        .expect("failed to register index component");
+        .context("register index component")?;
     let emitter = builder.emitter();
-    tokio::spawn(async move {
-        game_loop(
+    emitter
+        .emit(main_id, IndexMessage::Platforms(platforms))
+        .context("send chat platforms")?;
+    let game_task = tokio::spawn(async move {
+        if let Err(error) = game_loop(
             chat,
             main_id,
             twitch_chat_id,
@@ -132,33 +173,21 @@ pub fn start_game(
             leader_board,
         )
         .await
+        {
+            tracing::error!(%error, "Wordle game loop stopped");
+        }
     });
-    builder
-        .finish(&mut backend, |runtime, backend| runtime.run(backend))
-        .unwrap();
+    let result = builder.finish(&mut backend, |runtime, backend| runtime.run(backend));
+    game_task.abort();
+    result.context("run Wordle terminal")
 }
 
 fn get_spell_checker(word_list: WordList) -> HashSet<String> {
-    // Read the spell checker file from the src/games/wordle/assets/wordlist.txt and read each line
-    // into the hashmap
-    let mut spell_checker = HashSet::new();
-    let file_path = match word_list {
-        WordList::Challenge => "../wordle_word/src/txt/challenge.txt",
-        WordList::Nerd => "../wordle_word/src/txt/nerd.txt",
-        WordList::Standard => "../wordle_word/src/txt/standard.txt",
-    };
-
-    if let Ok(lines) = std::fs::read_to_string(file_path) {
-        for line in lines.lines() {
-            let word = line.trim().to_uppercase();
-            if !word.is_empty() {
-                spell_checker.insert(word);
-            }
-        }
-    } else {
-        panic!("Failed to read the spell checker file");
-    }
-    spell_checker
+    random_word::all(word_list)
+        .iter()
+        .map(|word| word.trim().to_uppercase())
+        .filter(|word| !word.is_empty())
+        .collect()
 }
 
 fn get_random_word(list: WordList) -> Word {
@@ -170,112 +199,6 @@ fn get_random_word(list: WordList) -> Word {
         .expect("Failed to convert random word to [u8; 5]")
 }
 
-// Easy is to dirive copy/clone
-#[derive(Clone, Copy)]
-pub struct UserScore {
-    id: i64,
-    total_points: i64,
-}
-
-impl UserScore {
-    pub fn new(id: i64, total_points: i64) -> Self {
-        Self { id, total_points }
-    }
-}
-
-#[derive(Clone)]
-pub struct User {
-    pub platform: MessagePlatform,
-    pub platform_user_id: String,
-    pub platform_user_name: String,
-    pub score: UserScore,
-}
-
-// Twitch Users Hashmap<(platform)Twitch_userID, (Interal ID, Current Score)>
-static TWITCH_USERS: LazyLock<Mutex<HashMap<String, UserScore>>> = LazyLock::new(|| {
-    let m = Mutex::new(HashMap::new());
-    m
-});
-static YOUTUBE_USERS: LazyLock<Mutex<HashMap<i32, &'static str>>> = LazyLock::new(|| {
-    let m = Mutex::new(HashMap::new());
-    m
-});
-static DISCORD_USERS: LazyLock<Mutex<HashMap<i32, &'static str>>> = LazyLock::new(|| {
-    let m = Mutex::new(HashMap::new());
-    m
-});
-// Should get our internal ID from the database matching the players platform and platform_user_id.
-// Should cache the player's ID in memory and should check that before hitting the database
-async fn get_player_id(
-    platform: MessagePlatform,
-    platform_user_id: String,
-    platform_user_name: String,
-    conn: &mut PoolConnection<Sqlite>,
-) -> anyhow::Result<UserScore> {
-    match platform {
-        MessagePlatform::Twitch => {
-            let twitch_users = TWITCH_USERS.lock().await;
-            // Does user exist in cashe
-            if let Some(user) = twitch_users.get(&platform_user_id) {
-                Ok(user.clone())
-            } else {
-                // Does user exist in database?
-                let platform_u8 = platform as u8;
-                let rez = sqlx::query!(
-                    r#"
-                SELECT id, total_points FROM wordle_highscores WHERE platform = ? AND platform_user_id = ?
-                        "#,
-                    platform_u8,
-                    platform_user_id,
-                )
-                .fetch_one( conn.deref_mut())
-                .await;
-                // if no user, insert a new user.
-                let Ok(rez) = rez else {
-                    // Insert into
-                    let req = sqlx::query!(
-                        r#"
-                INSERT INTO wordle_highscores ( username, platform_user_id, platform, total_points )
-                VALUES ( ?, ?, ?, ? )
-                        "#,
-                        platform_user_name,
-                        platform_user_id,
-                        platform_u8,
-                        1,
-                    )
-                    .execute(conn.deref_mut())
-                    .await?;
-
-                    // request last row to get real ID
-                    let last_row_id = req.last_insert_rowid();
-                    let rez = sqlx::query!(
-                        r#"
-                    SELECT id, total_points FROM wordle_highscores WHERE rowid = ?
-                            "#,
-                        last_row_id,
-                    )
-                    .fetch_one(conn.deref_mut())
-                    .await?;
-
-                    return Ok(UserScore {
-                        id: rez.id,
-                        total_points: rez.total_points,
-                    });
-                };
-                return Ok(UserScore::new(rez.id, rez.total_points));
-                //twitch_users.insert(platform_user_id.to_string(), UserScore::new(rez.id, rez.total_points));
-            }
-        }
-        _ => {
-            //TODO: deal with youtube users
-            return Ok(UserScore {
-                id: 0,
-                total_points: 0,
-            });
-        }
-    }
-}
-
 async fn game_loop(
     mut chat: UnboundedReceiver<Message>,
     main_id: ComponentId<IndexMessage>,
@@ -284,37 +207,41 @@ async fn game_loop(
     spell_checker: HashSet<String>,
     word_list: WordList,
     leader_board: Pool<Sqlite>,
-) {
+) -> anyhow::Result<()> {
     let guess_duration = std::time::Duration::from_secs(GAME_ROUND_TIME_LIMIT as u64);
+    refresh_leader_board(&leader_board, &emitter, main_id).await?;
     loop {
         let mut correct_cells = [Cell::default(); 5];
         let mut round_count = 0;
-        increment_round_count(&mut round_count, &emitter, main_id).await;
+        increment_round_count(&mut round_count, &emitter, main_id).await?;
         // Not actually "starting" the game now.
         let mut start_time = std::time::Instant::now();
-        update_timer(GAME_ROUND_TIME_LIMIT, &emitter, main_id).await;
+        update_timer(GAME_ROUND_TIME_LIMIT, &emitter, main_id).await?;
 
         let word = get_random_word(word_list);
 
         let mut game_round = GameRound::new(word, &spell_checker);
         let mut game_over = false;
         let mut round_started = false;
-        let mut leader_board_conn = leader_board.acquire().await.unwrap();
 
         // Play a round
         while round_count <= 6 && !game_over {
             // Process incoming messages from the chat
             // TODO: Currently if processing falls behind the game will not progress to next round
             while let Ok(message) = chat.try_recv() {
-                let player = message.sender();
+                let player = Player::from(&message);
                 let guess = message.content();
-                let player_id = get_player_id(
-                    message.platform(),
-                    message.platform_id(),
-                    player.clone(),
-                    &mut leader_board_conn,
-                );
-                let valid = game_round.new_guess(player, guess);
+                let valid = game_round.new_guess(player.clone(), guess);
+                if valid && player.is_scored() {
+                    let score =
+                        get_player_score(&leader_board, player.platform, &player.id, &player.name)
+                            .await?;
+                    tracing::debug!(
+                        player_id = score.id,
+                        total_points = score.total_points,
+                        "Wordle player registered"
+                    );
+                }
                 // emit the chat message to the twitch chat component
                 if valid && !round_started {
                     round_started = true;
@@ -331,7 +258,7 @@ async fn game_loop(
                         ),
                     )
                     .await
-                    .expect("failed to send chat messages message");
+                    .context("send chat message")?;
             }
 
             if !round_started {
@@ -345,7 +272,6 @@ async fn game_loop(
                 // increment the guess count and reset the timer
                 let winning_word = game_round.select_round_winner(word);
 
-                // println!("Round {round_count}: Winning word is {winning_word:?}");
                 // Update the UI with the winning word
                 let row_message = game_round.build_cells(winning_word.unwrap_or([97; 5]));
                 emitter
@@ -356,9 +282,20 @@ async fn game_loop(
                             row_message,
                         }),
                     )
-                    .expect("failed to send winning word message");
+                    .context("send winning word")?;
 
                 update_correct_cells(&mut correct_cells, &row_message.data);
+
+                // Everyone who voted for the word on the board shares its points.
+                if let Some(winning_word) = winning_word {
+                    let points = score_row(&row_message.data, round_count);
+                    let awarded =
+                        award_points(&leader_board, game_round.voters_for(winning_word), points)
+                            .await?;
+                    if awarded {
+                        refresh_leader_board(&leader_board, &emitter, main_id).await?;
+                    }
+                }
 
                 emitter
                     .emit_async(
@@ -371,27 +308,11 @@ async fn game_loop(
                         }),
                     )
                     .await
-                    .expect("failed to send winning word message");
-                // Check win condition
-                // TODO: Check if the winning word is correct
-                let mut did_win = true;
-                for cell in row_message.data.iter() {
-                    if cell.status != LetterStatus::Correct {
-                        did_win = false;
-                        break;
-                    }
-                }
-
-                // Calculate score here
-                // for (user_id, guess) in game_round.players_votes {
-                //score = calculate_score(user_id, winning_word, guess);
-                // Score updating could be batched... but that is a 100000 follower issue.
-                //update_users_score(user_id, score);
-                //}
-
-                if did_win {
-                    game_over = true;
-                }
+                    .context("send winning word")?;
+                game_over = row_message
+                    .data
+                    .iter()
+                    .all(|cell| cell.status == LetterStatus::Correct);
 
                 // They won
                 if game_over {
@@ -399,7 +320,7 @@ async fn game_loop(
                 }
                 // Reset the game round for the next guess
                 start_time = std::time::Instant::now();
-                update_timer(GAME_ROUND_TIME_LIMIT, &emitter, main_id).await;
+                update_timer(GAME_ROUND_TIME_LIMIT, &emitter, main_id).await?;
 
                 next_round(
                     &mut round_count,
@@ -408,21 +329,19 @@ async fn game_loop(
                     &mut game_round,
                     &mut round_started,
                 )
-                .await;
+                .await?;
                 continue;
             }
 
             // Emit the timer update
             let timer = (guess_duration.as_secs() - start_time.elapsed().as_secs()) as u8;
-            update_timer(timer, &emitter, main_id).await;
+            update_timer(timer, &emitter, main_id).await?;
 
             // If no messages are received, we can continue the game loop
             if start_time.elapsed() <= guess_duration {
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             }
         }
-
-        let correct_word = game_round.build_cells(word);
 
         // Toggle bit has a bug in this UI threading.
         // messages are not recived in the order they are sent
@@ -449,23 +368,77 @@ async fn game_loop(
                 }),
             )
             .await
-            .expect("failed to send winning word message");
+            .context("send winning word")?;
         // build correct cells from the winning word
         tokio::time::sleep(std::time::Duration::from_secs(30)).await;
         // Reset the board for the next round
-        update_timer(GAME_ROUND_TIME_LIMIT, &emitter, main_id).await;
-        reset_board(&emitter, main_id).await;
+        update_timer(GAME_ROUND_TIME_LIMIT, &emitter, main_id).await?;
+        reset_board(&emitter, main_id).await?;
     } // Game loop
 }
 
-/* For each round each user that guessed the selected word gets 2 points for every correct letter and 1 point for every correct letter in the wrong position.
-the users that guessed the word first gets an extra 5 points
-if the word is the corret word, the first user to guess gets an extra 10 point and everyone that guessed it gets 10 points
-not batching writes to database at first.
-*/
-fn calculate_score(user_id: String, correct_cells: &[Cell; 5], their_guess: &[Cell; 5]) -> u8 {
-    // Check if the user guessed the word correctly
-    5
+/// Points earned by a row: 2 per correctly placed letter, 1 per letter in the wrong spot,
+/// plus a solve bonus of 40 minus 5 for every row used (row 1 = 35, row 6 = 10).
+fn score_row(cells: &[Cell; 5], row: u8) -> u32 {
+    let letter_points: u32 = cells
+        .iter()
+        .map(|cell| match cell.status {
+            LetterStatus::Correct => CORRECT_LETTER_POINTS,
+            LetterStatus::Present => PRESENT_LETTER_POINTS,
+            LetterStatus::Absent => 0,
+        })
+        .sum();
+    let solved = cells
+        .iter()
+        .all(|cell| cell.status == LetterStatus::Correct);
+    let solve_bonus = if solved {
+        SOLVE_BONUS_BASE.saturating_sub(SOLVE_BONUS_PENALTY_PER_ROW * u32::from(row))
+    } else {
+        0
+    };
+    letter_points + solve_bonus
+}
+
+/// Returns whether any stored score changed.
+async fn award_points(
+    leader_board: &Pool<Sqlite>,
+    players: Vec<&Player>,
+    points: u32,
+) -> anyhow::Result<bool> {
+    if points == 0 {
+        return Ok(false);
+    }
+    let mut awarded = false;
+    for player in players.into_iter().filter(|player| player.is_scored()) {
+        awarded = true;
+        let score = add_points(
+            leader_board,
+            player.platform,
+            &player.id,
+            &player.name,
+            i64::from(points),
+        )
+        .await?;
+        tracing::info!(
+            player = %player.name,
+            points,
+            total_points = score.total_points,
+            "Wordle points awarded"
+        );
+    }
+    Ok(awarded)
+}
+
+async fn refresh_leader_board(
+    leader_board: &Pool<Sqlite>,
+    emitter: &Emitter,
+    main_id: ComponentId<IndexMessage>,
+) -> anyhow::Result<()> {
+    let entries = top_scores(leader_board, LEADER_BOARD_SIZE).await?;
+    emitter
+        .emit_async(main_id, IndexMessage::LeaderBoard(entries))
+        .await
+        .context("send leader board update")
 }
 
 fn update_correct_cells(correct_cells: &mut [Cell; 5], row_data: &[Cell; 5]) {
@@ -483,14 +456,15 @@ async fn next_round(
     main_id: ComponentId<IndexMessage>,
     game_round: &mut GameRound<'_>,
     round_started: &mut bool,
-) {
+) -> anyhow::Result<()> {
     // Increment the round count
-    increment_round_count(round_count, emitter, main_id).await;
+    increment_round_count(round_count, emitter, main_id).await?;
     *round_started = false;
     game_round.reset_votes();
+    Ok(())
 }
 
-async fn reset_board(emitter: &Emitter, main_id: ComponentId<IndexMessage>) {
+async fn reset_board(emitter: &Emitter, main_id: ComponentId<IndexMessage>) -> anyhow::Result<()> {
     // Reset the board by emitting a reset message
     for i in 1..=7 {
         // Emit
@@ -505,35 +479,65 @@ async fn reset_board(emitter: &Emitter, main_id: ComponentId<IndexMessage>) {
                 }),
             )
             .await
-            .expect("failed to send reset board message");
+            .context("send board reset")?;
     }
+    Ok(())
 }
 
 async fn increment_round_count(
     round_count: &mut u8,
     emitter: &Emitter,
     main_id: ComponentId<IndexMessage>,
-) {
+) -> anyhow::Result<()> {
     // Increment the round count
     *round_count += 1;
     // Emit the new round count
     emitter
         .emit_async(main_id, IndexMessage::Round(*round_count))
         .await
-        .expect("failed to send round count message");
+        .context("send round update")
 }
 
-async fn update_timer(timer: u8, emitter: &Emitter, main_id: ComponentId<IndexMessage>) {
+async fn update_timer(
+    timer: u8,
+    emitter: &Emitter,
+    main_id: ComponentId<IndexMessage>,
+) -> anyhow::Result<()> {
     // Emit the new round count
     emitter
         .emit_async(main_id, IndexMessage::Timer(timer))
         .await
-        .expect("failed to send round count message");
+        .context("send round update")
+}
+
+/// A chat participant, identified by platform and platform user id rather than display name.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Player {
+    pub platform: MessagePlatform,
+    pub id: String,
+    pub name: String,
+}
+
+impl Player {
+    /// Debug messages are for local testing and never reach the persistent scoreboard.
+    pub fn is_scored(&self) -> bool {
+        !matches!(self.platform, MessagePlatform::Debug)
+    }
+}
+
+impl From<&Message> for Player {
+    fn from(message: &Message) -> Self {
+        Self {
+            platform: message.platform(),
+            id: message.platform_id(),
+            name: message.sender(),
+        }
+    }
 }
 
 struct GameRound<'a> {
     word: [u8; 5],
-    players_votes: HashMap<String, ([u8; 5], u32)>,
+    players_votes: HashMap<Player, (Word, u32)>,
     spell_checker: &'a HashSet<String>,
     guess_position: u32,
 }
@@ -542,7 +546,6 @@ type Word = [u8; 5];
 
 struct VoteIndexer {
     votes: u32,
-    voters: Vec<String>,
     position_in_round: u32,
 }
 
@@ -558,7 +561,7 @@ impl<'a> GameRound<'a> {
         }
     }
 
-    pub fn new_guess(&mut self, player: String, guess: String) -> bool {
+    pub fn new_guess(&mut self, player: Player, guess: String) -> bool {
         let upper = guess.to_uppercase();
         if !self.validate_guess(&upper) {
             return false;
@@ -593,14 +596,12 @@ impl<'a> GameRound<'a> {
 
     pub fn build_cells(&self, guess: Word) -> RowMessage {
         let mut cells = [Cell::default(); 5];
-        let mut used = [false; 5]; // Track used letters in the word
         let mut letter_counts = HashMap::new();
 
         // First pass: mark Correct and count leftover letters
         for i in 0..5 {
             if guess[i] == self.word[i] {
                 cells[i] = (guess[i], LetterStatus::Correct).into();
-                used[i] = true;
             } else {
                 letter_counts
                     .entry(self.word[i])
@@ -639,14 +640,12 @@ impl<'a> GameRound<'a> {
         let mut highest_vote = 0;
 
         // Build a map of all votes
-        for (name, (voted_word, pos)) in self.players_votes.iter() {
+        for (voted_word, pos) in self.players_votes.values() {
             let votes = total_votes.entry(*voted_word).or_insert(VoteIndexer {
                 votes: 0,
-                voters: Vec::new(),
                 position_in_round: 10000,
             });
             votes.votes += 1;
-            votes.voters.push(name.clone());
             if pos < &votes.position_in_round {
                 votes.position_in_round = *pos;
             }
@@ -672,7 +671,172 @@ impl<'a> GameRound<'a> {
         Some(winning_word.0)
     }
 
+    /// Players whose current vote is `word`.
+    pub fn voters_for(&self, word: Word) -> Vec<&Player> {
+        self.players_votes
+            .iter()
+            .filter(|(_, (voted_word, _))| *voted_word == word)
+            .map(|(player, _)| player)
+            .collect()
+    }
+
     pub fn reset_votes(&mut self) {
         self.players_votes.clear();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn embedded_ui_templates_compile() -> anyhow::Result<()> {
+        let mut document = Document::new("@index");
+        document.add_component(
+            "messages",
+            include_str!("templates/message.aml").to_template(),
+        )?;
+        document.add_component("stack", include_str!("templates/row.aml").to_template())?;
+        document.add_component("index", include_str!("templates/main.aml").to_template())?;
+        document.compile()?;
+        Ok(())
+    }
+
+    fn cells(statuses: [LetterStatus; 5]) -> [Cell; 5] {
+        let mut cells = [Cell::default(); 5];
+        for (cell, status) in cells.iter_mut().zip(statuses) {
+            cell.status = status;
+        }
+        cells
+    }
+
+    #[test]
+    fn letters_score_two_for_correct_and_one_for_present() {
+        use LetterStatus::*;
+        assert_eq!(score_row(&cells([Absent; 5]), 1), 0);
+        assert_eq!(
+            score_row(&cells([Present, Absent, Absent, Absent, Absent]), 1),
+            1
+        );
+        assert_eq!(
+            score_row(&cells([Correct, Absent, Absent, Absent, Absent]), 1),
+            2
+        );
+        assert_eq!(
+            score_row(&cells([Correct, Present, Correct, Present, Absent]), 3),
+            6
+        );
+    }
+
+    #[test]
+    fn solving_adds_forty_minus_five_per_row() {
+        let solved = cells([LetterStatus::Correct; 5]);
+        assert_eq!(score_row(&solved, 1), 10 + 35);
+        assert_eq!(score_row(&solved, 2), 10 + 30);
+        assert_eq!(score_row(&solved, 6), 10 + 10);
+    }
+
+    fn player(id: &str) -> Player {
+        Player {
+            platform: MessagePlatform::Twitch,
+            id: id.into(),
+            name: format!("name-{id}"),
+        }
+    }
+
+    #[test]
+    fn voters_for_returns_players_behind_the_board_word() {
+        let dictionary: HashSet<String> = ["APPLE", "GRAPE", "MANGO"]
+            .iter()
+            .map(|word| word.to_string())
+            .collect();
+        let mut round = GameRound::new(*b"APPLE", &dictionary);
+        assert!(round.new_guess(player("1"), "grape".into()));
+        assert!(round.new_guess(player("2"), "apple".into()));
+        assert!(round.new_guess(player("3"), "mango".into()));
+        // A later guess from the same player replaces their earlier vote.
+        assert!(round.new_guess(player("3"), "apple".into()));
+        assert!(!round.new_guess(player("4"), "zzzzz".into()));
+
+        let winner = round.select_round_winner(*b"APPLE").unwrap();
+        assert_eq!(&winner, b"APPLE");
+        let mut voters: Vec<&str> = round
+            .voters_for(winner)
+            .into_iter()
+            .map(|player| player.id.as_str())
+            .collect();
+        voters.sort();
+        assert_eq!(voters, ["2", "3"]);
+        assert_eq!(score_row(&round.build_cells(winner).data, 1), 45);
+    }
+
+    #[test]
+    fn leader_board_renders_ranked_players() -> anyhow::Result<()> {
+        use anathema::backend::testing::TestBackend;
+
+        let doc = Document::new("@index");
+        let mut backend = TestBackend::new((160, 40));
+        backend.events().next().stop();
+
+        let mut builder = Runtime::builder(doc, &backend);
+        builder.default::<Messages>(
+            "messages",
+            include_str!("templates/message.aml").to_template(),
+        )?;
+        builder.prototype(
+            "stack",
+            include_str!("templates/row.aml").to_template(),
+            || Row,
+            RowState::default,
+        )?;
+        let main_id = builder.component(
+            "index",
+            include_str!("templates/main.aml").to_template(),
+            Index,
+            IndexState::default(),
+        )?;
+        let emitter = builder.emitter();
+        emitter.emit(
+            main_id,
+            IndexMessage::Platforms(vec![MessagePlatform::Twitch, MessagePlatform::Youtube]),
+        )?;
+        emitter.emit(
+            main_id,
+            IndexMessage::LeaderBoard(vec![
+                LeaderboardEntry {
+                    username: "alice".into(),
+                    total_points: 120,
+                },
+                LeaderboardEntry {
+                    username: "bob".into(),
+                    total_points: 87,
+                },
+            ]),
+        )?;
+        builder.finish(&mut backend, |runtime, backend| runtime.run(backend))?;
+
+        let screen: Vec<String> = (0..40).map(|line| backend.line(line)).collect();
+        let rendered = screen.join("\n");
+        println!("{rendered}");
+        assert!(rendered.contains("Leader Board"), "{}", rendered);
+        assert!(rendered.contains("twitch, youtube"), "{}", rendered);
+        let alice = screen.iter().position(|line| line.contains("alice"));
+        let bob = screen.iter().position(|line| line.contains("bob"));
+        assert!(alice.is_some() && bob.is_some(), "{}", rendered);
+        assert!(alice < bob, "{}", rendered);
+        assert!(screen[alice.unwrap()].contains("1.") && screen[alice.unwrap()].contains("120"));
+        assert!(screen[bob.unwrap()].contains("2.") && screen[bob.unwrap()].contains("87"));
+        Ok(())
+    }
+
+    #[test]
+    fn each_dictionary_accepts_its_generated_words() {
+        for list in [WordList::Standard, WordList::Challenge, WordList::Nerd] {
+            let dictionary = get_spell_checker(list);
+            assert!(!dictionary.is_empty());
+            let word = get_random_word(list);
+            let round = GameRound::new(word, &dictionary);
+            assert!(round.validate_guess(std::str::from_utf8(&word).unwrap()));
+        }
     }
 }

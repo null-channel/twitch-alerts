@@ -1,36 +1,17 @@
-use std::{
-    env,
-    path::{Path, PathBuf},
-    str::FromStr,
+use std::str::FromStr;
+
+use sqlx::{
+    migrate::Migrator,
+    sqlite::{SqliteConnectOptions, SqlitePool},
 };
 
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
-
+/// Open the application's database and apply the migrations embedded by that application.
 pub async fn setup_sqlite_migrations(
     db: String,
-    migrations_dir: PathBuf,
+    migrations: &Migrator,
 ) -> anyhow::Result<SqlitePool> {
-    // will create the db if needed
-    println!("DB: {}", db.clone());
-    println!("Migrations: {:?}", migrations_dir);
-    let path = env::current_dir()?;
-    println!("The current directory is {}", path.display());
-    let url = SqliteConnectOptions::from_str(&db)
-        .map_err(|e| anyhow::anyhow!(e))?
-        .create_if_missing(true);
-    let pool = SqlitePool::connect_with(url).await?;
-
-    println!("Running migrations from: {:?}", migrations_dir.clone());
-
-    sqlx::migrate::Migrator::new(migrations_dir)
-        .await?
-        .run(&pool)
-        .await?;
-    // Return the connection manager
+    let options = SqliteConnectOptions::from_str(&db)?.create_if_missing(true);
+    let pool = SqlitePool::connect_with(options).await?;
+    migrations.run(&pool).await?;
     Ok(pool)
-}
-
-pub fn get_migrations_from_cargo_dir(dir: &str) -> anyhow::Result<PathBuf> {
-    let crate_dir = std::env::var("CARGO_MANIFEST_DIR")?;
-    Ok(Path::new(&crate_dir).join(dir))
 }

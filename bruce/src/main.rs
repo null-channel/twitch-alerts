@@ -1,37 +1,31 @@
 #![warn(clippy::unwrap_in_result)]
-/// Mods
-mod wordle;
 mod opts;
 mod utils;
+mod wordle;
 
-use twitch_common::chat::twitch_chat::TwitchChat;
+use anyhow::Context as _;
 use clap::Parser;
-use opts::{Cli, Commands, GamesSubCommand, TwitchChatArgs};
+use opts::{ChatArgs, Cli, Commands, GamesSubCommand, PlatformConfig};
 use random_word::WordList;
+use twitch_common::chat::twitch_chat::TwitchChat;
+use twitch_common::chat::youtube_chat::YoutubeChat;
+use twitch_common::chat::ChatHub;
 
+static MIGRATIONS: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
 
-use tokio::{
-    task::JoinHandle,
-};
+fn main() -> anyhow::Result<()> {
+    tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(32)
+        .enable_all()
+        .build()?
+        .block_on(run())
+}
 
-#[tokio::main(flavor = "multi_thread", worker_threads = 32)]
-async fn main() -> anyhow::Result<()> {
+async fn run() -> anyhow::Result<()> {
     utils::install_utils()?;
     let cmd = Cli::parse();
 
-    // WILL PRINT CREDINTIALS!!!!
-    // eprintln!("Starting app with options: {:?}", cmd);
-
-    tracing::debug!(
-        "App started!\n{}",
-        Cli::try_parse_from(["app", "--version"])
-            .unwrap_err()
-            .to_string()
-    );
-
-    // Initialize the tracing
-
-    tracing::debug!(opts = ?cmd);
+    tracing::debug!("Starting bruce {}", env!("CARGO_PKG_VERSION"));
 
     match cmd.command {
         Commands::Game(opts) => {
@@ -42,63 +36,61 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn run_chat() -> anyhow::Result<()> {
-    Ok(())
-}
-pub async fn run_bot() -> anyhow::Result<()> {
-    Ok(())
-}
-
 pub async fn run_game(opts: &GamesSubCommand) -> anyhow::Result<()> {
     match opts {
         GamesSubCommand::Wordle(args) => {
-            let mut twitch = get_twitch_chat(&args.twitch).await?;
-            let (chat_sender, chat_receiver) = tokio::sync::mpsc::unbounded_channel();
-            let channel = args.twitch.channel.clone();
-            tokio::spawn(async move {
-                match twitch.run(chat_sender, channel).await {
-                    Ok(()) => {}
-                    Err(e) => tracing::error!(error = %e, "Twitch chat task exited with error"),
-                }
-            });
+            let chat = connect_chat(&args.chat).await?;
+            let platforms = chat.platforms();
+            let chat_receiver = chat.spawn();
 
-            let sqlite_pool = sql_common::setup::setup_sqlite_migrations(
-                args.db_ags.clone(),
-                sql_common::setup::get_migrations_from_cargo_dir("migrations")?,
-            )
-            .await?;
+            let sqlite_pool =
+                sql_common::setup::setup_sqlite_migrations(args.db_path.clone(), &MIGRATIONS)
+                    .await?;
             let word_list = WordList::from(args.word_list.as_str());
 
             // Anathema's `runtime.run` blocks a thread for the whole session. Running it on a
-            // Tokio worker can strand `tokio::spawn` tasks (e.g. `game_loop`, IRC) on that same
-            // worker, so drive the TUI from the blocking pool instead.
+            // Tokio worker can strand `tokio::spawn` tasks (e.g. `game_loop`, chat sources) on
+            // that same worker, so drive the TUI from the blocking pool instead.
             tokio::task::spawn_blocking(move || {
-                crate::wordle::game::start_game(chat_receiver, word_list, sqlite_pool)
+                crate::wordle::game::start_game(chat_receiver, platforms, word_list, sqlite_pool)
             })
             .await
-            .map_err(|e| anyhow::anyhow!("Wordle TUI thread panicked or was cancelled: {e}"))?;
+            .map_err(|e| anyhow::anyhow!("Wordle TUI thread panicked or was cancelled: {e}"))??;
         }
-        GamesSubCommand::Dragons(args) => {
+        GamesSubCommand::Dragons(_) => {
             anyhow::bail!("Dragons game is not implemented yet");
         }
     }
     Ok(())
 }
 
-pub async fn get_twitch_chat(opts: &TwitchChatArgs) -> anyhow::Result<TwitchChat> {
-    let chat = TwitchChat::new(
-        opts.channel.clone(),
-        opts.tc_username.clone(),
-        opts.tc_password.clone(),
-    )
-    .await?;
-    Ok(chat)
+/// Connect to every configured chat platform.
+///
+/// Connections are made before the game starts so that bad credentials, an offline YouTube
+/// broadcast and similar problems are reported on the terminal instead of inside the TUI.
+pub async fn connect_chat(args: &ChatArgs) -> anyhow::Result<ChatHub> {
+    let mut hub = ChatHub::new();
+    for platform in args.platforms()? {
+        match platform {
+            PlatformConfig::Twitch(config) => {
+                let source = TwitchChat::connect(config)
+                    .await
+                    .context("connect to Twitch chat")?;
+                tracing::info!(source = %source_name(&source), "chat source ready");
+                hub.add(source);
+            }
+            PlatformConfig::Youtube(config) => {
+                let source = YoutubeChat::connect(config)
+                    .await
+                    .context("connect to YouTube live chat")?;
+                tracing::info!(source = %source_name(&source), "chat source ready");
+                hub.add(source);
+            }
+        }
+    }
+    Ok(hub)
 }
 
-async fn flatten<T>(handle: JoinHandle<anyhow::Result<T>>) -> anyhow::Result<T> {
-    match handle.await {
-        Ok(Ok(result)) => Ok(result),
-        Ok(Err(err)) => Err(err),
-        Err(e) => Err(anyhow::anyhow!(e)),
-    }
+fn source_name(source: &impl twitch_common::chat::ChatSource) -> String {
+    source.name()
 }

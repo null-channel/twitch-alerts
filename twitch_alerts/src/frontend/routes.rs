@@ -1,5 +1,5 @@
 use crate::frontend::types;
-use crate::frontend::UnitedStates;
+use crate::frontend::FrontendState;
 use axum::{extract::State, http::StatusCode};
 use maud::{html, Markup};
 
@@ -21,14 +21,14 @@ pub struct AdminTemplate {
     pub port: u16,
 }
 
-pub async fn index(State(sw_state): State<UnitedStates>) -> IndexTemplate {
+pub async fn index(State(sw_state): State<FrontendState>) -> IndexTemplate {
     IndexTemplate {
         hostname: sw_state.host_info.websocket_host,
         port: sw_state.host_info.ws_port,
     }
 }
 
-pub async fn admin(State(sw_state): State<UnitedStates>) -> AdminTemplate {
+pub async fn admin(State(sw_state): State<FrontendState>) -> AdminTemplate {
     AdminTemplate {
         enabled: types::EVENT_QUEUE_ACTIVE.load(std::sync::atomic::Ordering::SeqCst),
         hostname: sw_state.host_info.websocket_host,
@@ -37,7 +37,7 @@ pub async fn admin(State(sw_state): State<UnitedStates>) -> AdminTemplate {
 }
 
 pub async fn get_latest_unpublished_events(
-    State(state): State<UnitedStates>,
+    State(state): State<FrontendState>,
 ) -> Result<Markup, (StatusCode, String)> {
     let queues = state.event_queues.lock().unwrap();
     let range = if queues.unpublished_events.len() < 10 {
@@ -62,7 +62,7 @@ pub async fn get_latest_unpublished_events(
 }
 
 pub async fn get_latest_events(
-    State(state): State<UnitedStates>,
+    State(state): State<FrontendState>,
 ) -> Result<Markup, (StatusCode, String)> {
     let queues = state.event_queues.lock().unwrap();
     let events = queues.latest_events.clone();
@@ -91,7 +91,7 @@ pub async fn resume_events() -> Result<Markup, (StatusCode, String)> {
 }
 
 pub async fn get_all_events_in_queue(
-    State(state): State<UnitedStates>,
+    State(state): State<FrontendState>,
 ) -> Result<Markup, (StatusCode, String)> {
     let queues = state.event_queues.lock().unwrap();
     let events = queues.unpublished_events.clone();

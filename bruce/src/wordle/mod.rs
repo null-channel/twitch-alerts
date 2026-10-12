@@ -1,3 +1,3 @@
 pub mod game;
-pub mod state;
+mod scoreboard;
 pub mod view;

@@ -1,42 +1,26 @@
 use clap::{builder::ArgPredicate, Parser};
-use random_word::WordList;
-
-/*
-* null-twitch cli
-* TODO: add moderation options to mock cheap viewer ads
-*
-* twinkle server
-* twinkle bot
-* twinkle chat
-* twinkle game
-* twinkle game --mode=dnd
-*
-* bruce server
-*
-* tx server
-* tx bot
-* tx chat
-* tx game
-* tx game --mode=dnd
-* */
-
 #[derive(clap::Args, Debug, Clone)]
 pub struct HttpServer {
     /// The host to run the server on
-    #[clap(long, env, hide_env = true, default_value = "localhost")]
+    #[clap(long, env = "HTTP_HOST", hide_env = true, default_value = "0.0.0.0")]
     pub host: String,
     /// The port to run the server on
-    #[clap(long, env, hide_env = true, default_value = "8080")]
+    #[clap(long, env = "HTTP_PORT", hide_env = true, default_value = "8080")]
     pub port: u16,
 }
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct WSHttpServer {
-    /// The host to run the server on
-    #[clap(long, env, hide_env = true, default_value = "localhost")]
+    /// The host browsers use for the WebSocket connection
+    #[clap(
+        long,
+        env = "WEBSOCKET_HOST",
+        hide_env = true,
+        default_value = "localhost"
+    )]
     pub ws_host: String,
     /// The port to run the server on
-    #[clap(long, env, hide_env = true, default_value = "9000")]
+    #[clap(long, env = "WEBSOCKET_PORT", hide_env = true, default_value = "9000")]
     pub ws_port: u16,
 }
 
@@ -86,8 +70,8 @@ pub struct TwitchBotArgs {
 }
 
 #[derive(Parser, Debug, Clone)]
-#[clap(name = "null-twitch")]
-#[clap(about = "Marek's Great Twitch Tool", long_about = None)]
+#[clap(name = "twitch_alerts", version)]
+#[clap(about = "Twitch alerts server", long_about = None)]
 pub struct Cli {
     #[clap(subcommand)]
     pub command: Commands,
@@ -96,10 +80,6 @@ pub struct Cli {
 #[derive(clap::Subcommand, Debug, Clone)]
 pub enum Commands {
     Server(ServerArgs),
-    Chat,
-    Bot,
-    #[command(subcommand)]
-    Game(GamesSubCommand),
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -137,58 +117,8 @@ pub struct ServerArgs {
     #[clap(long, env, hide_env = true, default_value = "alerts.db")]
     pub db_path: Option<String>,
     /// The path to the frontend assets
-    #[clap(long, env, hide_env = true, default_value = "frontend_api/assets")]
+    #[clap(long, env, hide_env = true, default_value = concat!(env!("CARGO_MANIFEST_DIR"), "/src/frontend/assets"))]
     pub frontend_assets: String,
-}
-
-#[derive(clap::Subcommand, Debug, Clone)]
-pub enum GamesSubCommand {
-    #[command()]
-    Wordle(Wordle),
-    #[command()]
-    Dragons(Dragons),
-}
-
-#[derive(clap::Args, Debug, Clone)]
-pub struct Wordle {
-    #[command(flatten)]
-    pub twitch: TwitchChatArgs,
-    #[arg(short, long, default_value = "standard")]
-    pub word_list: String,
-    #[arg(
-        short,
-        long,
-        default_value = "sqlite:src/games/wordle/wordle_scoreboard.db"
-    )]
-    pub db_ags: String,
-}
-
-#[derive(clap::Args, Debug, Clone)]
-pub struct Dragons {
-    #[command(flatten)]
-    pub twitch: TwitchChatArgs,
-    pub dragons: u32,
-}
-
-#[derive(clap::Args, Debug, Clone)]
-pub struct TwitchChatArgs {
-    #[clap(long, short = 'u', env, hide_env = true)]
-    pub tc_username: String,
-    #[clap(long, short = 'p', env, hide_env = true, hide_env_values = true)]
-    pub tc_password: String,
-    /// The channel to connect to
-    #[clap(long, env, hide_env = true)]
-    pub channel: String,
-}
-
-pub fn is_token(s: String) -> eyre::Result<()> {
-    if s.starts_with("oauth:") {
-        eyre::bail!("token should not have `oauth:` as a prefix")
-    }
-    if s.len() != 30 {
-        eyre::bail!("token needs to be 30 characters long")
-    }
-    Ok(())
 }
 
 #[derive(Clone)]
