@@ -1,54 +1,41 @@
 use clap::{builder::ArgPredicate, Parser};
-use random_word::WordList;
-
-/*
-* null-twitch cli
-* TODO: add moderation options to mock cheap viewer ads
-*
-* twinkle server
-* twinkle bot
-* twinkle chat
-* twinkle game
-* twinkle game --mode=dnd
-*
-* bruce server
-*
-* tx server
-* tx bot
-* tx chat
-* tx game
-* tx game --mode=dnd
-* */
-
+use std::{net::SocketAddr, path::PathBuf};
 #[derive(clap::Args, Debug, Clone)]
 pub struct HttpServer {
     /// The host to run the server on
-    #[clap(long, env, hide_env = true, default_value = "localhost")]
+    #[clap(long, env = "HTTP_HOST", hide_env = true, default_value = "0.0.0.0")]
     pub host: String,
     /// The port to run the server on
-    #[clap(long, env, hide_env = true, default_value = "8080")]
+    #[clap(long, env = "HTTP_PORT", hide_env = true, default_value = "8080")]
     pub port: u16,
 }
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct WSHttpServer {
-    /// The host to run the server on
-    #[clap(long, env, hide_env = true, default_value = "localhost")]
+    /// The host browsers use for the WebSocket connection
+    #[clap(
+        long,
+        env = "WEBSOCKET_HOST",
+        hide_env = true,
+        default_value = "localhost"
+    )]
     pub ws_host: String,
     /// The port to run the server on
-    #[clap(long, env, hide_env = true, default_value = "9000")]
+    #[clap(long, env = "WEBSOCKET_PORT", hide_env = true, default_value = "9000")]
     pub ws_port: u16,
 }
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct TwitchBotArgs {
+    #[clap(flatten)]
+    pub oauth: OAuthArgs,
     /// OAuth2 Access token
     #[clap(
         long,
         env,
         hide_env = true,
-        group = "token",
-        required_unless_present = "service"
+        hide_env_values = true,
+        conflicts_with = "oauth2_service_url"
     )]
     pub access_token: Option<String>,
     /// Name of channel to monitor. If left out, defaults to owner of access token.
@@ -58,19 +45,17 @@ pub struct TwitchBotArgs {
     #[clap(long, env, hide_env = true, group = "channel")]
     pub channel_id: Option<String>,
     /// URL to service that provides OAuth2 token. Called on start and whenever the token needs to be refreshed.
-    #[clap(long, env, hide_env = true, group = "service",
-        value_parser = url::Url::parse, required_unless_present = "token"
-        )]
+    #[clap(long, env, hide_env = true, value_parser = url::Url::parse)]
     pub oauth2_service_url: Option<url::Url>,
     /// Bearer key for authorizing on the OAuth2 service url.
-    #[clap(long, env, hide_env = true, group = "service")]
+    #[clap(long, env, hide_env = true, requires = "oauth2_service_url")]
     pub oauth2_service_key: Option<Secret>,
     /// Grab token by pointer. See https://tools.ietf.org/html/rfc6901
     #[clap(
         long,
         env,
         hide_env = true,
-        group = "service",
+        requires = "oauth2_service_url",
         default_value_if("oauth2_service_url", ArgPredicate::IsPresent, Some("/access_token"))
     )]
     pub oauth2_service_pointer: Option<String>,
@@ -79,15 +64,15 @@ pub struct TwitchBotArgs {
         long,
         env,
         hide_env = true,
-        group = "service",
+        requires = "oauth2_service_url",
         default_value_if("oauth2_service_url", ArgPredicate::IsPresent, Some("30"))
     )]
     pub oauth2_service_refresh: Option<u64>,
 }
 
 #[derive(Parser, Debug, Clone)]
-#[clap(name = "null-twitch")]
-#[clap(about = "Marek's Great Twitch Tool", long_about = None)]
+#[clap(name = "twitch_alerts", version)]
+#[clap(about = "Twitch alerts server", long_about = None)]
 pub struct Cli {
     #[clap(subcommand)]
     pub command: Commands,
@@ -95,11 +80,38 @@ pub struct Cli {
 
 #[derive(clap::Subcommand, Debug, Clone)]
 pub enum Commands {
-    Server(ServerArgs),
-    Chat,
-    Bot,
-    #[command(subcommand)]
-    Game(GamesSubCommand),
+    Server(Box<ServerArgs>),
+    /// Authorize Twitch once and save refreshable credentials for the server.
+    Authorize(AuthorizeArgs),
+}
+
+#[derive(clap::Args, Debug, Clone)]
+pub struct OAuthArgs {
+    /// Client ID of your own registered Twitch application.
+    #[clap(long, env, hide_env = true)]
+    pub twitch_client_id: Option<String>,
+    /// Client secret of the same Twitch application (kept out of the token file).
+    #[clap(long, env, hide_env = true, hide_env_values = true)]
+    pub twitch_client_secret: Option<Secret>,
+    /// Persistent, private file holding Twitch access and refresh tokens.
+    #[clap(long, env = "TWITCH_TOKEN_FILE", default_value = "twitch-tokens.json")]
+    pub token_file: PathBuf,
+}
+
+#[derive(clap::Args, Debug, Clone)]
+pub struct AuthorizeArgs {
+    #[clap(flatten)]
+    pub oauth: OAuthArgs,
+    /// Must exactly match a redirect URL registered in the Twitch console.
+    #[clap(
+        long,
+        env = "TWITCH_REDIRECT_URL",
+        default_value = "http://localhost:3000/auth/twitch/callback"
+    )]
+    pub redirect_url: url::Url,
+    /// Local callback listener; use an SSH tunnel or HTTPS reverse proxy remotely.
+    #[clap(long, default_value = "127.0.0.1:3000")]
+    pub listen_addr: SocketAddr,
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -112,8 +124,9 @@ pub struct LLMArgs {
 pub struct OpenAIArgs {
     #[clap(long, env, hide_env = true)]
     pub openai_key: Option<String>,
-    #[clap(long, env, hide_env = true)]
-    pub openai_model: Option<String>,
+    /// Chat Completions model supporting reasoning_effort=none for fast alert stories.
+    #[clap(long, env, hide_env = true, default_value = "gpt-6-luna", value_parser = clap::builder::NonEmptyStringValueParser::new())]
+    pub openai_model: String,
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -137,58 +150,8 @@ pub struct ServerArgs {
     #[clap(long, env, hide_env = true, default_value = "alerts.db")]
     pub db_path: Option<String>,
     /// The path to the frontend assets
-    #[clap(long, env, hide_env = true, default_value = "frontend_api/assets")]
+    #[clap(long, env, hide_env = true, default_value = concat!(env!("CARGO_MANIFEST_DIR"), "/src/frontend/assets"))]
     pub frontend_assets: String,
-}
-
-#[derive(clap::Subcommand, Debug, Clone)]
-pub enum GamesSubCommand {
-    #[command()]
-    Wordle(Wordle),
-    #[command()]
-    Dragons(Dragons),
-}
-
-#[derive(clap::Args, Debug, Clone)]
-pub struct Wordle {
-    #[command(flatten)]
-    pub twitch: TwitchChatArgs,
-    #[arg(short, long, default_value = "standard")]
-    pub word_list: String,
-    #[arg(
-        short,
-        long,
-        default_value = "sqlite:src/games/wordle/wordle_scoreboard.db"
-    )]
-    pub db_ags: String,
-}
-
-#[derive(clap::Args, Debug, Clone)]
-pub struct Dragons {
-    #[command(flatten)]
-    pub twitch: TwitchChatArgs,
-    pub dragons: u32,
-}
-
-#[derive(clap::Args, Debug, Clone)]
-pub struct TwitchChatArgs {
-    #[clap(long, short = 'u', env, hide_env = true)]
-    pub tc_username: String,
-    #[clap(long, short = 'p', env, hide_env = true, hide_env_values = true)]
-    pub tc_password: String,
-    /// The channel to connect to
-    #[clap(long, env, hide_env = true)]
-    pub channel: String,
-}
-
-pub fn is_token(s: String) -> eyre::Result<()> {
-    if s.starts_with("oauth:") {
-        eyre::bail!("token should not have `oauth:` as a prefix")
-    }
-    if s.len() != 30 {
-        eyre::bail!("token needs to be 30 characters long")
-    }
-    Ok(())
 }
 
 #[derive(Clone)]

@@ -1,3 +1,13 @@
-# ignore rust targets.
 **/target/
-/target/
+**/target-*/
+**/.git
+**/.claude/
+**/.codex/
+**/.env
+**/.env.*
+**/*.log
+**/*.db
+**/*.db-*
+**/*.db.old
+**/twitch-tokens.json
+**/twitch-tokens.*.tmp

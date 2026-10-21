@@ -2,7 +2,6 @@ use std::iter::FromIterator;
 
 use anathema::component::{Children, Component, Context};
 use anathema::state::{List, State, Value};
-use crossterm::terminal::LeaveAlternateScreen;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Cell {
@@ -13,7 +12,7 @@ pub struct Cell {
 impl Default for Cell {
     fn default() -> Self {
         Self {
-            letter: " ".as_bytes()[0],
+            letter: b' ',
             status: LetterStatus::Absent,
         }
     }
@@ -47,12 +46,6 @@ impl From<RowMessage> for RowState {
     }
 }
 
-impl RowMessage {
-    pub fn new(data: [Cell; 5]) -> Self {
-        Self { data }
-    }
-}
-
 #[derive(State)]
 struct CellState {
     letter: Value<char>,
@@ -79,7 +72,7 @@ impl From<Cell> for CellState {
 
 #[derive(State)]
 pub struct RowState {
-    pub cells: Value<List<CellState>>,
+    cells: Value<List<CellState>>,
 }
 
 impl Default for RowState {
@@ -112,14 +105,5 @@ impl Component for Row {
     ) {
         // Convert the message to the state
         state.copy_from(&message);
-    }
-}
-
-fn color_to_string(color: u8) -> String {
-    match color {
-        0 => "red".to_string(),
-        1 => "yellow".to_string(),
-        2 => "green".to_string(),
-        _ => "gray".to_string(),
     }
 }

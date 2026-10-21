@@ -10,45 +10,64 @@ use tokio::sync::{mpsc::UnboundedSender, RwLock};
 use tokio_tungstenite::tungstenite;
 use tracing::Instrument;
 use twitch_api::eventsub::channel::{
-    ChannelCheerV1Payload, ChannelRaidV1Payload, ChannelSubscribeV1Payload,
-    ChannelSubscriptionGiftV1Payload, ChannelSubscriptionMessageV1Payload,
+    ChannelCheerV1, ChannelCheerV1Payload, ChannelFollowV2, ChannelFollowV2Payload, ChannelRaidV1,
+    ChannelRaidV1Payload, ChannelSubscribeV1, ChannelSubscribeV1Payload, ChannelSubscriptionGiftV1,
+    ChannelSubscriptionGiftV1Payload, ChannelSubscriptionMessageV1,
+    ChannelSubscriptionMessageV1Payload,
 };
-use twitch_api::twitch_oauth2::UserToken;
-use twitch_api::{
-    eventsub::{
-        channel::ChannelFollowV2Payload,
-        event::websocket::{EventsubWebsocketData, ReconnectPayload, SessionData, WelcomePayload},
-        Event, Message, NotificationMetadata, Payload,
-    },
-    types::{self},
-    HelixClient,
+use twitch_api::eventsub::{
+    event::websocket::{EventsubWebsocketData, ReconnectPayload, SessionData, WelcomePayload},
+    Event, EventSubscription, Message, Payload, Transport,
 };
+use twitch_api::helix::{ClientRequestError, HelixRequestPostError};
+use twitch_api::twitch_oauth2::{Scope, TwitchToken, UserToken};
+use twitch_api::{types, HelixClient};
 
-// TODO: Token should be stored in some sort of database
-//
+type Socket =
+    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
+
+/// Twitch sends a keepalive at least every 10 seconds; after this long without any frame the
+/// connection is treated as dead.
+const KEEPALIVE_TIMEOUT: Duration = Duration::from_secs(40);
+/// Pause between failed reconnection attempts.
+const RECONNECT_DELAY: Duration = Duration::from_secs(1);
+
+/// Listens to Twitch EventSub over WebSocket and forwards supported events to `sender`.
+///
+/// The listener never panics on protocol events: closed or failed connections are
+/// reestablished, unsupported or malformed notifications are logged and skipped, and
+/// subscriptions that already exist are treated as success.
 #[derive(Clone)]
 pub struct WebsocketClient {
     pub session_id: Option<String>,
     pub token: Arc<RwLock<UserToken>>,
     pub client: HelixClient<'static, reqwest::Client>,
     pub user_id: types::UserId,
+    /// The EventSub WebSocket endpoint used for fresh sessions.
     pub connect_url: url::Url,
+    /// A one-time URL Twitch asked us to move to. Subscriptions carry over to that session.
+    pub reconnect_url: Option<url::Url>,
     pub sender: UnboundedSender<NewTwitchEventMessage>,
 }
 
+/// What the read loop should do after handling a frame.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Flow {
+    Continue,
+    Reconnect,
+}
+
 impl WebsocketClient {
-    pub async fn connect(
-        &self,
-    ) -> anyhow::Result<
-        tokio_tungstenite::WebSocketStream<
-            tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
-        >,
-    > {
-        tracing::info!("connecting to twitch");
-        let (socket, _) =
-            tokio_tungstenite::connect_async_with_config(&self.connect_url, None, false)
-                .await
-                .context("Can't connect")?;
+    /// Connect to the pending reconnect URL if Twitch supplied one, otherwise to the base URL.
+    pub async fn connect(&mut self) -> anyhow::Result<Socket> {
+        let url = self
+            .reconnect_url
+            .take()
+            .unwrap_or_else(|| self.connect_url.clone());
+        tracing::info!(%url, "connecting to twitch");
+        let (socket, _) = tokio_tungstenite::connect_async_with_config(&url, None, false)
+            .await
+            .context("Can't connect")?;
         Ok(socket)
     }
 
@@ -58,186 +77,211 @@ impl WebsocketClient {
             .await
             .context("when establishing connection")?;
         loop {
-            tokio::select!(
-            Some(msg) = futures::StreamExt::next(&mut socket) => {
-                let span = tracing::info_span!("message received", raw_message = ?msg);
-                match msg {
-                    Err(tungstenite::Error::Protocol(
-                        tungstenite::error::ProtocolError::ResetWithoutClosingHandshake,
-                    )) => {
-                        tracing::warn!(
-                            "connection was sent an unexpected frame or was reset, reestablishing it"
-                        );
-                        let s = self.process_failure(span).await;
-                        if let Some(res) = s {
-                            socket = res;
-                        }
-                    }
-                    _ => {
-                        let message = msg.context("when getting message")?;
+            let flow = tokio::select! {
+                frame = futures::StreamExt::next(&mut socket) => match frame {
+                    Some(Ok(message)) => {
                         let span = tracing::info_span!("processing message");
                         self.process_message(message).instrument(span).await?
                     }
-                };
-            }
-            _ = tokio::time::sleep(Duration::from_secs(40)) => {
-                let span = tracing::info_span!("keepalive");
-                tracing::warn!("keepalive timeout, reestablishing connection");
-                let s = self.process_failure(span).await;
-                if let Some(res) = s {
-                    socket = res;
+                    Some(Err(error)) => {
+                        tracing::warn!(%error, "Twitch EventSub connection failed, reestablishing it");
+                        Flow::Reconnect
+                    }
+                    None => {
+                        tracing::warn!("Twitch EventSub connection ended, reestablishing it");
+                        Flow::Reconnect
+                    }
+                },
+                _ = tokio::time::sleep(KEEPALIVE_TIMEOUT) => {
+                    tracing::warn!("keepalive timeout, reestablishing connection");
+                    Flow::Reconnect
                 }
-            })
+            };
+            if flow == Flow::Reconnect {
+                if let Some(reconnected) = self.reconnect().await {
+                    socket = reconnected;
+                }
+            }
         }
     }
 
-    async fn process_failure(
-        &mut self,
-        span: tracing::Span,
-    ) -> Option<
-        tokio_tungstenite::WebSocketStream<
-            tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
-        >,
-    > {
-        let res = self
-            .connect()
-            .instrument(span)
-            .await
-            .context("when reestablishing connection");
-
-        if let Err(e) = res {
-            tracing::error!("failed to reestablish connection: {e}");
-            tokio::time::sleep(Duration::from_secs(1)).await;
-            return None;
+    /// Try once to open a new connection; on failure wait briefly and keep the current socket.
+    async fn reconnect(&mut self) -> Option<Socket> {
+        let span = tracing::info_span!("reconnect");
+        match self.connect().instrument(span).await {
+            Ok(socket) => Some(socket),
+            Err(error) => {
+                tracing::error!("failed to reestablish connection: {error:#}");
+                tokio::time::sleep(RECONNECT_DELAY).await;
+                None
+            }
         }
-        Some(res.unwrap())
     }
 
-    pub async fn process_message(&mut self, msg: tungstenite::Message) -> anyhow::Result<()> {
+    pub async fn process_message(&mut self, msg: tungstenite::Message) -> anyhow::Result<Flow> {
         match msg {
             tungstenite::Message::Text(s) => {
                 tracing::info!("{s}");
-                match Event::parse_websocket(&s)? {
+                let data = match Event::parse_websocket(&s) {
+                    Ok(data) => data,
+                    Err(error) => {
+                        tracing::warn!(%error, "ignoring unparseable Twitch EventSub frame");
+                        return Ok(Flow::Continue);
+                    }
+                };
+                match data {
                     EventsubWebsocketData::Welcome {
                         payload: WelcomePayload { session },
                         ..
+                    } => {
+                        if let Err(error) = self.process_welcome_message(session).await {
+                            // Twitch drops sessions without subscriptions, so start over.
+                            tracing::error!("failed to subscribe to Twitch events: {error:#}");
+                            return Ok(Flow::Reconnect);
+                        }
+                        Ok(Flow::Continue)
                     }
-                    | EventsubWebsocketData::Reconnect {
+                    EventsubWebsocketData::Reconnect {
                         payload: ReconnectPayload { session },
                         ..
                     } => {
-                        self.process_welcome_message(session).await?;
-                        Ok(())
+                        self.session_id = Some(session.id.to_string());
+                        match session.reconnect_url {
+                            Some(url) => {
+                                self.reconnect_url =
+                                    Some(url.parse().context("parse Twitch reconnect URL")?);
+                                tracing::info!("Twitch asked us to move to a new session");
+                                Ok(Flow::Reconnect)
+                            }
+                            None => {
+                                tracing::warn!(
+                                    "Twitch reconnect request without a URL; waiting for the close"
+                                );
+                                Ok(Flow::Continue)
+                            }
+                        }
                     }
                     EventsubWebsocketData::Notification { metadata, payload } => {
-                        self.process_notification(payload, &metadata, &s)?;
-                        Ok(())
+                        match new_twitch_event(payload) {
+                            Ok(Some(event)) => {
+                                let message = NewTwitchEventMessage {
+                                    event,
+                                    message_at: metadata.message_timestamp.as_str().into(),
+                                    message_id: metadata.message_id.to_string(),
+                                };
+                                self.sender
+                                    .send(message)
+                                    .context("Twitch event receiver closed")?;
+                            }
+                            Ok(None) => tracing::info!(
+                                event_type = ?metadata.subscription_type,
+                                "ignoring unsupported Twitch event"
+                            ),
+                            Err(error) => tracing::warn!(
+                                %error,
+                                event_type = ?metadata.subscription_type,
+                                "dropping malformed Twitch event"
+                            ),
+                        }
+                        Ok(Flow::Continue)
                     }
-                    EventsubWebsocketData::Revocation {
-                        metadata: _,
-                        payload: _,
-                    } => Ok(()),
-                    EventsubWebsocketData::Keepalive {
-                        metadata: _,
-                        payload: _,
-                    } => Ok(()),
-                    _ => Ok(()),
+                    EventsubWebsocketData::Revocation { metadata, .. } => {
+                        tracing::warn!(?metadata, "Twitch revoked an EventSub subscription");
+                        Ok(Flow::Continue)
+                    }
+                    EventsubWebsocketData::Keepalive { .. } => Ok(Flow::Continue),
+                    _ => Ok(Flow::Continue),
                 }
             }
-            tungstenite::Message::Close(_) => todo!(),
-            _ => Ok(()),
+            tungstenite::Message::Close(frame) => {
+                tracing::warn!(?frame, "Twitch closed the EventSub connection");
+                Ok(Flow::Reconnect)
+            }
+            _ => Ok(Flow::Continue),
         }
-    }
-
-    fn process_notification(
-        &self,
-        data: Event,
-        metadata: &NotificationMetadata<'_>,
-        _payload: &str,
-    ) -> anyhow::Result<()> {
-        // TODO: Delete as this is wrong... but is how it still works for right now!
-        let event = new_twitch_event(data)?;
-        let message = NewTwitchEventMessage {
-            event,
-            message_at: metadata.message_timestamp.as_str().into(),
-            message_id: metadata.message_id.to_string(),
-        };
-        self.sender.send(message).unwrap();
-        Ok(())
     }
 
     pub async fn process_welcome_message(&mut self, data: SessionData<'_>) -> anyhow::Result<()> {
         self.session_id = Some(data.id.to_string());
-        if let Some(url) = data.reconnect_url {
-            self.connect_url = url.parse()?;
+        let transport = Transport::websocket(data.id.clone());
+        let user = self.user_id.clone();
+
+        self.subscribe(ChannelFollowV2::new(user.clone(), user.clone()), &transport)
+            .await?;
+        self.subscribe(
+            ChannelSubscribeV1::broadcaster_user_id(user.clone()),
+            &transport,
+        )
+        .await?;
+        self.subscribe(
+            ChannelRaidV1::to_broadcaster_user_id(user.clone()),
+            &transport,
+        )
+        .await?;
+        self.subscribe(
+            ChannelSubscriptionMessageV1::broadcaster_user_id(user.clone()),
+            &transport,
+        )
+        .await?;
+        self.subscribe(
+            ChannelSubscriptionGiftV1::broadcaster_user_id(user.clone()),
+            &transport,
+        )
+        .await?;
+        if self.token.read().await.scopes().contains(&Scope::BitsRead) {
+            self.subscribe(ChannelCheerV1::broadcaster_user_id(user), &transport)
+                .await?;
+        } else {
+            tracing::warn!(
+                "Twitch token lacks the bits:read scope; cheer alerts stay off until you authorize again"
+            );
         }
-
-        // One way of doing it
-        let req = twitch_api::helix::eventsub::CreateEventSubSubscriptionRequest::new();
-        let body = twitch_api::helix::eventsub::CreateEventSubSubscriptionBody::new(
-            twitch_api::eventsub::channel::ChannelFollowV2::new(
-                self.user_id.clone(),
-                self.user_id.clone(),
-            ),
-            twitch_api::eventsub::Transport::websocket(data.id.clone()),
-        );
-
-        self.client
-            .req_post(req, body, &*self.token.read().await)
-            .await?;
-        let transport = twitch_api::eventsub::Transport::websocket(data.id.clone());
-
-        // Create Channel Subscription
-        self.client
-            .create_eventsub_subscription(
-                twitch_api::eventsub::channel::ChannelSubscribeV1::broadcaster_user_id(
-                    self.user_id.clone(),
-                ),
-                transport.clone(),
-                &*self.token.read().await,
-            )
-            .await?;
-
-        // Create Channel Raid Subscription
-        self.client
-            .create_eventsub_subscription(
-                twitch_api::eventsub::channel::ChannelRaidV1::to_broadcaster_user_id(
-                    self.user_id.clone(),
-                ),
-                transport.clone(),
-                &*self.token.read().await,
-            )
-            .await?;
-
-        // Create Channel Subscription Message Subscription
-        self.client
-            .create_eventsub_subscription(
-                twitch_api::eventsub::channel::ChannelSubscriptionMessageV1::broadcaster_user_id(
-                    self.user_id.clone(),
-                ),
-                transport.clone(),
-                &*self.token.read().await,
-            )
-            .await?;
 
         tracing::info!("we are listening");
         Ok(())
     }
+
+    /// Create one EventSub subscription on the current session. A subscription that already
+    /// exists (HTTP 409) counts as success so a reconnected session can be set up again.
+    async fn subscribe<E>(&self, subscription: E, transport: &Transport) -> anyhow::Result<()>
+    where
+        E: EventSubscription + Send,
+    {
+        let token = self.token.read().await;
+        match self
+            .client
+            .create_eventsub_subscription(subscription, transport.clone(), &*token)
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(ClientRequestError::HelixRequestPostError(HelixRequestPostError::Error {
+                status,
+                ..
+            })) if status.as_u16() == 409 => {
+                tracing::debug!(event_type = ?E::EVENT_TYPE, "EventSub subscription already exists");
+                Ok(())
+            }
+            Err(error) => Err(error)
+                .with_context(|| format!("create {:?} EventSub subscription", E::EVENT_TYPE)),
+        }
+    }
 }
 
-// Creates a new TwitchEvent enum from the payload and metadata
-fn new_twitch_event(payload: Event) -> anyhow::Result<TwitchEvent> {
-    match payload {
+/// Convert a Twitch notification into an alert event.
+///
+/// Returns `Ok(None)` for event types this listener does not turn into alerts.
+fn new_twitch_event(payload: Event) -> anyhow::Result<Option<TwitchEvent>> {
+    let event = match payload {
         Event::ChannelFollowV2(Payload {
             message:
                 Message::Notification(ChannelFollowV2Payload {
                     user_name, user_id, ..
                 }),
             ..
-        }) => Ok(TwitchEvent::ChannelFollow(FollowEvent {
+        }) => TwitchEvent::ChannelFollow(FollowEvent {
             user_name: user_name.to_string(),
             user_id: user_id.to_string().parse::<i64>()?,
-        })),
+        }),
         Event::ChannelSubscribeV1(Payload {
             message:
                 Message::Notification(ChannelSubscribeV1Payload {
@@ -251,19 +295,19 @@ fn new_twitch_event(payload: Event) -> anyhow::Result<TwitchEvent> {
                 }),
             ..
         }) => {
-            println!("New sub event +!+!+!+!+!+!!+!+!+!+!+!+!+!+");
-            Ok(TwitchEvent::ChannelSubscribe(SubscribeEvent {
+            tracing::info!("new subscription event");
+            TwitchEvent::ChannelSubscribe(SubscribeEvent {
                 user_name: user_name.to_string(),
                 user_id: user_id.to_string().parse::<i64>()?,
                 broadcaster_user_id: broadcaster_user_id.to_string().parse::<i64>()?,
                 broadcaster_user_name: broadcaster_user_name.to_string(),
                 is_gift,
-                tier: twitch_teir_to_teir(tier),
+                tier: subscription_tier(tier),
                 streak_months: Some(1),
                 cumulative_months: 1,
                 duration_months: 1,
                 message: "".to_string(),
-            }))
+            })
         }
         Event::ChannelRaidV1(Payload {
             message:
@@ -278,7 +322,7 @@ fn new_twitch_event(payload: Event) -> anyhow::Result<TwitchEvent> {
                     ..
                 }),
             ..
-        }) => Ok(TwitchEvent::ChannelRaid(RaidEvent {
+        }) => TwitchEvent::ChannelRaid(RaidEvent {
             from_broadcaster_user_id: from_broadcaster_user_id.to_string(),
             from_broadcaster_user_login: from_broadcaster_user_login.to_string(),
             from_broadcaster_user_name: from_broadcaster_user_name.to_string(),
@@ -286,8 +330,7 @@ fn new_twitch_event(payload: Event) -> anyhow::Result<TwitchEvent> {
             to_broadcaster_user_login: to_broadcaster_user_login.to_string(),
             to_broadcaster_user_name: to_broadcaster_user_name.to_string(),
             viewers,
-        })),
-        // Need to populate data from api because the gifter is not listed
+        }),
         Event::ChannelSubscriptionGiftV1(Payload {
             message:
                 Message::Notification(ChannelSubscriptionGiftV1Payload {
@@ -304,19 +347,18 @@ fn new_twitch_event(payload: Event) -> anyhow::Result<TwitchEvent> {
                     ..
                 }),
             ..
-        }) => Ok(TwitchEvent::ChannelSubGift(ChannelGiftMessage {
+        }) => TwitchEvent::ChannelSubGift(ChannelGiftMessage {
             broadcaster_user_id: broadcaster_user_id.to_string(),
             broadcaster_user_login: broadcaster_user_login.to_string(),
             broadcaster_user_name: broadcaster_user_name.to_string(),
             cumulative_total,
             is_anonymous,
-            tier: twitch_teir_to_teir(tier),
+            tier: subscription_tier(tier),
             total,
-            user_id: braid_optional_to_string_optional(user_id),
-            user_login: braid_optional_to_string_optional(user_login),
-            user_name: braid_optional_to_string_optional(user_name),
-        })),
-
+            user_id: optional_string(user_id),
+            user_login: optional_string(user_login),
+            user_name: optional_string(user_name),
+        }),
         Event::ChannelSubscriptionMessageV1(Payload {
             message:
                 Message::Notification(ChannelSubscriptionMessageV1Payload {
@@ -333,22 +375,22 @@ fn new_twitch_event(payload: Event) -> anyhow::Result<TwitchEvent> {
                 }),
             ..
         }) => {
-            println!("New sub event +!+!+!+!+!+!!+!+!+!+!+!+!+!+");
-            Ok(TwitchEvent::ChannelResubscribe(SubscribeEvent {
+            tracing::info!("new resubscription event");
+            TwitchEvent::ChannelResubscribe(SubscribeEvent {
                 user_name: user_name.to_string(),
                 user_id: user_id.to_string().parse::<i64>()?,
                 broadcaster_user_id: broadcaster_user_id.to_string().parse::<i64>()?,
                 broadcaster_user_name: broadcaster_user_name.to_string(),
                 is_gift: false,
-                tier: twitch_teir_to_teir(tier),
+                tier: subscription_tier(tier),
                 cumulative_months,
                 duration_months,
                 //TODO: deal with emotes
                 message: message.text,
                 streak_months,
-            }))
+            })
         }
-
+        // Anonymous cheers carry no user; Twitch sets both fields to null.
         Event::ChannelCheerV1(Payload {
             message:
                 Message::Notification(ChannelCheerV1Payload {
@@ -359,106 +401,23 @@ fn new_twitch_event(payload: Event) -> anyhow::Result<TwitchEvent> {
                     ..
                 }),
             ..
-        }) => Ok(TwitchEvent::ChannelCheer(CheerEvent {
-            user_name: user_name.unwrap().to_string(),
-            user_id: user_id.unwrap().to_string().parse::<i64>()?,
+        }) => TwitchEvent::ChannelCheer(CheerEvent {
+            user_name: user_name
+                .map(|name| name.to_string())
+                .unwrap_or_else(|| "Anonymous".to_string()),
+            user_id: user_id
+                .map(|id| id.to_string().parse::<i64>())
+                .transpose()?,
             bits,
             message: message.to_string(),
-        })),
-
-        Event::ChannelPointsCustomRewardAddV1(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(anyhow::anyhow!(
-            "ChannelPointsCustomRewardAddV1 is not supported"
-        )),
-        Event::ChannelPointsCustomRewardUpdateV1(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(anyhow::anyhow!(
-            "ChannelPointsCustomRewardUpdateV1 is not supported"
-        )),
-        Event::ChannelPointsCustomRewardRemoveV1(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(anyhow::anyhow!(
-            "ChannelPointsCustomRewardRemoveV1 is not supported"
-        )),
-        Event::ChannelPointsCustomRewardRedemptionAddV1(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(anyhow::anyhow!(
-            "ChannelPointsCustomRewardRedemptionAddV1 is not supported"
-        )),
-        Event::ChannelPointsCustomRewardRedemptionUpdateV1(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(anyhow::anyhow!(
-            "ChannelPointsCustomRewardRedemptionUpdateV1 is not supported"
-        )),
-        Event::ChannelHypeTrainBeginV1(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(anyhow::anyhow!("ChannelHypeTrainBeginV1 is not supported")),
-        Event::ChannelHypeTrainProgressV1(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(anyhow::anyhow!(
-            "ChannelHypeTrainProgressV1 is not supported"
-        )),
-        Event::ChannelHypeTrainEndV1(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(anyhow::anyhow!("ChannelHypeTrainEndV1 is not supported")),
-        Event::ChannelPollBeginV1(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(anyhow::anyhow!("ChannelPollBeginV1 is not supported")),
-        Event::ChannelPollProgressV1(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(anyhow::anyhow!("ChannelPollProgressV1 is not supported")),
-        Event::ChannelPollEndV1(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(anyhow::anyhow!("ChannelPollEndV1 is not supported")),
-        Event::ChannelPredictionBeginV1(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(anyhow::anyhow!("ChannelPredictionBeginV1 is not supported")),
-        Event::ChannelPredictionProgressV1(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(anyhow::anyhow!(
-            "ChannelPredictionProgressV1 is not supported"
-        )),
-        Event::ChannelPredictionLockV1(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(anyhow::anyhow!("ChannelPredictionLockV1 is not supported")),
-        Event::ChannelPredictionEndV1(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(anyhow::anyhow!("ChannelPredictionEndV1 is not supported")),
-        Event::ChannelBanV1(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(anyhow::anyhow!("ChannelBanV1 is not supported")),
-        Event::ChannelUnbanV1(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(anyhow::anyhow!("ChannelUnbanV1 is not supported")),
-        Event::ChannelUpdateV2(Payload {
-            message: Message::Notification(..),
-            ..
-        }) => Err(anyhow::anyhow!("ChannelUpdateV1 is not supported")),
-
-        _ => todo!(),
-    }
+        }),
+        _ => return Ok(None),
+    };
+    Ok(Some(event))
 }
 
-fn twitch_teir_to_teir(twithc_teir: types::SubscriptionTier) -> NullSubTier {
-    match twithc_teir {
+fn subscription_tier(tier: types::SubscriptionTier) -> NullSubTier {
+    match tier {
         types::SubscriptionTier::Tier1 => NullSubTier::Tier1("rare".to_string()),
         types::SubscriptionTier::Tier2 => NullSubTier::Tier2("epic".to_string()),
         types::SubscriptionTier::Tier3 => NullSubTier::Tier3("legendary".to_string()),
@@ -467,9 +426,6 @@ fn twitch_teir_to_teir(twithc_teir: types::SubscriptionTier) -> NullSubTier {
     }
 }
 
-fn braid_optional_to_string_optional<T: ToString>(input: Option<T>) -> Option<String> {
-    match input {
-        None => None,
-        Some(thing) => Some(thing.to_string()),
-    }
+fn optional_string<T: ToString>(input: Option<T>) -> Option<String> {
+    input.map(|value| value.to_string())
 }

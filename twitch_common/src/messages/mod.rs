@@ -46,7 +46,7 @@ pub struct FollowEvent {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CheerEvent {
     pub user_name: String,
-    pub user_id: i64,
+    pub user_id: Option<i64>,
     pub bits: i64,
     pub message: String,
 }
@@ -74,17 +74,6 @@ pub struct SubscribeEvent {
     pub duration_months: i64,
     pub message: String,
     pub streak_months: Option<i64>,
-}
-
-// Path: messages/src/lib.rs
-// { "{ "message": "hello world", "image_url": "https:://something.com" }" }
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct DisplayMessage {
-    pub message: String,
-    pub image_url: String,
-    pub sound_url: String,
-    pub display_time: usize,
-    pub payload: TwitchEvent,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

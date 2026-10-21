@@ -4,7 +4,7 @@
 #
 
 app = 'twitch-alerts'
-primary_region = 'atl'
+primary_region = 'dfw'
 
 [build]
 
@@ -34,7 +34,12 @@ primary_region = 'atl'
   CHANNEL_ID = "99431252"
   RUST_ENV = "production"
   ENV = "production"
-  AI_MIGRATIONS_DIR = "/var/lib/db"
+  TWITCH_TOKEN_FILE = "/data/twitch-tokens.json"
+  OPENAI_MODEL = "gpt-6-luna"
 
 [[vm]]
   size = 'shared-cpu-1x'
+
+[[mounts]]
+  source = "alerts_data"
+  destination = "/data"
