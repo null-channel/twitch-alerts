@@ -1,0 +1,101 @@
+{
+  "agent": "Claude Code",
+  "base_commit": "bc296a794b418775f5f127b0f2443adcddc17a83",
+  "branch": "fix/split-edges",
+  "checkpoint_id": "01M5E9MVA6ND7GJ7DEPN4V5CAN",
+  "checkpoint_transcript_start": 0,
+  "checkpoints_count": 3,
+  "cli_version": "0.1.0",
+  "code_commit": "d844dc5a80935128ee7b49ad400de122af7d7f7b",
+  "combined_attribution": {
+    "agent_lines": 2027,
+    "agent_percentage": 100.0,
+    "agent_removed": 0,
+    "calculated_at": "2026-10-21T03:56:26.854542451Z",
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "metric_version": 2,
+    "total_committed": 2027,
+    "total_lines_changed": 2027
+  },
+  "committed_at": "2026-10-21T03:56:26.854542451Z",
+  "context_tokens": null,
+  "context_window_size": null,
+  "created_at": "2026-10-21T03:56:26.854542451Z",
+  "files_touched": [
+    ".dockerignore",
+    ".gitignore",
+    "Cargo.lock",
+    "README.md",
+    "bruce/games.db",
+    "bruce/src/main.rs",
+    "fly.toml",
+    "twitch_alerts/.env.example",
+    "twitch_alerts/Cargo.toml",
+    "twitch_alerts/src/ai_manager/mod.rs",
+    "twitch_alerts/src/ai_manager/openai.rs",
+    "twitch_alerts/src/auth.rs",
+    "twitch_alerts/src/auth/tests.rs",
+    "twitch_alerts/src/frontend/mod.rs",
+    "twitch_alerts/src/main.rs",
+    "twitch_alerts/src/opts.rs",
+    "twitch_alerts/src/utils.rs",
+    "twitch_alerts/tests/cli.rs",
+    "twitch_alerts/tests/local_auth.rs",
+    "twitch_common/src/twitch_listener/websocket.rs"
+  ],
+  "imported": false,
+  "initial_attribution": {
+    "agent_lines": 2027,
+    "agent_percentage": 100.0,
+    "agent_removed": 0,
+    "calculated_at": "2026-10-21T03:56:26.854542451Z",
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "metric_version": 2,
+    "total_committed": 2027,
+    "total_lines_changed": 2027
+  },
+  "model": "claude-fable-5-1",
+  "prompt_count": 3,
+  "save_step_count": 3,
+  "session_id": "dad49070-7e4d-449e-a169-800afac9b1ca",
+  "sessions": [
+    {
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "metadata": "/0/metadata.json",
+      "prompt": "/0/prompt.txt",
+      "rewrite": "/0/rewrite.json",
+      "transcript": "/0/full.jsonl"
+    }
+  ],
+  "shadow_commit": "0f5339e4b4fc961d977e2efc0c2dd07c6d011a88",
+  "started_at": "2026-10-21T03:29:27.968626065Z",
+  "strategy": "manual-commit",
+  "token_usage": {
+    "api_call_count": 0,
+    "cache_creation_tokens": 143541,
+    "cache_read_tokens": 3641671,
+    "input_tokens": 838,
+    "output_tokens": 19283,
+    "subagent_total": 0
+  },
+  "token_usage_by_model": {
+    "claude-fable-5-1": {
+      "api_call_count": 0,
+      "cache_creation_tokens": 143541,
+      "cache_read_tokens": 3641671,
+      "input_tokens": 838,
+      "output_tokens": 19283,
+      "subagent_total": 0
+    }
+  },
+  "transcript_lines_at_start": 0,
+  "transcript_start": 0,
+  "workspace_stored": true,
+  "worktree_tree": "5c98c326486a4f43b3817ac8bd7ee4ee00088a30",
+  "xo_agent": "claude-code"
+}

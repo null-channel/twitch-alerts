@@ -1,0 +1,404 @@
+{
+  "agent": "Claude Code",
+  "base_commit": "bc296a794b418775f5f127b0f2443adcddc17a83",
+  "branch": "fix/split-edges",
+  "checkpoint_id": "01M5E9MVA6ND7GJ7DEPN4V5CAN",
+  "checkpoint_transcript_start": 0,
+  "checkpoints_count": 3,
+  "cli_version": "0.1.0",
+  "code_commit": "d844dc5a80935128ee7b49ad400de122af7d7f7b",
+  "committed_at": "2026-10-21T03:56:26.854542451Z",
+  "compact_transcript_start": 0,
+  "context_tokens": null,
+  "context_window_size": null,
+  "created_at": "2026-10-21T03:56:26.854542451Z",
+  "files_touched": [
+    ".dockerignore",
+    ".gitignore",
+    "Cargo.lock",
+    "README.md",
+    "bruce/games.db",
+    "bruce/src/main.rs",
+    "fly.toml",
+    "twitch_alerts/.env.example",
+    "twitch_alerts/Cargo.toml",
+    "twitch_alerts/src/ai_manager/mod.rs",
+    "twitch_alerts/src/ai_manager/openai.rs",
+    "twitch_alerts/src/auth.rs",
+    "twitch_alerts/src/auth/tests.rs",
+    "twitch_alerts/src/frontend/mod.rs",
+    "twitch_alerts/src/main.rs",
+    "twitch_alerts/src/opts.rs",
+    "twitch_alerts/src/utils.rs",
+    "twitch_alerts/tests/cli.rs",
+    "twitch_alerts/tests/local_auth.rs",
+    "twitch_common/src/twitch_listener/websocket.rs"
+  ],
+  "initial_attribution": {
+    "agent_lines": 2027,
+    "agent_percentage": 100.0,
+    "agent_removed": 0,
+    "calculated_at": "2026-10-21T03:56:26.854542451Z",
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "metric_version": 2,
+    "total_committed": 2027,
+    "total_lines_changed": 2027
+  },
+  "model": "claude-fable-5-1",
+  "prompt_count": 3,
+  "rewrite": {
+    "events": [
+      {
+        "actor": "ai",
+        "added_lines": 1803,
+        "at": "2026-10-21T03:56:26.822292709Z",
+        "files": [
+          {
+            "added_lines": 0,
+            "path": "bruce/src/main.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 3,
+            "removed_lines": 3,
+            "rewritten_lines": 0,
+            "status": "M"
+          },
+          {
+            "added_lines": 47,
+            "path": "twitch_alerts/src/ai_manager/mod.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 71,
+            "removed_lines": 71,
+            "rewritten_lines": 42,
+            "status": "M"
+          },
+          {
+            "added_lines": 256,
+            "path": "twitch_alerts/src/ai_manager/openai.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 0,
+            "removed_lines": 0,
+            "rewritten_lines": 0,
+            "status": "A"
+          },
+          {
+            "added_lines": 494,
+            "path": "twitch_alerts/src/auth.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 0,
+            "removed_lines": 0,
+            "rewritten_lines": 0,
+            "status": "A"
+          },
+          {
+            "added_lines": 389,
+            "path": "twitch_alerts/src/auth/tests.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 0,
+            "removed_lines": 0,
+            "rewritten_lines": 0,
+            "status": "A"
+          },
+          {
+            "added_lines": 44,
+            "path": "twitch_alerts/src/frontend/mod.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 0,
+            "removed_lines": 0,
+            "rewritten_lines": 0,
+            "status": "M"
+          },
+          {
+            "added_lines": 19,
+            "path": "twitch_alerts/src/main.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 13,
+            "removed_lines": 13,
+            "rewritten_lines": 6,
+            "status": "M"
+          },
+          {
+            "added_lines": 44,
+            "path": "twitch_alerts/src/opts.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 11,
+            "removed_lines": 11,
+            "rewritten_lines": 9,
+            "status": "M"
+          },
+          {
+            "added_lines": 1,
+            "path": "twitch_alerts/src/utils.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 7,
+            "removed_lines": 7,
+            "rewritten_lines": 1,
+            "status": "M"
+          },
+          {
+            "added_lines": 33,
+            "path": "twitch_alerts/tests/cli.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 0,
+            "removed_lines": 0,
+            "rewritten_lines": 0,
+            "status": "M"
+          },
+          {
+            "added_lines": 476,
+            "path": "twitch_alerts/tests/local_auth.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 0,
+            "removed_lines": 0,
+            "rewritten_lines": 0,
+            "status": "A"
+          },
+          {
+            "added_lines": 0,
+            "path": "twitch_common/src/twitch_listener/websocket.rs",
+            "prior_ai_lines": 0,
+            "prior_human_lines": 0,
+            "prior_preexisting_lines": 2,
+            "removed_lines": 2,
+            "rewritten_lines": 0,
+            "status": "M"
+          }
+        ],
+        "from_tree": "bc296a794b418775f5f127b0f2443adcddc17a83",
+        "model": "claude-fable-5-1",
+        "prior_ai_lines": 0,
+        "prior_human_lines": 0,
+        "prior_preexisting_lines": 107,
+        "removed_lines": 107,
+        "rewritten_lines": 58,
+        "sequence": 1,
+        "superseded_lines": 0,
+        "surviving_lines": 1803,
+        "to_tree": "5c98c326486a4f43b3817ac8bd7ee4ee00088a30",
+        "trigger": "cross-worktree-commit",
+        "turn_sequence": 3
+      }
+    ],
+    "final_files": [
+      {
+        "ai_lines": 0,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "bruce/src/main.rs",
+        "preexisting_lines": 78
+      },
+      {
+        "ai_lines": 47,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/ai_manager/mod.rs",
+        "preexisting_lines": 210
+      },
+      {
+        "ai_lines": 256,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/ai_manager/openai.rs",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 494,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/auth.rs",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 389,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/auth/tests.rs",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 44,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/frontend/mod.rs",
+        "preexisting_lines": 356
+      },
+      {
+        "ai_lines": 19,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/main.rs",
+        "preexisting_lines": 98
+      },
+      {
+        "ai_lines": 44,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/opts.rs",
+        "preexisting_lines": 134
+      },
+      {
+        "ai_lines": 1,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/src/utils.rs",
+        "preexisting_lines": 135
+      },
+      {
+        "ai_lines": 33,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/tests/cli.rs",
+        "preexisting_lines": 23
+      },
+      {
+        "ai_lines": 476,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_alerts/tests/local_auth.rs",
+        "preexisting_lines": 0
+      },
+      {
+        "ai_lines": 0,
+        "human_lines": 0,
+        "human_percent": 0,
+        "path": "twitch_common/src/twitch_listener/websocket.rs",
+        "preexisting_lines": 470
+      }
+    ],
+    "limitations": [
+      "Tool-level rewrite boundaries were re-baselined when the agent committed from a linked worktree; the final target-worktree diff was attributed to the executing agent session.",
+      "Human versus AI is inferred from prompt and agent hook boundaries; edits made concurrently between boundaries can be ambiguous.",
+      "Estimated wasted tokens allocate a turn's observed usage in proportion to AI-added lines later superseded; providers do not report token-to-line causality.",
+      "Token deltas are assigned to the turn active at the reporting hook; provider telemetry reported late can shift usage to the following prompt.",
+      "Multiple writes between native hook callbacks appear as one rewrite event; agents without post-tool hooks expose turn-level rather than tool-level revisions."
+    ],
+    "observed_tokens_on_ai_rewrite_turns_by_model": {
+      "claude-fable-5-1": {
+        "api_call_count": 0,
+        "cache_creation_tokens": 4272,
+        "cache_read_tokens": 666154,
+        "input_tokens": 128,
+        "output_tokens": 3313,
+        "subagent_total": 0
+      }
+    },
+    "schema_version": 1,
+    "summary": {
+      "ai_added_lines": 1803,
+      "ai_event_count": 1,
+      "ai_replaced_ai_lines": 0,
+      "ai_replaced_human_lines": 0,
+      "ai_rewrite_events": 1,
+      "ai_rewritten_lines": 58,
+      "event_count": 1,
+      "final_ai_lines": 1803,
+      "final_human_lines": 0,
+      "final_human_percent": 0,
+      "final_preexisting_lines": 1504,
+      "human_added_lines": 0,
+      "human_event_count": 0,
+      "human_replaced_ai_lines": 0,
+      "human_replaced_human_lines": 0,
+      "human_rewrite_events": 0,
+      "human_rewritten_lines": 0,
+      "observed_tokens_on_ai_rewrite_turns": {
+        "api_call_count": 0,
+        "cache_creation_tokens": 4272,
+        "cache_read_tokens": 666154,
+        "input_tokens": 128,
+        "output_tokens": 3313,
+        "subagent_total": 0
+      }
+    },
+    "turns": [
+      {
+        "ai_added_lines": 0,
+        "observed_tokens_by_model": {
+          "claude-fable-5-1": {
+            "api_call_count": 0,
+            "cache_creation_tokens": 16388,
+            "cache_read_tokens": 177428,
+            "input_tokens": 34,
+            "output_tokens": 493,
+            "subagent_total": 0
+          }
+        },
+        "prompt": "Do a review of the repo and let me know if you find anything interesting with the architecture, we just split twitch alerts and our twitch command line games apart and I'm sure there are still odd edges",
+        "sequence": 1,
+        "superseded_ai_lines": 0
+      },
+      {
+        "ai_added_lines": 0,
+        "observed_tokens_by_model": {
+          "claude-fable-5-1": {
+            "api_call_count": 0,
+            "cache_creation_tokens": 6073,
+            "cache_read_tokens": 460741,
+            "input_tokens": 96,
+            "output_tokens": 3570,
+            "subagent_total": 0
+          }
+        },
+        "prompt": "<task-notification>\n<task-id>bqkik0ze4</task-id>\n<tool-use-id>REDACTED</tool-use-id>\n<output-file>/tmp/claude-1000/-home-marek-code-twitch-twitch-alerts/dad49070-7e4d-449e-a169-800afac9b1ca/tasks/bqkik0ze4.output</output-file>\n<status>completed</status>\n<summary>Background command \"Run clippy on the two application packages\" completed (exit code 0)</summary>\n</task-notification>",
+        "sequence": 2,
+        "superseded_ai_lines": 0
+      },
+      {
+        "ai_added_lines": 1803,
+        "observed_tokens_by_model": {
+          "claude-fable-5-1": {
+            "api_call_count": 0,
+            "cache_creation_tokens": 4272,
+            "cache_read_tokens": 666154,
+            "input_tokens": 128,
+            "output_tokens": 3313,
+            "subagent_total": 0
+          }
+        },
+        "prompt": "lets start with the edges worth fixing, please clean up the worktree mess first.",
+        "sequence": 3,
+        "superseded_ai_lines": 0
+      }
+    ]
+  },
+  "save_step_count": 3,
+  "session_id": "dad49070-7e4d-449e-a169-800afac9b1ca",
+  "shadow_commit": "0f5339e4b4fc961d977e2efc0c2dd07c6d011a88",
+  "started_at": "2026-10-21T03:29:27.968626065Z",
+  "strategy": "manual-commit",
+  "token_usage": {
+    "api_call_count": 0,
+    "cache_creation_tokens": 143541,
+    "cache_read_tokens": 3641671,
+    "input_tokens": 838,
+    "output_tokens": 19283,
+    "subagent_total": 0
+  },
+  "token_usage_by_model": {
+    "claude-fable-5-1": {
+      "api_call_count": 0,
+      "cache_creation_tokens": 143541,
+      "cache_read_tokens": 3641671,
+      "input_tokens": 838,
+      "output_tokens": 19283,
+      "subagent_total": 0
+    }
+  },
+  "transcript_lines_at_start": 0,
+  "transcript_start": 0,
+  "workspace_stored": true,
+  "worktree_tree": "5c98c326486a4f43b3817ac8bd7ee4ee00088a30",
+  "xo_agent": "claude-code"
+}
