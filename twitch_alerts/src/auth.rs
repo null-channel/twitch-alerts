@@ -84,11 +84,20 @@ fn credentials(opts: &OAuthArgs) -> anyhow::Result<(&str, ClientSecret)> {
     Ok((id, secret.into()))
 }
 
+/// Scopes the server cannot run without: follow and subscription alerts.
 fn required_scopes() -> Vec<Scope> {
     vec![
         Scope::ModeratorReadFollowers,
         Scope::ChannelReadSubscriptions,
     ]
+}
+
+/// Scopes the `authorize` command asks for. `bits:read` only enables cheer alerts, so tokens
+/// saved before it was added keep working and the server just logs that cheers are off.
+fn requested_scopes() -> Vec<Scope> {
+    let mut scopes = required_scopes();
+    scopes.push(Scope::BitsRead);
+    scopes
 }
 
 fn check_token(token: &UserToken, expected: &UserToken) -> anyhow::Result<()> {
@@ -447,7 +456,7 @@ pub async fn authorize(opts: &AuthorizeArgs) -> anyhow::Result<()> {
         "redirect URL must be an HTTP(S) URL without query parameters or a fragment"
     );
     let mut builder = UserTokenBuilder::new(client_id, secret, opts.redirect_url.clone())
-        .set_scopes(required_scopes())
+        .set_scopes(requested_scopes())
         .force_verify(true);
     let (url, _) = builder.generate_url();
     let builder = Arc::new(tokio::sync::Mutex::new(Some(builder)));

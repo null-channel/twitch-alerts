@@ -400,7 +400,7 @@ async fn local_authorization_renewal_and_restart() {
     ];
     app = RunningApp::start(&directory.0, &services, "server", &args);
     wait_for(&mut app, || {
-        services.state.lock().unwrap().subscriptions.len() == 4
+        services.state.lock().unwrap().subscriptions.len() == 5
     })
     .await;
     assert_eq!(
@@ -450,7 +450,7 @@ async fn local_authorization_renewal_and_restart() {
     // Recover the saved rotated token after a hard stop without authorizing again.
     app = RunningApp::start(&directory.0, &services, "restarted", &args);
     wait_for(&mut app, || {
-        services.state.lock().unwrap().subscriptions.len() == 8
+        services.state.lock().unwrap().subscriptions.len() == 10
     })
     .await;
     let state = services.state.lock().unwrap();
@@ -461,12 +461,13 @@ async fn local_authorization_renewal_and_restart() {
         "channel.subscribe",
         "channel.raid",
         "channel.subscription.message",
+        "channel.subscription.gift",
     ];
     for (index, (subscription, auth)) in state.subscriptions.iter().enumerate() {
-        assert_eq!(subscription, expected[index % 4]);
+        assert_eq!(subscription, expected[index % 5]);
         assert_eq!(
             auth,
-            if index < 4 {
+            if index < 5 {
                 "Bearer local-access-2"
             } else {
                 "Bearer local-access-3"

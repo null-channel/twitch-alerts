@@ -2,8 +2,8 @@ mod openai;
 pub mod sqlite;
 
 use crate::messages::{
-    ChannelGiftMessage, DisplayMessage, FollowEvent, NewTwitchEventMessage, NullSubTier, RaidEvent,
-    SubscribeEvent, TwitchEvent,
+    ChannelGiftMessage, CheerEvent, DisplayMessage, FollowEvent, NewTwitchEventMessage,
+    NullSubTier, RaidEvent, SubscribeEvent, TwitchEvent,
 };
 use openai::StoryGenerator;
 use tokio::sync::mpsc;
@@ -76,9 +76,9 @@ impl AIManager {
                 //TODO: handle resubscribe event
                 self.handle_resub_event(resub_event).await?;
             }
-            TwitchEvent::ChannelCheer(_cheer_event) => {
+            TwitchEvent::ChannelCheer(cheer_event) => {
                 println!("Channel Cheer Event!");
-                //TODO: handle cheer event
+                self.handle_cheer_event(cheer_event).await?;
             }
         }
         Ok(())
@@ -217,6 +217,39 @@ impl AIManager {
             sound_url: "none".to_string(),
             display_time,
             payload: TwitchEvent::ChannelSubscribe(subscriber_event.clone()),
+        };
+        self.frontend_sender.send(display_message)?;
+        Ok(())
+    }
+
+    pub async fn handle_cheer_event(&self, cheer_event: &CheerEvent) -> anyhow::Result<()> {
+        let response = self
+            .story_generator
+            .generate(format!(
+                "tell me an epic story about how {} threw {} gold coins to the null party.",
+                cheer_event.user_name, cheer_event.bits
+            ))
+            .await?;
+
+        println!("Response: {}", response);
+        let conn = self.sqlite_pool.acquire().await?;
+        // Anonymous cheers have no Twitch user, so they are stored under user id 0.
+        sqlite::write_new_story_segment(
+            conn,
+            cheer_event.user_id.unwrap_or(0),
+            "cheer".to_string(),
+            response.to_string(),
+        )
+        .await?;
+
+        let display_time = response.split_whitespace().count() * 500;
+
+        let display_message = DisplayMessage {
+            message: response.to_string(),
+            image_url: "none".to_string(),
+            sound_url: "none".to_string(),
+            display_time,
+            payload: TwitchEvent::ChannelCheer(cheer_event.clone()),
         };
         self.frontend_sender.send(display_message)?;
         Ok(())

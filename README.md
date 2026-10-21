@@ -77,9 +77,11 @@ cargo run -p twitch_alerts -- authorize
 ```
 
 Open the URL printed in the terminal and approve access **as the broadcaster**
-whose alerts you want to monitor. The command requests `moderator:read:followers`
-and `channel:read:subscriptions`, checks the callback's random state, saves the
-access and refresh tokens, and exits. It does not need `OPENAI_KEY`.
+whose alerts you want to monitor. The command requests `moderator:read:followers`,
+`channel:read:subscriptions`, and `bits:read`, checks the callback's random state,
+saves the access and refresh tokens, and exits. It does not need `OPENAI_KEY`.
+Tokens saved before `bits:read` was added keep working; the server logs that cheer
+alerts are off until you run `authorize` again.
 
 Remove any old `ACCESS_TOKEN` or `OAUTH2_SERVICE_URL` setting from both your shell
 and `.env`, then start alerts normally. Explicit legacy settings take precedence
@@ -167,10 +169,16 @@ Their default logs are `twitch_alerts.log` and `bruce.log`. Override these with
 `TWITCH_ALERTS_LOG` or `BRUCE_LOG`; `NULL_TWITCH_LOG` is retained as a fallback.
 Existing database files and local configuration are not moved by this split.
 
-Alerts persists follow/subscription stories, raids, and gifted subscriptions. The
+Alerts subscribes to follows, subscriptions, resubscriptions, raids, gifted
+subscriptions, and (with `bits:read`) cheers, and persists a story for each. The
 latest migration preserves existing gift records and permits missing gifter details
-for anonymous gifts. Bruce registers players when they submit valid guesses; round
-scoring and the visible leaderboard remain unfinished.
+for anonymous gifts. If Twitch closes the EventSub connection or asks the server to
+move sessions, the listener reconnects and re-creates its subscriptions. Bruce
+registers players when they submit valid guesses; round scoring and the visible
+leaderboard remain unfinished.
+
+Database and log files such as `alerts.db`, `bruce/games.db`, and `*.log` are not
+tracked by Git; copies in older checkouts stay on disk but are no longer committed.
 
 ## Verify
 

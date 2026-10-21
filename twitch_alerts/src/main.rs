@@ -90,6 +90,7 @@ pub async fn run_server(opts: &ServerArgs) -> anyhow::Result<()> {
         client,
         user_id,
         connect_url: twitch_api::TWITCH_EVENTSUB_WEBSOCKET_URL.clone(),
+        reconnect_url: None,
         sender,
     };
 

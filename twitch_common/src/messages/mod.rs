@@ -46,7 +46,7 @@ pub struct FollowEvent {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CheerEvent {
     pub user_name: String,
-    pub user_id: i64,
+    pub user_id: Option<i64>,
     pub bits: i64,
     pub message: String,
 }
