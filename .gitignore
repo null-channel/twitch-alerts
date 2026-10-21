@@ -1,5 +1,6 @@
 # Build output and editor backups.
 **/target/
+**/target-*/
 **/dist/
 **/*.rs.bk
 
