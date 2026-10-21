@@ -7,8 +7,18 @@ hstack [background: reset]
                     span " | "
                     span "Time: "
                     span state.timer
-            border
-                text "Leader Board"
+            expand
+                border
+                    vstack
+                        text [bold: true] "Leader Board"
+                        for leader in state.leaders
+                            hstack
+                                container [width: 4]
+                                    text leader.rank
+                                        span "."
+                                expand [axis: "horizontal"]
+                                    text leader.name
+                                text [text_align: "right"] leader.points
     expand [factor: 4]
         border [sides: []]
             vstack
