@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "checkpointId": "01M5EB6Y4SNFHCTZEJ9N3KDC6E",
+  "sessionId": "dad49070-7e4d-449e-a169-800afac9b1ca",
+  "agent": "claude-code",
+  "codeCommit": "1056a5fac504e6187bb3d9aac6478f0f3ea1456f",
+  "baseCommit": "169fcc47b62f800f672597e091a2b9eedf5d21cf",
+  "files": [
+    {
+      "path": ".gitignore",
+      "status": "M",
+      "addedLines": [
+        {
+          "start": 3,
+          "end": 3
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+   Compiling bruce v0.1.0 (/home/marek/code/twitch/twitch-alerts/bruce)
+warning: unused import: `std::fs::OpenOptions`
+ --> bruce/src/main.rs:6:5
+  |
+6 | use std::fs::OpenOptions;
+  |     ^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `Registry` and `fmt`
+  --> bruce/src/main.rs:11:26
+   |
+11 | use tracing_subscriber::{fmt, prelude::*, Registry};
+   |                          ^^^              ^^^^^^^^
+
+warning: unused import: `prelude`
+  --> bruce/src/main.rs:11:31
+   |
+11 | use tracing_subscriber::{fmt, prelude::*, Registry};
+   |                               ^^^^^^^
+
+warning: `bruce` (bin "bruce") generated 3 warnings (run `cargo fix --bin "bruce" -p bruce` to apply 2 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.81s
+     Running `/home/marek/code/twitch/twitch-alerts/target/debug/bruce game wordle --word-list standard --channel=marekcounts`
+Error: install tracing
+
+Caused by:
+    invalid filter directive

@@ -1,0 +1,109 @@
+{
+  "agent": "Claude Code",
+  "base_commit": "169fcc47b62f800f672597e091a2b9eedf5d21cf",
+  "branch": "fix/split-edges-clean",
+  "checkpoint_id": "01M5EB6Y4SNFHCTZEJ9N3KDC6E",
+  "checkpoint_transcript_start": 476,
+  "checkpoints_count": 4,
+  "cli_version": "0.1.0",
+  "code_commit": "1056a5fac504e6187bb3d9aac6478f0f3ea1456f",
+  "committed_at": "2026-10-21T04:23:48.153189741Z",
+  "compact_transcript_start": 35,
+  "context_tokens": null,
+  "context_window_size": null,
+  "created_at": "2026-10-21T04:23:48.153189741Z",
+  "files_touched": [
+    ".gitignore"
+  ],
+  "initial_attribution": {
+    "agent_lines": 1,
+    "agent_percentage": 100.0,
+    "agent_removed": 0,
+    "calculated_at": "2026-10-21T04:23:48.153189741Z",
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "metric_version": 2,
+    "total_committed": 1,
+    "total_lines_changed": 1
+  },
+  "model": "",
+  "prompt_count": 4,
+  "rewrite": {
+    "events": [],
+    "final_files": [],
+    "limitations": [
+      "Tool-level rewrite boundaries were re-baselined when the agent committed from a linked worktree; the final target-worktree diff was attributed to the executing agent session.",
+      "Human versus AI is inferred from prompt and agent hook boundaries; edits made concurrently between boundaries can be ambiguous.",
+      "Estimated wasted tokens allocate a turn's observed usage in proportion to AI-added lines later superseded; providers do not report token-to-line causality.",
+      "Token deltas are assigned to the turn active at the reporting hook; provider telemetry reported late can shift usage to the following prompt.",
+      "Multiple writes between native hook callbacks appear as one rewrite event; agents without post-tool hooks expose turn-level rather than tool-level revisions."
+    ],
+    "schema_version": 1,
+    "summary": {
+      "ai_added_lines": 0,
+      "ai_event_count": 0,
+      "ai_replaced_ai_lines": 0,
+      "ai_replaced_human_lines": 0,
+      "ai_rewrite_events": 0,
+      "ai_rewritten_lines": 0,
+      "event_count": 0,
+      "final_ai_lines": 0,
+      "final_human_lines": 0,
+      "final_human_percent": 0,
+      "final_preexisting_lines": 0,
+      "human_added_lines": 0,
+      "human_event_count": 0,
+      "human_replaced_ai_lines": 0,
+      "human_replaced_human_lines": 0,
+      "human_rewrite_events": 0,
+      "human_rewritten_lines": 0
+    },
+    "turns": [
+      {
+        "ai_added_lines": 0,
+        "observed_tokens_by_model": {
+          "unknown": {
+            "api_call_count": 0,
+            "cache_creation_tokens": 72758,
+            "cache_read_tokens": 6244230,
+            "input_tokens": 898,
+            "output_tokens": 49274,
+            "subagent_total": 0
+          }
+        },
+        "prompt": "<task-notification>\n<task-id>b4ysfazji</task-id>\n<tool-use-id>toolu_01PMrasWTrgscT1ijyhBX6fo</tool-use-id>\n<output-file>/tmp/claude-1000/-home-marek-code-twitch-twitch-alerts/dad49070-7e4d-449e-a169-800afac9b1ca/tasks/b4ysfazji.output</output-file>\n<status>completed</status>\n<summary>Background command \"Commit the EventSub changes, push the branch, and open the PR\" completed (exit code 0)</summary>\n</task-notification>",
+        "sequence": 4,
+        "superseded_ai_lines": 0
+      }
+    ]
+  },
+  "save_step_count": 4,
+  "session_id": "dad49070-7e4d-449e-a169-800afac9b1ca",
+  "shadow_commit": "c63f34a46d1781ba838623ef0299a309a01421f4",
+  "started_at": "2026-10-21T04:15:27.216967256Z",
+  "strategy": "manual-commit",
+  "token_usage": {
+    "api_call_count": 0,
+    "cache_creation_tokens": 84198,
+    "cache_read_tokens": 8496672,
+    "input_tokens": 1186,
+    "output_tokens": 56431,
+    "subagent_total": 0
+  },
+  "token_usage_by_model": {
+    "unknown": {
+      "api_call_count": 0,
+      "cache_creation_tokens": 84198,
+      "cache_read_tokens": 8496672,
+      "input_tokens": 1186,
+      "output_tokens": 56431,
+      "subagent_total": 0
+    }
+  },
+  "transcript_lines_at_start": 476,
+  "transcript_start": 476,
+  "workspace_stored": true,
+  "worktree_tree": "2188461769ba8aa9f67f9e53d33fadf9e326ccda",
+  "xo_agent": "claude-code"
+}

@@ -1,0 +1,35 @@
+[package]
+name = "twitch_alerts"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+sqlx = { workspace = true }
+twitch_api = { version = "0.7.0", features = [
+    "reqwest",
+    "helix",
+    "eventsub",
+    "hmac",
+    "unsupported",
+    "mock_api"] }
+maud = { version = "0.27.0", features = ["axum"] }
+axum = { version = "0.8.1" }
+askama = { version = "0.14.0" }
+askama_web = { version = "0.14.4", features = ["axum-0.8"] }
+tower-http = { version = "0.6.2", features = ["fs", "trace"] }
+futures-channel = "0.3.31"
+futures-util = "0.3.31"
+dotenvy = "0.15.6"
+reqwest = { version = "0.12.4", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1" }
+tokio = { version = "1.26.0", features = ["macros", "rt-multi-thread", "sync", "time", "net"] }
+tokio-tungstenite = { version = "0.21.0", features = ["native-tls"] }
+tracing = "0.1.37"
+tracing-error = "0.2.0"
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+url = "2.3.1"
+clap = { version = "4.1.8", features = ["derive", "env"] }
+twitch_common = { path = "../twitch_common", features = ["eventsub"] }
+sql_common = { path = "../sql_common" }

@@ -1,0 +1,82 @@
+{
+  "agent": "Claude Code",
+  "base_commit": "169fcc47b62f800f672597e091a2b9eedf5d21cf",
+  "branch": "fix/split-edges-clean",
+  "checkpoint_id": "01M5EB6Y4SNFHCTZEJ9N3KDC6E",
+  "checkpoint_transcript_start": 476,
+  "checkpoints_count": 4,
+  "cli_version": "0.1.0",
+  "code_commit": "1056a5fac504e6187bb3d9aac6478f0f3ea1456f",
+  "combined_attribution": {
+    "agent_lines": 1,
+    "agent_percentage": 100.0,
+    "agent_removed": 0,
+    "calculated_at": "2026-10-21T04:23:48.153189741Z",
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "metric_version": 2,
+    "total_committed": 1,
+    "total_lines_changed": 1
+  },
+  "committed_at": "2026-10-21T04:23:48.153189741Z",
+  "context_tokens": null,
+  "context_window_size": null,
+  "created_at": "2026-10-21T04:23:48.153189741Z",
+  "files_touched": [
+    ".gitignore"
+  ],
+  "imported": false,
+  "initial_attribution": {
+    "agent_lines": 1,
+    "agent_percentage": 100.0,
+    "agent_removed": 0,
+    "calculated_at": "2026-10-21T04:23:48.153189741Z",
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "metric_version": 2,
+    "total_committed": 1,
+    "total_lines_changed": 1
+  },
+  "model": "",
+  "prompt_count": 4,
+  "save_step_count": 4,
+  "session_id": "dad49070-7e4d-449e-a169-800afac9b1ca",
+  "sessions": [
+    {
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "metadata": "/0/metadata.json",
+      "prompt": "/0/prompt.txt",
+      "rewrite": "/0/rewrite.json",
+      "transcript": "/0/full.jsonl"
+    }
+  ],
+  "shadow_commit": "c63f34a46d1781ba838623ef0299a309a01421f4",
+  "started_at": "2026-10-21T04:15:27.216967256Z",
+  "strategy": "manual-commit",
+  "token_usage": {
+    "api_call_count": 0,
+    "cache_creation_tokens": 84198,
+    "cache_read_tokens": 8496672,
+    "input_tokens": 1186,
+    "output_tokens": 56431,
+    "subagent_total": 0
+  },
+  "token_usage_by_model": {
+    "unknown": {
+      "api_call_count": 0,
+      "cache_creation_tokens": 84198,
+      "cache_read_tokens": 8496672,
+      "input_tokens": 1186,
+      "output_tokens": 56431,
+      "subagent_total": 0
+    }
+  },
+  "transcript_lines_at_start": 476,
+  "transcript_start": 476,
+  "workspace_stored": true,
+  "worktree_tree": "2188461769ba8aa9f67f9e53d33fadf9e326ccda",
+  "xo_agent": "claude-code"
+}

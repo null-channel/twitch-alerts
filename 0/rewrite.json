@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "summary": {
+    "event_count": 0,
+    "ai_event_count": 0,
+    "human_event_count": 0,
+    "ai_rewrite_events": 0,
+    "human_rewrite_events": 0,
+    "ai_added_lines": 0,
+    "human_added_lines": 0,
+    "ai_rewritten_lines": 0,
+    "human_rewritten_lines": 0,
+    "ai_replaced_ai_lines": 0,
+    "ai_replaced_human_lines": 0,
+    "human_replaced_ai_lines": 0,
+    "human_replaced_human_lines": 0,
+    "final_ai_lines": 0,
+    "final_human_lines": 0,
+    "final_preexisting_lines": 0,
+    "final_human_percent": 0
+  },
+  "events": [],
+  "turns": [
+    {
+      "sequence": 4,
+      "prompt": "<task-notification>\n<task-id>b4ysfazji</task-id>\n<tool-use-id>toolu_01PMrasWTrgscT1ijyhBX6fo</tool-use-id>\n<output-file>/tmp/claude-1000/-home-marek-code-twitch-twitch-alerts/dad49070-7e4d-449e-a169-800afac9b1ca/tasks/b4ysfazji.output</output-file>\n<status>completed</status>\n<summary>Background command \"Commit the EventSub changes, push the branch, and open the PR\" completed (exit code 0)</summary>\n</task-notification>",
+      "ai_added_lines": 0,
+      "superseded_ai_lines": 0,
+      "observed_tokens_by_model": {
+        "unknown": {
+          "input_tokens": 898,
+          "cache_read_tokens": 6244230,
+          "cache_creation_tokens": 72758,
+          "output_tokens": 49274,
+          "api_call_count": 0,
+          "subagent_total": 0
+        }
+      }
+    }
+  ],
+  "final_files": [],
+  "limitations": [
+    "Tool-level rewrite boundaries were re-baselined when the agent committed from a linked worktree; the final target-worktree diff was attributed to the executing agent session.",
+    "Human versus AI is inferred from prompt and agent hook boundaries; edits made concurrently between boundaries can be ambiguous.",
+    "Estimated wasted tokens allocate a turn's observed usage in proportion to AI-added lines later superseded; providers do not report token-to-line causality.",
+    "Token deltas are assigned to the turn active at the reporting hook; provider telemetry reported late can shift usage to the following prompt.",
+    "Multiple writes between native hook callbacks appear as one rewrite event; agents without post-tool hooks expose turn-level rather than tool-level revisions."
+  ]
+}

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: twitch-alerts-0
+spec:
+  type: LoadBalancer
+  selector:
+    app: twitch-alerts
+  ports:
+  - protocol: TCP
+    port: 9000
+    targetPort: 9000
+    name: websocket
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+    name: frontend
