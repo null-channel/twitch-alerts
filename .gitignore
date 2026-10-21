@@ -16,3 +16,6 @@ twitch-tokens.*.tmp
 /.xo/logs/
 /.xo/tmp/
 /.xo/settings.local.json
+
+# Worktrees created by coding agents live inside the repository.
+/.claude/worktrees/
