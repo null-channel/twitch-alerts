@@ -11,6 +11,8 @@
 *.db
 *.db-*
 *.db.old
+twitch-tokens.json
+twitch-tokens.*.tmp
 /.xo/logs/
 /.xo/tmp/
 /.xo/settings.local.json

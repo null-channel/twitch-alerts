@@ -28,13 +28,22 @@ On Debian/Ubuntu, native dependencies require `pkg-config` and `libssl-dev`.
 
 ## Run alerts
 
-From the workspace root, configure `ACCESS_TOKEN` (or `OAUTH2_SERVICE_URL`) and
+From the workspace root, configure Twitch authorization as described below and
 `OPENAI_KEY` in your environment or `.env`. See
 [twitch_alerts/.env.example](twitch_alerts/.env.example) for available settings.
 
 ```bash
 cargo run -p twitch_alerts -- server --channel-login your_channel
 ```
+
+Alert stories use `gpt-6-luna` by default. Override it with `OPENAI_MODEL` or
+`--openai-model`. The selected model must support Chat Completions with
+`reasoning_effort=none`; this keeps these short alert requests fast and avoids
+reasoning-token costs. Responses are capped at 128 completion tokens, and the
+story prompt asks for at most 27 words. See the current
+[OpenAI model specifications and pricing](https://developers.openai.com/api/docs/models/gpt-6-luna).
+The Fly configuration explicitly sets `OPENAI_MODEL=gpt-6-luna`; the API key goes
+in the `OPENAI_KEY` Fly secret.
 
 HTTP defaults to `0.0.0.0:8080`, and the WebSocket listener uses port `9000`.
 The overlay is at `/` and the admin UI at `/admin`. `WEBSOCKET_HOST` is the hostname
@@ -45,6 +54,91 @@ and `wss` on HTTPS pages.
 The database defaults to `alerts.db` in the current directory. Set `DB_PATH` or
 `--db-path` to use an existing database. For a copied binary, also set
 `FRONTEND_ASSETS` to the copied `twitch_alerts/src/frontend/assets` directory.
+
+## Twitch authorization and automatic renewal
+
+Register a **confidential** application in the
+[Twitch developer console](https://dev.twitch.tv/console/apps), or use your existing
+application. Add this exact OAuth redirect URL to its settings:
+`http://localhost:3000/auth/twitch/callback`.
+
+Set these values in the environment or the workspace root `.env`:
+
+```dotenv
+TWITCH_CLIENT_ID=your_application_client_id
+TWITCH_CLIENT_SECRET=your_application_client_secret
+TWITCH_TOKEN_FILE=twitch-tokens.json
+```
+
+Stop the alerts server, then run the one-time setup:
+
+```bash
+cargo run -p twitch_alerts -- authorize
+```
+
+Open the URL printed in the terminal and approve access **as the broadcaster**
+whose alerts you want to monitor. The command requests `moderator:read:followers`
+and `channel:read:subscriptions`, checks the callback's random state, saves the
+access and refresh tokens, and exits. It does not need `OPENAI_KEY`.
+
+Remove any old `ACCESS_TOKEN` or `OAUTH2_SERVICE_URL` setting from both your shell
+and `.env`, then start alerts normally. Explicit legacy settings take precedence
+over the saved tokens. Keep `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, and
+`TWITCH_TOKEN_FILE` configured for the server. The client ID and secret must belong
+to the application that issued the tokens.
+
+The server validates authorization at startup and at least hourly, renews access
+tokens five minutes before expiry, and immediately saves any rotated refresh
+token. An expired saved access token is recovered automatically at startup.
+Temporary network failures retry every 30 seconds. If Twitch revokes the grant or
+rejects the refresh credentials, the server exits with instructions to authorize
+again. See Twitch's [refresh](https://dev.twitch.tv/docs/authentication/refresh-tokens/)
+and [validation](https://dev.twitch.tv/docs/authentication/validate-tokens/) documentation.
+
+The token file contains secrets, is written atomically with mode `0600` on Unix,
+and is ignored by Git. The client secret stays in your environment. Use a private
+directory on persistent storage, run one alerts instance per token file, and keep
+the same file across restarts and deployments. For the Docker image, set
+`TWITCH_TOKEN_FILE=/data/twitch-tokens.json` and mount the same `/data` volume for
+both authorization and the server. Litestream backs up the database separately;
+it does not back up this token file.
+
+### One-time setup on a remote server
+
+Use SSH forwarding so the callback in your local browser reaches the temporary
+listener on the webserver. From your computer:
+
+```bash
+ssh -L 3000:127.0.0.1:3000 user@your-webserver
+```
+
+In that SSH session, configure the environment and run `twitch_alerts authorize`
+(or the Cargo command above), then open its printed URL in your local browser.
+The default listener binds only to `127.0.0.1:3000` and waits up to ten minutes.
+After it succeeds, start the normal server; SSH forwarding is only needed during
+this initial authorization.
+
+Alternatively, set `TWITCH_REDIRECT_URL=https://your-domain/auth/twitch/callback`
+and register that exact URL with Twitch. During setup, proxy that path to
+`127.0.0.1:3000`. `authorize --listen-addr` changes the temporary bind address;
+`authorize --redirect-url` changes the externally visible callback URL. With
+Docker, publish the callback port on loopback and pass
+`--listen-addr 0.0.0.0:3000` inside the container. No callback listener is needed
+for subsequent token renewal.
+
+### Existing token configurations
+
+`ACCESS_TOKEN` / `--access-token` still supports a standalone user token, but it
+cannot renew without refresh credentials. Use the authorization command above to
+switch to automatic renewal; an implicit-flow token cannot be converted into a
+refreshable token.
+
+`OAUTH2_SERVICE_URL` / `--oauth2-service-url` still supports an external token
+provider. The server fetches a new token near expiry or after failed validation.
+`OAUTH2_SERVICE_KEY` supplies an optional bearer key,
+`OAUTH2_SERVICE_POINTER` selects the token from the JSON response (default
+`/access_token`), and `OAUTH2_SERVICE_REFRESH` controls the renewal margin in
+seconds (default `30`).
 
 ## Run Bruce
 
@@ -95,6 +189,34 @@ warnings as errors.
 
 CI also checks each application separately, so workspace feature unification
 cannot hide a missing dependency.
+
+### Test alerts locally without Twitch credentials
+
+Run the executable integration test:
+
+```bash
+cargo +1.95 test --locked -p twitch_alerts --test local_auth -- --nocapture
+```
+
+It launches local OAuth and EventSub mocks and runs the actual alerts binary with
+fake credentials, a temporary SQLite database, and a temporary token file. It
+checks authorization and callback state, recovery from an expired token,
+background renewal, persistence after a hard restart, EventSub subscriptions,
+overlay/admin pages, static assets, and the browser WebSocket connection. It
+cleans up its processes and files when it finishes. No real Twitch or OpenAI
+requests are made, and it does not load your `.env`.
+
+The alerts test suite also checks that a queued follow alert reaches a browser
+WebSocket with the expected HTML:
+
+```bash
+cargo +1.95 test --locked -p twitch_alerts
+```
+
+These tests need permission to listen on localhost ports. Real Twitch browser
+consent and live stream events still need a separate test using the authorization
+setup above. Locally generated token files are excluded from Docker's build
+context as well as Git.
 
 ## Alerts deployment
 

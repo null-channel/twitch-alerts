@@ -104,7 +104,6 @@ pub async fn get_access_token(
             request = request.bearer_auth(key.secret());
         }
         let request = request.build()?;
-        tracing::debug!("request: {:?}", request);
 
         match client.execute(request).await {
             Ok(response)
@@ -127,12 +126,7 @@ pub async fn get_access_token(
             }
             Ok(response_error) => {
                 let status = response_error.status();
-                let error = response_error.text().await?;
-                anyhow::bail!(
-                    "oauth service returned error code: {} with body: {:?}",
-                    status,
-                    error
-                );
+                anyhow::bail!("oauth service returned error code: {}", status);
             }
             Err(e) => Err(e).context("calling OAuth service"),
         }

@@ -3,12 +3,9 @@ mod opts;
 mod utils;
 mod wordle;
 
-use std::fs::OpenOptions;
-
 use clap::Parser;
 use opts::{Cli, Commands, GamesSubCommand, TwitchChatArgs};
 use random_word::WordList;
-use tracing_subscriber::{fmt, prelude::*, Registry};
 use twitch_common::chat::twitch_chat::TwitchChat;
 
 static MIGRATIONS: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");

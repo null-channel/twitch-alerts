@@ -328,6 +328,50 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn queued_follow_alert_reaches_browser_websocket() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let queues = Arc::new(Mutex::new(Queues::new()));
+        let connections = Arc::new(Mutex::new(HashMap::new()));
+        let (sender, receiver) = mpsc::unbounded_channel();
+        let mut workers = JoinSet::new();
+        let incoming = queues.clone();
+        workers.spawn(async move { receive_messages(receiver, &incoming).await });
+        let browsers = connections.clone();
+        workers.spawn(async move { accept_connections(listener, browsers).await });
+        workers.spawn(async move { process_events(&queues, &connections).await });
+        let (mut browser, _) = tokio_tungstenite::connect_async(format!("ws://{address}"))
+            .await
+            .unwrap();
+        sender
+            .send(DisplayMessage {
+                message: "A local adventurer joins the party.".into(),
+                image_url: "none".into(),
+                sound_url: "none".into(),
+                display_time: 1000,
+                payload: crate::messages::TwitchEvent::ChannelFollow(
+                    crate::messages::FollowEvent {
+                        user_name: "LocalFollower".into(),
+                        user_id: 123,
+                    },
+                ),
+            })
+            .unwrap();
+        let alert = tokio::time::timeout(std::time::Duration::from_secs(3), browser.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        let html = alert.into_text().unwrap();
+        assert!(html.contains("id=\"notifications\""));
+        assert!(html.contains("class=\"alert\""));
+        assert!(html.contains("Followed"));
+        assert!(html.contains("LocalFollower"));
+        assert!(html.contains("A local adventurer joins the party."));
+        browser.close(None).await.unwrap();
+    }
+
+    #[tokio::test]
     async fn websocket_disconnect_removes_connection() {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap();
