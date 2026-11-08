@@ -1,4 +1,7 @@
-use clap::Parser;
+use std::fmt;
+
+use clap::{Parser, ValueEnum};
+use strum_macros::AsRefStr;
 
 #[derive(Parser, Debug, Clone)]
 #[clap(name = "bruce", version)]
@@ -22,12 +25,19 @@ pub enum GamesSubCommand {
     Dragons(Dragons),
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug, AsRefStr)]
+pub enum WordListSelection {
+    Standard,
+    Challenge,
+    Nerd,
+}
+
 #[derive(clap::Args, Debug, Clone)]
 pub struct Wordle {
     #[command(flatten)]
     pub twitch: TwitchChatArgs,
-    #[arg(short, long, default_value = "standard", value_parser = ["standard", "challenge", "nerd"])]
-    pub word_list: String,
+    #[arg(short, long, default_value_t = WordListSelection::Standard, value_enum, ignore_case = true)]
+    pub word_list: WordListSelection,
     #[arg(
         short = 'd',
         long = "db-path",
@@ -36,6 +46,8 @@ pub struct Wordle {
         default_value = "sqlite:games.db"
     )]
     pub db_path: String,
+    #[arg(short = 't')]
+    pub test_word: Option<String>,
 }
 
 #[derive(clap::Args, Debug, Clone)]

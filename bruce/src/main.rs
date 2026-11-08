@@ -3,13 +3,12 @@ mod opts;
 mod utils;
 mod wordle;
 
-use std::fs::OpenOptions;
-
 use clap::Parser;
 use opts::{Cli, Commands, GamesSubCommand, TwitchChatArgs};
 use random_word::WordList;
-use tracing_subscriber::{fmt, prelude::*, Registry};
 use twitch_common::chat::twitch_chat::TwitchChat;
+
+use crate::opts::WordListSelection;
 
 static MIGRATIONS: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
 
@@ -52,7 +51,12 @@ pub async fn run_game(opts: &GamesSubCommand) -> anyhow::Result<()> {
             let sqlite_pool =
                 sql_common::setup::setup_sqlite_migrations(args.db_path.clone(), &MIGRATIONS)
                     .await?;
-            let word_list = WordList::from(args.word_list.as_str());
+
+            let word_list = if let Some(wordlist) = args.test_word.clone() {
+                WordList::Test(wordlist)
+            } else {
+                WordList::from(args.word_list.as_ref())
+            };
 
             // Anathema's `runtime.run` blocks a thread for the whole session. Running it on a
             // Tokio worker can strand `tokio::spawn` tasks (e.g. `game_loop`, IRC) on that same

@@ -1,5 +1,6 @@
 #![warn(clippy::unwrap_in_result)]
 mod ai_manager;
+mod auth;
 mod frontend;
 mod messages;
 mod opts;
@@ -9,13 +10,9 @@ use crate::frontend::{FrontendApi, HostInfo};
 use ai_manager::AIManager;
 use clap::Parser;
 use opts::{Cli, Commands, ServerArgs};
-use twitch_api::twitch_oauth2::UserToken;
+use tokio::sync::mpsc;
+use twitch_api::HelixClient;
 use twitch_common::twitch_listener::websocket::WebsocketClient;
-
-use std::sync::Arc;
-
-use tokio::sync::{mpsc, RwLock};
-use twitch_api::{client::ClientDefault, HelixClient};
 
 static MIGRATIONS: sqlx::migrate::Migrator = sqlx::migrate!("./src/migrations");
 
@@ -37,18 +34,17 @@ async fn run() -> anyhow::Result<()> {
         Commands::Server(opts) => {
             run_server(&opts).await?;
         }
+        Commands::Authorize(opts) => auth::authorize(&opts).await?,
     }
 
     Ok(())
 }
 
 pub async fn run_server(opts: &ServerArgs) -> anyhow::Result<()> {
-    let client: HelixClient<'static, _> = twitch_api::HelixClient::with_client(
-        <reqwest::Client>::default_client_with_name(Some("twitch-rs/eventsub".parse()?))?,
-    );
-
-    let token = utils::get_access_token(client.get_client(), &opts.twitch).await?;
-    let token: Arc<RwLock<UserToken>> = Arc::new(RwLock::new(token));
+    let client: HelixClient<'static, _> =
+        twitch_api::HelixClient::with_client(auth::http_client()?);
+    let mut auth = auth::TokenManager::load(client.get_client().clone(), &opts.twitch).await?;
+    let token = auth.token.clone();
     let user_id = if let Some(ref id) = opts.twitch.channel_id {
         id.clone().into()
     } else if let Some(ref login) = opts.twitch.channel_login {
@@ -60,6 +56,10 @@ pub async fn run_server(opts: &ServerArgs) -> anyhow::Result<()> {
     } else {
         token.read().await.user_id.clone()
     };
+    anyhow::ensure!(
+        user_id == token.read().await.user_id,
+        "authorize as the broadcaster whose alerts you want to monitor"
+    );
 
     let Some(gpt_key) = opts.llm.openai.openai_key.clone() else {
         anyhow::bail!("GPT key is required");
@@ -77,7 +77,12 @@ pub async fn run_server(opts: &ServerArgs) -> anyhow::Result<()> {
     let (sender, receiver) = mpsc::unbounded_channel();
     let (frontend_sender, frontend_receiver) = mpsc::unbounded_channel();
 
-    let ai_manager = AIManager::new(sqlite_pool, gpt_key, frontend_sender)?;
+    let ai_manager = AIManager::new(
+        sqlite_pool,
+        gpt_key,
+        opts.llm.openai.openai_model.clone(),
+        frontend_sender,
+    )?;
 
     let mut twitch_client = WebsocketClient {
         session_id: None,
@@ -103,6 +108,7 @@ pub async fn run_server(opts: &ServerArgs) -> anyhow::Result<()> {
     let frontend_api = FrontendApi::new(host_info, opts.frontend_assets.clone());
 
     tokio::try_join!(
+        auth.run(),
         twitch_client.run(),
         ai_manager.run(receiver),
         frontend_api.run(frontend_receiver),

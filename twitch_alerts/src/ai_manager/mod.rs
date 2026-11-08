@@ -1,18 +1,16 @@
+mod openai;
 pub mod sqlite;
 
 use crate::messages::{
     ChannelGiftMessage, DisplayMessage, FollowEvent, NewTwitchEventMessage, NullSubTier, RaidEvent,
     SubscribeEvent, TwitchEvent,
 };
-use chatgpt::{
-    config::{ChatGPTEngine, ModelConfigurationBuilder},
-    prelude::{ChatGPT, Conversation},
-};
+use openai::StoryGenerator;
 use tokio::sync::mpsc;
 
 pub struct AIManager {
     pub sqlite_pool: sqlx::SqlitePool,
-    pub chat_gpt: ChatGPT,
+    story_generator: StoryGenerator,
     pub frontend_sender: mpsc::UnboundedSender<DisplayMessage>,
 }
 
@@ -20,17 +18,13 @@ impl AIManager {
     pub fn new(
         sqlite: sqlx::SqlitePool,
         chat_key: String,
+        model: String,
         fs: mpsc::UnboundedSender<DisplayMessage>,
     ) -> anyhow::Result<Self> {
-        let client = ChatGPT::new_with_config(
-            chat_key,
-            ModelConfigurationBuilder::default()
-                .engine(ChatGPTEngine::Custom("gpt-4o-mini"))
-                .build()?,
-        )?;
+        let story_generator = StoryGenerator::new(chat_key, model)?;
         Ok(AIManager {
             sqlite_pool: sqlite,
-            chat_gpt: client,
+            story_generator,
             frontend_sender: fs,
         })
     }
@@ -60,31 +54,27 @@ impl AIManager {
     }
 
     async fn new_event(&self, msg: NewTwitchEventMessage) -> anyhow::Result<()> {
-        let conversation: Conversation = self.chat_gpt.new_conversation_directed(
-            "You are D&DGPT, when answering any questions, you always answer with a short epic story as a dungeons and dragons dungeon master in 27 words or less."
-        );
-
         match &msg.event {
             TwitchEvent::ChannelFollow(follow_event) => {
                 println!("Channel Follow Event!");
-                self.handle_follow_event(follow_event, conversation).await?;
+                self.handle_follow_event(follow_event).await?;
             }
             TwitchEvent::ChannelSubscribe(sub_event) => {
                 println!("Channel Subscribe Event!");
-                self.handle_subscribe_event(sub_event, conversation).await?;
+                self.handle_subscribe_event(sub_event).await?;
             }
             TwitchEvent::ChannelRaid(raid_event) => {
                 println!("Channel Raid Event!");
-                self.handle_raid_event(raid_event, conversation).await?;
+                self.handle_raid_event(raid_event).await?;
             }
             TwitchEvent::ChannelSubGift(sub_gift) => {
                 println!("Channel Sub Gift Event!");
-                self.handle_gift_sub_event(sub_gift, conversation).await?;
+                self.handle_gift_sub_event(sub_gift).await?;
             }
             TwitchEvent::ChannelResubscribe(resub_event) => {
                 println!("Channel Resub Event!");
                 //TODO: handle resubscribe event
-                self.handle_resub_event(resub_event, conversation).await?;
+                self.handle_resub_event(resub_event).await?;
             }
             TwitchEvent::ChannelCheer(_cheer_event) => {
                 println!("Channel Cheer Event!");
@@ -97,7 +87,6 @@ impl AIManager {
     pub async fn handle_gift_sub_event(
         &self,
         gift_sub_event: &ChannelGiftMessage,
-        mut conversation: Conversation,
     ) -> anyhow::Result<()> {
         let gifter_name = match gift_sub_event.user_name.clone() {
             Some(name) => name,
@@ -112,27 +101,22 @@ impl AIManager {
             NullSubTier::Other(tier) => tier,
         };
 
-        let response = conversation
-            .send_message(format!(
+        let response = self
+            .story_generator
+            .generate(format!(
                 "tell me an epic story about how {} gifted new {} powers to {} null party members.",
                 gifter_name, tier, gift_sub_event.total,
             ))
             .await?;
 
-        println!("Response: {}", response.message().content);
+        println!("Response: {}", response);
         let conn = self.sqlite_pool.acquire().await?;
-        sqlite::write_new_gift_subs_event(
-            conn,
-            gift_sub_event,
-            tier,
-            response.message().content.to_string(),
-        )
-        .await?;
+        sqlite::write_new_gift_subs_event(conn, gift_sub_event, tier, response.to_string()).await?;
 
-        let display_time = response.message().content.split_whitespace().count() * 500;
+        let display_time = response.split_whitespace().count() * 500;
 
         let display_message = DisplayMessage {
-            message: response.message().content.to_string(),
+            message: response.to_string(),
             image_url: "none".to_string(),
             sound_url: "none".to_string(),
             display_time,
@@ -142,28 +126,23 @@ impl AIManager {
         Ok(())
     }
 
-    pub async fn handle_raid_event(
-        &self,
-        raid_event: &RaidEvent,
-        mut conversation: Conversation,
-    ) -> anyhow::Result<()> {
-        let response = conversation
-            .send_message(format!(
+    pub async fn handle_raid_event(&self, raid_event: &RaidEvent) -> anyhow::Result<()> {
+        let response = self.story_generator
+            .generate(format!(
                 "tell me an epic story about how {} people from {}'s party joined forces with the Null party for a joint quest.",
                 raid_event.viewers,
                 raid_event.from_broadcaster_user_name,
             ))
             .await?;
 
-        println!("Response: {}", response.message().content);
+        println!("Response: {}", response);
         let conn = self.sqlite_pool.acquire().await?;
-        sqlite::write_new_raid_event(conn, raid_event, response.message().content.to_string())
-            .await?;
+        sqlite::write_new_raid_event(conn, raid_event, response.to_string()).await?;
 
-        let display_time = response.message().content.split_whitespace().count() * 500;
+        let display_time = response.split_whitespace().count() * 500;
 
         let display_message = DisplayMessage {
-            message: response.message().content.to_string(),
+            message: response.to_string(),
             image_url: "none".to_string(),
             sound_url: "none".to_string(),
             display_time,
@@ -176,29 +155,29 @@ impl AIManager {
     pub async fn handle_resub_event(
         &self,
         subscriber_event: &SubscribeEvent,
-        mut conversation: Conversation,
     ) -> anyhow::Result<()> {
-        let response = conversation
-            .send_message(format!(
+        let response = self
+            .story_generator
+            .generate(format!(
                 "tell me an epic story about how {} supported the party",
                 subscriber_event.user_name
             ))
             .await?;
 
-        println!("Response: {}", response.message().content);
+        println!("Response: {}", response);
         let conn = self.sqlite_pool.acquire().await?;
         sqlite::write_new_story_segment(
             conn,
             subscriber_event.user_id,
             "subscribe".to_string(),
-            response.message().content.to_string(),
+            response.to_string(),
         )
         .await?;
 
-        let display_time = response.message().content.split_whitespace().count() * 500;
+        let display_time = response.split_whitespace().count() * 500;
 
         let display_message = DisplayMessage {
-            message: response.message().content.to_string(),
+            message: response.to_string(),
             image_url: "none".to_string(),
             sound_url: "none".to_string(),
             display_time,
@@ -211,29 +190,29 @@ impl AIManager {
     pub async fn handle_subscribe_event(
         &self,
         subscriber_event: &SubscribeEvent,
-        mut conversation: Conversation,
     ) -> anyhow::Result<()> {
-        let response = conversation
-            .send_message(format!(
+        let response = self
+            .story_generator
+            .generate(format!(
                 "tell me an epic story about how {} supported the party",
                 subscriber_event.user_name
             ))
             .await?;
 
-        println!("Response: {}", response.message().content);
+        println!("Response: {}", response);
         let conn = self.sqlite_pool.acquire().await?;
         sqlite::write_new_story_segment(
             conn,
             subscriber_event.user_id,
             "subscribe".to_string(),
-            response.message().content.to_string(),
+            response.to_string(),
         )
         .await?;
 
-        let display_time = response.message().content.split_whitespace().count() * 500;
+        let display_time = response.split_whitespace().count() * 500;
 
         let display_message = DisplayMessage {
-            message: response.message().content.to_string(),
+            message: response.to_string(),
             image_url: "none".to_string(),
             sound_url: "none".to_string(),
             display_time,
@@ -243,33 +222,30 @@ impl AIManager {
         Ok(())
     }
 
-    pub async fn handle_follow_event(
-        &self,
-        follow_event: &FollowEvent,
-        mut conversation: Conversation,
-    ) -> anyhow::Result<()> {
-        let response = conversation
-            .send_message(format!(
+    pub async fn handle_follow_event(&self, follow_event: &FollowEvent) -> anyhow::Result<()> {
+        let response = self
+            .story_generator
+            .generate(format!(
                 "tell me an epic story about how {} joined forces with the null party.",
                 follow_event.user_name
             ))
             .await?;
 
-        println!("Response: {}", response.message().content);
+        println!("Response: {}", response);
         let conn = self.sqlite_pool.acquire().await?;
         sqlite::write_new_story_segment(
             conn,
             follow_event.user_id,
             "follow".to_string(),
-            response.message().content.to_string(),
+            response.to_string(),
         )
         .await?;
 
-        let display_time = response.message().content.split_whitespace().count() * 750;
+        let display_time = response.split_whitespace().count() * 750;
         //TODO: check if there is a "MAX_DISPLAY_TIME" env var
 
         let display_message = DisplayMessage {
-            message: response.message().content.to_string(),
+            message: response.to_string(),
             image_url: "none".to_string(),
             sound_url: "none".to_string(),
             display_time,

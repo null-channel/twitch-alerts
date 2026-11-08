@@ -13,6 +13,7 @@ use anathema::runtime::Runtime;
 use anathema::state::{List, State, Value};
 use anathema::templates::{Document, ToSourceKind};
 use anyhow::Context as _;
+use rand::seq::SliceRandom;
 use random_word::WordList;
 use sqlx::{Pool, Sqlite};
 use tokio::sync::mpsc::UnboundedReceiver;
@@ -149,7 +150,7 @@ pub fn start_game(
             main_id,
             twitch_chat_id,
             emitter,
-            get_spell_checker(word_list),
+            get_spell_checker(&word_list),
             word_list,
             leader_board,
         )
@@ -163,21 +164,32 @@ pub fn start_game(
     result.context("run Wordle terminal")
 }
 
-fn get_spell_checker(word_list: WordList) -> HashSet<String> {
-    random_word::all(word_list)
-        .iter()
-        .map(|word| word.trim().to_uppercase())
-        .filter(|word| !word.is_empty())
-        .collect()
+// TODO: Make return HashSet<&str>
+fn get_spell_checker(word_list: &WordList) -> HashSet<String> {
+    match word_list {
+        WordList::Test(word) => {
+            let mut map = HashSet::new();
+            map.insert(word.clone().trim().to_uppercase());
+            map
+        }
+        _ => random_word::all(word_list)
+            .iter()
+            .map(|word| word.trim().to_uppercase())
+            .filter(|word| !word.is_empty())
+            .collect(),
+    }
 }
 
-fn get_random_word(list: WordList) -> Word {
-    random_word::get_len(5, list)
-        .expect("Failed to get a random word from the spell checker")
-        .to_uppercase()
-        .as_bytes()
-        .try_into()
-        .expect("Failed to convert random word to [u8; 5]")
+fn get_random_word(list: &WordList) -> Word {
+    match list {
+        WordList::Test(word) => word.trim().to_uppercase().as_bytes().try_into().unwrap(),
+        _ => random_word::get_len(5, list)
+            .expect("Failed to get a random word from the spell checker")
+            .to_uppercase()
+            .as_bytes()
+            .try_into()
+            .expect("Failed to convert random word to [u8; 5]"),
+    }
 }
 
 async fn game_loop(
@@ -199,7 +211,7 @@ async fn game_loop(
         let mut start_time = std::time::Instant::now();
         update_timer(GAME_ROUND_TIME_LIMIT, &emitter, main_id).await?;
 
-        let word = get_random_word(word_list);
+        let word = get_random_word(&word_list);
 
         let mut game_round = GameRound::new(word, &spell_checker);
         let mut game_over = false;
@@ -213,6 +225,7 @@ async fn game_loop(
                 let player = Player::from(&message);
                 let guess = message.content();
                 let valid = game_round.new_guess(player.clone(), guess);
+                // TODO: Score should happen AFTER word is picked
                 if valid && player.is_scored() {
                     let score =
                         get_player_score(&leader_board, player.platform, &player.id, &player.name)
@@ -269,12 +282,20 @@ async fn game_loop(
 
                 // Everyone who voted for the word on the board shares its points.
                 if let Some(winning_word) = winning_word {
-                    let points = score_row(&row_message.data, round_count);
-                    let awarded =
-                        award_points(&leader_board, game_round.voters_for(winning_word), points)
+                    match word_list {
+                        WordList::Test(_) => {} // Do nothing!
+                        _ => {
+                            let points = score_row(&row_message.data, round_count);
+                            let awarded = award_points(
+                                &leader_board,
+                                game_round.voters_for(winning_word),
+                                points,
+                            )
                             .await?;
-                    if awarded {
-                        refresh_leader_board(&leader_board, &emitter, main_id).await?;
+                            if awarded {
+                                refresh_leader_board(&leader_board, &emitter, main_id).await?;
+                            }
+                        }
                     }
                 }
 
@@ -518,17 +539,11 @@ impl From<&Message> for Player {
 
 struct GameRound<'a> {
     word: [u8; 5],
-    players_votes: HashMap<Player, (Word, u32)>,
+    players_votes: HashMap<Player, Word>,
     spell_checker: &'a HashSet<String>,
-    guess_position: u32,
 }
 
 type Word = [u8; 5];
-
-struct VoteIndexer {
-    votes: u32,
-    position_in_round: u32,
-}
 
 impl<'a> GameRound<'a> {
     // Creates a new game round with a predefined word
@@ -538,7 +553,6 @@ impl<'a> GameRound<'a> {
             word,
             players_votes: HashMap::new(),
             spell_checker,
-            guess_position: 0,
         }
     }
 
@@ -547,11 +561,9 @@ impl<'a> GameRound<'a> {
         if !self.validate_guess(&upper) {
             return false;
         }
-        self.guess_position += 1;
         let mut arrays_of_u8 = Word::default();
         arrays_of_u8.copy_from_slice(upper.as_bytes());
-        self.players_votes
-            .insert(player, (arrays_of_u8, self.guess_position));
+        self.players_votes.insert(player, arrays_of_u8);
         true
     }
 
@@ -612,51 +624,35 @@ impl<'a> GameRound<'a> {
         RowMessage { data: cells }
     }
 
-    // Select the winning guess based on the votes
+    /// Picks the guess that goes on the board this round:
+    /// 1. if anyone guessed the winning word, that word;
+    /// 2. otherwise the most guessed word;
+    /// 3. if several words tie for most guessed, one of them at random.
+    ///
+    /// Returns `None` when nobody guessed.
     pub fn select_round_winner(&self, word: Word) -> Option<Word> {
-        // If there are multiple words with the same number of votes, first check to see if any of
-        // them are the correct word, and pick that word.
-        // Second if there are no correct words, pick the lowest position word with the most votes.
-        let mut total_votes = HashMap::new();
-        let mut highest_vote = 0;
-
-        // Build a map of all votes
-        for (voted_word, pos) in self.players_votes.values() {
-            let votes = total_votes.entry(*voted_word).or_insert(VoteIndexer {
-                votes: 0,
-                position_in_round: 10000,
-            });
-            votes.votes += 1;
-            if pos < &votes.position_in_round {
-                votes.position_in_round = *pos;
+        let mut total_votes: HashMap<Word, u32> = HashMap::new();
+        for voted_word in self.players_votes.values() {
+            if *voted_word == word {
+                return Some(word);
             }
-            if votes.votes > highest_vote {
-                highest_vote = votes.votes;
-            }
+            *total_votes.entry(*voted_word).or_insert(0) += 1;
         }
 
-        // Find the word with the most votes
-        // If there is a tie, pick the word with the lowest position in the round
-        let mut winning_word = ([0; 5], 1000000);
-        for (voted_word, vote_indexer) in total_votes.iter() {
-            if vote_indexer.votes == highest_vote {
-                // Check if the voted word is the correct word
-                if *voted_word == word {
-                    return Some(*voted_word);
-                }
-                if winning_word.1 > vote_indexer.position_in_round {
-                    winning_word = (*voted_word, vote_indexer.position_in_round);
-                }
-            }
-        }
-        Some(winning_word.0)
+        let highest_vote = *total_votes.values().max()?;
+        let most_guessed: Vec<Word> = total_votes
+            .into_iter()
+            .filter(|(_, votes)| *votes == highest_vote)
+            .map(|(voted_word, _)| voted_word)
+            .collect();
+        most_guessed.choose(&mut rand::thread_rng()).copied()
     }
 
     /// Players whose current vote is `word`.
     pub fn voters_for(&self, word: Word) -> Vec<&Player> {
         self.players_votes
             .iter()
-            .filter(|(_, (voted_word, _))| *voted_word == word)
+            .filter(|(_, voted_word)| **voted_word == word)
             .map(|(player, _)| player)
             .collect()
     }
@@ -751,6 +747,80 @@ mod tests {
         assert_eq!(score_row(&round.build_cells(winner).data, 1), 45);
     }
 
+    fn round_with_guesses<'a>(
+        dictionary: &'a HashSet<String>,
+        guesses: &[(&str, &str)],
+    ) -> GameRound<'a> {
+        let mut round = GameRound::new(*b"APPLE", dictionary);
+        for (id, guess) in guesses {
+            assert!(round.new_guess(player(id), guess.to_string()));
+        }
+        round
+    }
+
+    fn dictionary() -> HashSet<String> {
+        ["APPLE", "GRAPE", "MANGO", "PEACH"]
+            .iter()
+            .map(|word| word.to_string())
+            .collect()
+    }
+
+    #[test]
+    fn correct_guess_wins_even_when_outvoted() {
+        let dictionary = dictionary();
+        let round = round_with_guesses(
+            &dictionary,
+            &[
+                ("1", "grape"),
+                ("2", "grape"),
+                ("3", "grape"),
+                ("4", "apple"),
+            ],
+        );
+        assert_eq!(round.select_round_winner(*b"APPLE"), Some(*b"APPLE"));
+    }
+
+    #[test]
+    fn most_guessed_word_wins_without_a_correct_guess() {
+        let dictionary = dictionary();
+        let round = round_with_guesses(
+            &dictionary,
+            &[
+                ("1", "grape"),
+                ("2", "mango"),
+                ("3", "mango"),
+                ("4", "peach"),
+            ],
+        );
+        assert_eq!(round.select_round_winner(*b"APPLE"), Some(*b"MANGO"));
+    }
+
+    #[test]
+    fn tied_words_pick_one_of_the_tied_at_random() {
+        let dictionary = dictionary();
+        let round = round_with_guesses(
+            &dictionary,
+            &[
+                ("1", "grape"),
+                ("2", "grape"),
+                ("3", "mango"),
+                ("4", "mango"),
+                ("5", "peach"),
+            ],
+        );
+        for _ in 0..20 {
+            let winner = round.select_round_winner(*b"APPLE").unwrap();
+            assert!(&winner == b"GRAPE" || &winner == b"MANGO", "{:?}", winner);
+        }
+    }
+
+    #[test]
+    fn no_guesses_means_no_winner() {
+        let dictionary = dictionary();
+        let round = GameRound::new(*b"APPLE", &dictionary);
+        assert_eq!(round.select_round_winner(*b"APPLE"), None);
+    }
+
     #[test]
     fn leader_board_renders_ranked_players() -> anyhow::Result<()> {
         use anathema::backend::testing::TestBackend;
@@ -808,9 +878,9 @@ mod tests {
     #[test]
     fn each_dictionary_accepts_its_generated_words() {
         for list in [WordList::Standard, WordList::Challenge, WordList::Nerd] {
-            let dictionary = get_spell_checker(list);
+            let dictionary = get_spell_checker(&list);
             assert!(!dictionary.is_empty());
-            let word = get_random_word(list);
+            let word = get_random_word(&list);
             let round = GameRound::new(word, &dictionary);
             assert!(round.validate_guess(std::str::from_utf8(&word).unwrap()));
         }
