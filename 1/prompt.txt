@@ -1,0 +1,66 @@
+ok, so this has my old twitch alerts project, one of the big issues is auth, I need to set up auth where I can automatically do it on my webserver... because right now every once in a while I have to request a new auth token because my sever can't do it itself.
+
+---
+
+I'm using fly.io to host this, is there a good persistant store I could leverage?
+
+---
+
+Right now, I only care about events while streaming, if that changes I'll ensure to keep it running.
+
+---
+
+can you review?
+
+---
+
+can we test the twitch alerts updates locally?
+
+---
+
+this is the current logs off fly 
+15:25:24 Machine started in 1.157s
+15:25:24 machine started in 1.269875628s
+15:25:25 2026/10/18 15:25:25.956002 s3: restoring snapshot 6fb1e57c13d090dc/00000000 to /data/db.tmp
+15:25:26 2026/10/18 15:25:26.037108 s3: restoring wal files: generation=6fb1e57c13d090dc index=[00000000,00000000]
+15:25:26 2026/10/18 15:25:26.066291 s3: downloaded wal 6fb1e57c13d090dc/00000000 elapsed=28.978124ms
+15:25:26 2026/10/18 15:25:26.070892 s3: applied wal 6fb1e57c13d090dc/00000000 elapsed=4.310294ms
+15:25:26 2026/10/18 15:25:26.070951 s3: renaming database from temporary location
+15:25:26 litestream v0.3.8
+15:25:26 initialized db: /data/db
+15:25:26 replicating to: name="s3" type="s3" bucket="twitch-alerts" path="db" region="us-ord-1" endpoint="https://us-ord-1.linodeobjects.com" sync-interval=1s
+15:25:26 Starting app with options: Opts { access_token: REDACTED, channel_login: None, channel_id: Some("99431252"), oauth2_service_url: None, oauth2_service_key: None, oauth2_service_pointer: None, oauth2_service_refresh: None, gpt_key: Some("REDACTED"), db_path: Some("/data/db"), websocket_host: "twitch-alerts.fly.dev", http_port: "8080", ws_port: "9000", frontend_assets: "/var/lib/assets" }
+15:25:26 Error:
+15:25:26    0: when running application
+15:25:26    1: could not get/make access token
+15:25:26    2: token is not authorized for use
+15:25:26 Location:
+15:25:26    monolith/src/util.rs:61
+15:25:26   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ SPANTRACE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+15:25:26    0: monolith::util::make_token
+15:25:26       at monolith/src/util.rs:54
+15:25:26    1: monolith::util::get_access_token
+15:25:26       at monolith/src/util.rs:65
+15:25:26 Backtrace omitted. Run with RUST_BACKTRACE=1 environment variable to display it.
+
+---
+
+can we update the OpenAI model used? I would like to use one of the modern cheap ones
+
+---
+
+lets deploy it
+
+---
+
+<send_user_message_question_reply>
+[{"answer":"done","question":"Please register https://twitch-alerts.fly.dev/auth/twitch/callback as a redirect URL in your Twitch developer app. Also set a replacement OpenAI key in Fly as the OPENAI_KEY secret (staged is fine); don’t paste the key here. Let me know when those are ready so I can finish activation.","questionItemId":"[\"request_user_input_async\",\"call_62f2ccb8bd564cfe90c7987e2e92b4dc\",0]"}]
+</send_user_message_question_reply>
+
+---
+
+I got this http://localhost:3000/?error=redirect_mismatch&error_description=The+provided+redirect_uri+does+not+match&state=5pKxmUsJL%2BWeDG0DEpCDtw%3D%3D
+
+---
+
+ok. done
