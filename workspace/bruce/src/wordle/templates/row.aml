@@ -1,0 +1,14 @@
+let frontground_colours = [
+    "white",
+    "black",
+]
+let background_colours = [
+    "green",
+    "yellow",
+    "reset",
+]
+hstack
+    for cell in state.cells
+        border [background: background_colours[to_int(cell.status)], foreground: frontground_colours[to_int(cell.status != 2)], id: "cell"]
+            padding [top: 1, bottom: 1, left: 4, right: 4]
+                text to_upper(to_str(cell.letter))

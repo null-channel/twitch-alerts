@@ -1,0 +1,7 @@
+[workspace]
+members = ["bruce", "wordle_word", "twitch_alerts", "twitch_common", "sql_common"]
+default-members = ["bruce", "twitch_alerts", "twitch_common", "sql_common"]
+resolver = "3"
+
+[workspace.dependencies]
+sqlx = { version = "0.9.0", default-features = false, features = ["sqlite", "runtime-tokio", "macros", "migrate"] }

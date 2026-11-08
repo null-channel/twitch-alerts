@@ -1,0 +1,4 @@
+dbs:
+  - path: /data/db
+    replicas:
+      - url: s3://twitch-alerts.us-ord-1.linodeobjects.com/db

@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "summary": {
+    "event_count": 2,
+    "ai_event_count": 1,
+    "human_event_count": 1,
+    "ai_rewrite_events": 1,
+    "human_rewrite_events": 1,
+    "ai_added_lines": 274,
+    "human_added_lines": 161,
+    "ai_rewritten_lines": 80,
+    "human_rewritten_lines": 41,
+    "ai_replaced_ai_lines": 0,
+    "ai_replaced_human_lines": 0,
+    "human_replaced_ai_lines": 0,
+    "human_replaced_human_lines": 0,
+    "final_ai_lines": 274,
+    "final_human_lines": 161,
+    "final_preexisting_lines": 2536,
+    "final_human_percent": 37
+  },
+  "events": [
+    {
+      "sequence": 1,
+      "at": "2026-10-21T23:17:16.973319511Z",
+      "actor": "ai",
+      "trigger": "session-end",
+      "from_tree": "1056a5fac504e6187bb3d9aac6478f0f3ea1456f",
+      "to_tree": "a99e348bd1ccd26bf7318ddc37802f9b3e22f268",
+      "model": "claude-fable-5-1",
+      "files": [
+        {
+          "path": "twitch_alerts/src/ai_manager/mod.rs",
+          "status": "M",
+          "added_lines": 4,
+          "removed_lines": 37,
+          "rewritten_lines": 4,
+          "prior_ai_lines": 0,
+          "prior_human_lines": 0,
+          "prior_preexisting_lines": 37
+        },
+        {
+          "path": "twitch_alerts/src/auth.rs",
+          "status": "M",
+          "added_lines": 1,
+          "removed_lines": 10,
+          "rewritten_lines": 1,
+          "prior_ai_lines": 0,
+          "prior_human_lines": 0,
+          "prior_preexisting_lines": 10
+        },
+        {
+          "path": "twitch_alerts/src/main.rs",
+          "status": "M",
+          "added_lines": 0,
+          "removed_lines": 1,
+          "rewritten_lines": 0,
+          "prior_ai_lines": 0,
+          "prior_human_lines": 0,
+          "prior_preexisting_lines": 1
+        },
+        {
+          "path": "twitch_alerts/tests/local_auth.rs",
+          "status": "M",
+          "added_lines": 4,
+          "removed_lines": 5,
+          "rewritten_lines": 4,
+          "prior_ai_lines": 0,
+          "prior_human_lines": 0,
+          "prior_preexisting_lines": 5
+        },
+        {
+          "path": "twitch_common/src/messages/mod.rs",
+          "status": "M",
+          "added_lines": 1,
+          "removed_lines": 1,
+          "rewritten_lines": 1,
+          "prior_ai_lines": 0,
+          "prior_human_lines": 0,
+          "prior_preexisting_lines": 1
+        },
+        {
+          "path": "twitch_common/src/twitch_listener/websocket.rs",
+          "status": "M",
+          "added_lines": 264,
+          "removed_lines": 225,
+          "rewritten_lines": 70,
+          "prior_ai_lines": 0,
+          "prior_human_lines": 0,
+          "prior_preexisting_lines": 225
+        }
+      ],
+      "added_lines": 274,
+      "removed_lines": 279,
+      "rewritten_lines": 80,
+      "prior_ai_lines": 0,
+      "prior_human_lines": 0,
+      "prior_preexisting_lines": 279,
+      "superseded_lines": 0,
+      "surviving_lines": 274
+    },
+    {
+      "sequence": 2,
+      "at": "2026-11-08T04:57:19.784310372Z",
+      "actor": "human",
+      "trigger": "commit",
+      "from_tree": "a99e348bd1ccd26bf7318ddc37802f9b3e22f268",
+      "to_tree": "f74bd3b385e5703c67a26e1c5c671c586d8c6705",
+      "files": [
+        {
+          "path": "bruce/src/main.rs",
+          "status": "M",
+          "added_lines": 8,
+          "removed_lines": 1,
+          "rewritten_lines": 1,
+          "prior_ai_lines": 0,
+          "prior_human_lines": 0,
+          "prior_preexisting_lines": 1
+        },
+        {
+          "path": "bruce/src/opts.rs",
+          "status": "M",
+          "added_lines": 15,
+          "removed_lines": 3,
+          "rewritten_lines": 3,
+          "prior_ai_lines": 0,
+          "prior_human_lines": 0,
+          "prior_preexisting_lines": 3
+        },
+        {
+          "path": "bruce/src/wordle/game.rs",
+          "status": "M",
+          "added_lines": 138,
+          "removed_lines": 68,
+          "rewritten_lines": 37,
+          "prior_ai_lines": 0,
+          "prior_human_lines": 0,
+          "prior_preexisting_lines": 68
+        }
+      ],
+      "added_lines": 161,
+      "removed_lines": 72,
+      "rewritten_lines": 41,
+      "prior_ai_lines": 0,
+      "prior_human_lines": 0,
+      "prior_preexisting_lines": 72,
+      "superseded_lines": 0,
+      "surviving_lines": 161
+    }
+  ],
+  "turns": [],
+  "final_files": [
+    {
+      "path": "bruce/src/main.rs",
+      "ai_lines": 0,
+      "human_lines": 8,
+      "preexisting_lines": 77,
+      "human_percent": 100
+    },
+    {
+      "path": "bruce/src/opts.rs",
+      "ai_lines": 0,
+      "human_lines": 15,
+      "preexisting_lines": 54,
+      "human_percent": 100
+    },
+    {
+      "path": "bruce/src/wordle/game.rs",
+      "ai_lines": 0,
+      "human_lines": 138,
+      "preexisting_lines": 750,
+      "human_percent": 100
+    },
+    {
+      "path": "twitch_alerts/src/ai_manager/mod.rs",
+      "ai_lines": 4,
+      "human_lines": 0,
+      "preexisting_lines": 253,
+      "human_percent": 0
+    },
+    {
+      "path": "twitch_alerts/src/auth.rs",
+      "ai_lines": 1,
+      "human_lines": 0,
+      "preexisting_lines": 493,
+      "human_percent": 0
+    },
+    {
+      "path": "twitch_alerts/src/main.rs",
+      "ai_lines": 0,
+      "human_lines": 0,
+      "preexisting_lines": 117,
+      "human_percent": 0
+    },
+    {
+      "path": "twitch_alerts/tests/local_auth.rs",
+      "ai_lines": 4,
+      "human_lines": 0,
+      "preexisting_lines": 472,
+      "human_percent": 0
+    },
+    {
+      "path": "twitch_common/src/messages/mod.rs",
+      "ai_lines": 1,
+      "human_lines": 0,
+      "preexisting_lines": 114,
+      "human_percent": 0
+    },
+    {
+      "path": "twitch_common/src/twitch_listener/websocket.rs",
+      "ai_lines": 264,
+      "human_lines": 0,
+      "preexisting_lines": 206,
+      "human_percent": 0
+    }
+  ],
+  "limitations": [
+    "Human versus AI is inferred from prompt and agent hook boundaries; edits made concurrently between boundaries can be ambiguous.",
+    "Estimated wasted tokens allocate a turn's observed usage in proportion to AI-added lines later superseded; providers do not report token-to-line causality.",
+    "Token deltas are assigned to the turn active at the reporting hook; provider telemetry reported late can shift usage to the following prompt.",
+    "Multiple writes between native hook callbacks appear as one rewrite event; agents without post-tool hooks expose turn-level rather than tool-level revisions."
+  ]
+}
